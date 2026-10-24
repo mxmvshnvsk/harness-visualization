@@ -71,11 +71,23 @@ function describeSummary(report: GroundingReport): string {
   const parts = SOURCE_LEVELS.filter((level) => counts[level] > 0).map(
     (level) => `${LEVEL_SUMMARY_LABELS[level]} ${String(counts[level])}`,
   );
-  const weak = counts.catalog + counts.notSeen;
   const summary = `Итог: ${parts.join(', ')}`;
-  return weak > 0
-    ? styleText('red', `${summary}. Проверьте ссылки без прочтения: модель могла их выдумать.`)
-    : styleText('green', `${summary}.`);
+  // Самое слабое место определяет цвет итога: ссылка без прочтения хуже фрагмента.
+  if (counts.catalog + counts.notSeen > 0) {
+    return styleText(
+      'red',
+      `${summary}. Проверьте ссылки без прочтения: модель могла их выдумать.`,
+    );
+  }
+  // Фрагмент — не подтверждение: утверждения из ответа в нём может не оказаться.
+  // Сравнивать утверждение с текстом фрагмента будет этап 5b, пока — глазами.
+  if (counts.fragment > 0) {
+    return styleText(
+      'yellow',
+      `${summary}. Проверьте, есть ли утверждения из ответа во фрагментах выдачи.`,
+    );
+  }
+  return styleText('green', `${summary}.`);
 }
 
 function countByLevel(report: GroundingReport): Record<SourceLevel, number> {
