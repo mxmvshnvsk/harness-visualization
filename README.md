@@ -8,8 +8,8 @@
 
 ## Требования
 
-- Node.js 26 (LTS), версия указана в `.nvmrc`.
-- pnpm. В Node 25+ corepack больше не входит в поставку, поэтому, например: `npm install --global corepack@latest && corepack enable`.
+- Node.js 22.13 или новее, рекомендуется 24 (указана в `.nvmrc`).
+- pnpm: достаточно выполнить `corepack enable`, нужная версия pnpm указана в `package.json`.
 - Ключ DeepSeek API — понадобится с этапа 1. Подойдёт и любой другой OpenAI-совместимый API.
 
 ## Быстрый старт
