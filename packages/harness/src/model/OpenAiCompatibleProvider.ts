@@ -2,6 +2,7 @@
 // Запросы отправляются встроенным fetch, без SDK, — так виден ровно тот HTTP-запрос, что уходит.
 
 import { describeFetchFailure } from '../http/describeFetchFailure.js';
+import { HARNESS_USER_AGENT } from '../http/userAgent.js';
 import type { ModelSettings } from '../settings/settingsSchema.js';
 import type {
   ModelReply,
@@ -42,6 +43,7 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       url: buildUrl(this.settings.baseUrl, CHAT_COMPLETIONS_PATH),
       headers: {
         'Content-Type': 'application/json',
+        'User-Agent': HARNESS_USER_AGENT,
         Authorization: `Bearer ${this.apiKey}`,
       },
       body: {

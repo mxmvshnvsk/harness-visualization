@@ -3,12 +3,11 @@
 // иначе безобидная страница могла бы перенаправить на localhost.
 
 import { describeFetchFailure } from '../../http/describeFetchFailure.js';
+import { HARNESS_USER_AGENT } from '../../http/userAgent.js';
 import type { WebFetchSettings } from '../../settings/settingsSchema.js';
 import { ToolError } from '../ToolError.js';
 import { assertAllowedUrl } from './assertAllowedUrl.js';
 
-const USER_AGENT =
-  'HarnessVisualization/0.1 (learning project; +https://github.com/mxmvshnvsk/harness-visualization)';
 const REDIRECT_STATUSES = [301, 302, 303, 307, 308];
 
 export interface DownloadedPage {
@@ -49,7 +48,7 @@ async function fetchOnce(url: URL, timeoutMs: number): Promise<Response> {
     return await fetch(url, {
       redirect: 'manual',
       headers: {
-        'User-Agent': USER_AGENT,
+        'User-Agent': HARNESS_USER_AGENT,
         Accept: 'text/html,text/plain,application/json;q=0.9,*/*;q=0.5',
       },
       signal: AbortSignal.timeout(timeoutMs),

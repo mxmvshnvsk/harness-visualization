@@ -3,6 +3,7 @@
 
 import { z } from 'zod';
 import { describeFetchFailure } from '../http/describeFetchFailure.js';
+import { HARNESS_USER_AGENT } from '../http/userAgent.js';
 import type { SearchSettings } from '../settings/settingsSchema.js';
 import { ToolError } from '../tools/ToolError.js';
 import type { SearchProvider, SearchResponse } from './searchProvider.js';
@@ -72,6 +73,7 @@ export class TavilySearchProvider implements SearchProvider {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'User-Agent': HARNESS_USER_AGENT,
           Authorization: `Bearer ${this.apiKey}`,
         },
         body: JSON.stringify({
