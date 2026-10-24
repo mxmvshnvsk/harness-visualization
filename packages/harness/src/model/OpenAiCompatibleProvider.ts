@@ -1,6 +1,7 @@
 // Провайдер для любого OpenAI-совместимого API: DeepSeek, OpenAI, OpenRouter, Ollama.
 // Запросы отправляются встроенным fetch, без SDK, — так виден ровно тот HTTP-запрос, что уходит.
 
+import { describeFetchFailure } from '../http/describeFetchFailure.js';
 import type { ModelSettings } from '../settings/settingsSchema.js';
 import type {
   ModelReply,
@@ -141,18 +142,6 @@ function fromWireToolCall(wireToolCall: WireToolCall): ToolCall {
 function buildUrl(baseUrl: string, path: string): string {
   const baseWithSlash = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
   return new URL(path, baseWithSlash).toString();
-}
-
-// fetch пишет просто «fetch failed», а настоящая причина (DNS, отказ соединения,
-// прокси, таймаут) лежит в error.cause — показываем её.
-function describeFetchFailure(error: unknown): string {
-  if (!(error instanceof Error)) {
-    return String(error);
-  }
-  if (error.cause instanceof Error) {
-    return `${error.message} (${error.cause.message})`;
-  }
-  return error.message;
 }
 
 function parseJsonOrKeepText(text: string): unknown {

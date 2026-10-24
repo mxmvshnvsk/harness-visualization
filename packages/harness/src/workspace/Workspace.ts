@@ -3,7 +3,7 @@
 // поэтому модель не прочитает и не перезапишет ничего за её пределами.
 
 import type { Dirent } from 'node:fs';
-import { mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { ToolError } from '../tools/ToolError.js';
 
@@ -54,6 +54,27 @@ export class Workspace {
     await mkdir(dirname(absolutePath), { recursive: true });
     await writeFile(absolutePath, content, 'utf8');
     return Buffer.byteLength(content, 'utf8');
+  }
+
+  // Проверяет, что по пути лежит файл (а не папка и не пустота). Возвращает абсолютный путь.
+  async assertExistingFile(workspacePath: string): Promise<string> {
+    const absolutePath = this.resolvePath(workspacePath);
+    let isDirectory: boolean;
+    try {
+      isDirectory = (await stat(absolutePath)).isDirectory();
+    } catch (error) {
+      throw translateFileError(error, workspacePath);
+    }
+    if (isDirectory) {
+      throw new ToolError(`Это папка, а не файл: ${workspacePath}`);
+    }
+    return absolutePath;
+  }
+
+  // Удаляет только файлы: папку целиком модель удалить не может.
+  async deleteFile(workspacePath: string): Promise<void> {
+    const absolutePath = await this.assertExistingFile(workspacePath);
+    await rm(absolutePath);
   }
 
   async listEntries(workspacePath: string): Promise<WorkspaceEntry[]> {

@@ -4,13 +4,25 @@
 
 import { z } from 'zod';
 import { ToolError } from './ToolError.js';
-import type { Tool, ToolContext } from './toolTypes.js';
+import type { PreparedToolCall, Tool, ToolContext, ToolOutput } from './toolTypes.js';
 
 export interface ToolSpecification<ArgumentsSchema extends z.ZodType> {
   name: string;
   description: string;
   argumentsSchema: ArgumentsSchema;
-  execute(toolArguments: z.infer<ArgumentsSchema>, context: ToolContext): Promise<string>;
+  // Если задано, харнесс спросит разрешения у пользователя перед выполнением.
+  // Функция возвращает понятное человеку описание действия: «Удалить файл notes/a.md».
+  confirmation?: (toolArguments: z.infer<ArgumentsSchema>) => string;
+  // Проверка перед вопросом пользователю. Бросает ToolError, если действие невозможно.
+  checkBeforeConfirmation?: (
+    toolArguments: z.infer<ArgumentsSchema>,
+    context: ToolContext,
+  ) => Promise<void>;
+  // Можно вернуть просто текст для модели или текст вместе с подробностями для трейса.
+  execute(
+    toolArguments: z.infer<ArgumentsSchema>,
+    context: ToolContext,
+  ): Promise<string | ToolOutput>;
 }
 
 export function defineTool<ArgumentsSchema extends z.ZodType>(
@@ -20,12 +32,32 @@ export function defineTool<ArgumentsSchema extends z.ZodType>(
     name: specification.name,
     description: specification.description,
     parametersSchema: buildParametersSchema(specification.argumentsSchema),
-    async run(rawArguments, context) {
+    prepare(rawArguments) {
       const validation = specification.argumentsSchema.safeParse(rawArguments);
       if (!validation.success) {
         throw new ToolError(`Неверные аргументы:\n${z.prettifyError(validation.error)}`);
       }
-      return specification.execute(validation.data, context);
+      return prepareCall(specification, validation.data);
+    },
+  };
+}
+
+function prepareCall<ArgumentsSchema extends z.ZodType>(
+  specification: ToolSpecification<ArgumentsSchema>,
+  toolArguments: z.infer<ArgumentsSchema>,
+): PreparedToolCall {
+  const confirmationText =
+    specification.confirmation === undefined ? null : specification.confirmation(toolArguments);
+  return {
+    confirmationText,
+    async checkBeforeConfirmation(context) {
+      if (specification.checkBeforeConfirmation !== undefined) {
+        await specification.checkBeforeConfirmation(toolArguments, context);
+      }
+    },
+    async execute(context) {
+      const result = await specification.execute(toolArguments, context);
+      return typeof result === 'string' ? { content: result } : result;
     },
   };
 }

@@ -71,6 +71,21 @@
     "directory": "workspace",
     "seedDirectory": "examples/workspace"
   },
+  "webFetch": {
+    "requestTimeoutMs": 15000,
+    "maxDownloadBytes": 2000000,
+    "maxCharacters": 20000,
+    "maxRedirects": 5,
+    "allowPrivateNetwork": false
+  },
+  "search": {
+    "providerName": "tavily",
+    "baseUrl": "https://api.tavily.com",
+    "apiKeyVariable": "TAVILY_API_KEY",
+    "requestTimeoutMs": 20000,
+    "defaultMaxResults": 5,
+    "searchDepth": "basic"
+  },
   "traces": {
     "directory": "traces"
   }

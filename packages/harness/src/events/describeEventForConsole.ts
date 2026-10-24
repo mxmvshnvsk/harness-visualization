@@ -36,6 +36,12 @@ const EVENT_DESCRIBERS: EventDescribers = {
       `Харнесс → тул ${event.toolName}: ${shortenForPreview(event.argumentsText)}`,
     ),
   ],
+  permission_requested: (event) => [
+    styleText('magenta', `Нужно разрешение пользователя: ${event.actionDescription}`),
+  ],
+  permission_resolved: (event) => [
+    styleText('magenta', event.approved ? 'Пользователь разрешил' : 'Пользователь отказал'),
+  ],
   tool_result: describeToolResult,
   assistant_message: (event) => [styleText('green', 'Харнесс → пользователь:'), event.text],
   session_finished: describeSessionFinished,
@@ -86,16 +92,32 @@ function describeModelResponse(event: EventOfType<'model_response'>): string[] {
   return lines;
 }
 
+const TOOL_STATUS_LABELS = {
+  success: { label: 'готово', color: 'yellow' },
+  error: { label: 'ошибка', color: 'red' },
+  denied: { label: 'отказано пользователем', color: 'magenta' },
+} as const;
+
 function describeToolResult(event: EventOfType<'tool_result'>): string[] {
-  const status = event.isError ? 'ошибка' : 'готово';
-  const color = event.isError ? 'red' : 'yellow';
-  return [
+  const { label: status, color } = TOOL_STATUS_LABELS[event.status];
+  const lines = [
     styleText(
       color,
       `Тул ${event.toolName} → харнесс: ${status}, ${formatNumber(event.content.length)} симв. за ${event.durationMs} мс`,
     ),
     styleText('dim', `    ${shortenForPreview(event.content)}`),
   ];
+  if (event.details !== null) {
+    lines.push(styleText('dim', `    подробности: ${describeDetails(event.details)}`));
+  }
+  return lines;
+}
+
+// { credits: 1, downloadedBytes: 52000 } → credits: 1, downloadedBytes: 52000
+function describeDetails(details: Record<string, unknown>): string {
+  return Object.entries(details)
+    .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
+    .join(', ');
 }
 
 function describeSessionFinished(event: EventOfType<'session_finished'>): string[] {

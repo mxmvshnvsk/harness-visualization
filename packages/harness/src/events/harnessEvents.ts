@@ -87,15 +87,35 @@ export interface ToolCallPayload {
   arguments: unknown;
 }
 
+// success — тул выполнен; error — не выполнился, модель получит текст ошибки и сможет исправиться;
+// denied — пользователь не разрешил действие.
+export type ToolResultStatus = 'success' | 'error' | 'denied';
+
 export interface ToolResultPayload {
   type: 'tool_result';
   toolCallId: string;
   toolName: string;
-  // true — тул не выполнился; модель получит текст ошибки и сможет исправиться.
-  isError: boolean;
+  status: ToolResultStatus;
   // Ровно то, что увидит модель.
   content: string;
+  // Подробности для трейса и токеномики, модель их не видит; null, если их нет.
+  details: Record<string, unknown> | null;
   durationMs: number;
+}
+
+export interface PermissionRequestedPayload {
+  type: 'permission_requested';
+  toolCallId: string;
+  toolName: string;
+  // Понятное человеку описание действия: «Удалить файл notes/a.md».
+  actionDescription: string;
+}
+
+export interface PermissionResolvedPayload {
+  type: 'permission_resolved';
+  toolCallId: string;
+  toolName: string;
+  approved: boolean;
 }
 
 export interface AssistantMessagePayload {
@@ -125,6 +145,8 @@ export type HarnessEventPayload =
   | ModelResponsePayload
   | ModelErrorPayload
   | ToolCallPayload
+  | PermissionRequestedPayload
+  | PermissionResolvedPayload
   | ToolResultPayload
   | AssistantMessagePayload
   | SessionFinishedPayload

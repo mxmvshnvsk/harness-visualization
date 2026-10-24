@@ -78,10 +78,36 @@ const workspaceSettingsSchema = z.object({
   seedDirectory: z.string().min(1),
 });
 
+const webFetchSettingsSchema = z.object({
+  requestTimeoutMs: z.number().int().positive(),
+  // Больше этого страницу не скачиваем: огромные страницы не нужны модели и съедают память.
+  maxDownloadBytes: z.number().int().positive(),
+  // Столько символов текста страницы получит модель, остальное обрезается.
+  maxCharacters: z.number().int().positive(),
+  maxRedirects: z.number().int().min(0),
+  // false — адреса локальной сети и localhost запрещены,
+  // чтобы модель не добралась до сервисов на вашем компьютере и в вашей сети.
+  allowPrivateNetwork: z.boolean(),
+});
+
+const searchSettingsSchema = z.object({
+  providerName: z.literal('tavily'),
+  baseUrl: z.url(),
+  // Имя переменной окружения с ключом. Если переменная пуста, тул web_search не регистрируется.
+  apiKeyVariable: z.string().min(1),
+  requestTimeoutMs: z.number().int().positive(),
+  defaultMaxResults: z.number().int().min(1).max(20),
+  // basic — 1 кредит Tavily за запрос, advanced — 2.
+  searchDepth: z.enum(['basic', 'advanced', 'fast', 'ultra-fast']),
+});
+
 export const harnessSettingsSchema = z.object({
   model: modelSettingsSchema,
   agent: agentSettingsSchema,
   workspace: workspaceSettingsSchema,
+  webFetch: webFetchSettingsSchema,
+  // Если раздела нет, веб-поиска нет.
+  search: searchSettingsSchema.optional(),
   prices: z.record(z.string(), modelPricesSchema).default({}),
   traces: tracesSettingsSchema,
 });
@@ -92,3 +118,5 @@ export type ReasoningStyle = ModelSettings['reasoningStyle'];
 export type ModelPrices = z.infer<typeof modelPricesSchema>;
 export type Tariff = z.infer<typeof tariffSchema>;
 export type Weekday = z.infer<typeof weekdaySchema>;
+export type WebFetchSettings = z.infer<typeof webFetchSettingsSchema>;
+export type SearchSettings = z.infer<typeof searchSettingsSchema>;

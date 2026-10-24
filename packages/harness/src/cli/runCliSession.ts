@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { join, relative } from 'node:path';
 import type { AgentDependencies } from '../agent/agentDependencies.js';
 import { runAgentTurn } from '../agent/runAgentTurn.js';
+import { askConfirmation } from './askConfirmation.js';
 import { createConsolePrinter } from '../events/createConsolePrinter.js';
 import { EventStream } from '../events/EventStream.js';
 import { JsonlTraceWriter } from '../events/JsonlTraceWriter.js';
@@ -12,7 +13,9 @@ import type { ReasoningEffort } from '../model/chatTypes.js';
 import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
 import type { LoadedSettings } from '../settings/loadSettings.js';
 import { SessionTokenomics } from '../tokenomics/SessionTokenomics.js';
+import { TavilySearchProvider } from '../search/TavilySearchProvider.js';
 import { createFileTools } from '../tools/fileTools/createFileTools.js';
+import { createWebTools, type WebToolsOptions } from '../tools/webTools/createWebTools.js';
 import { ToolRegistry } from '../tools/ToolRegistry.js';
 import { prepareWorkspace } from '../workspace/prepareWorkspace.js';
 import { Workspace } from '../workspace/Workspace.js';
@@ -91,7 +94,7 @@ function createAgentDependencies(
 ): AgentDependencies {
   const { settings, modelApiKey } = input.loadedSettings;
   const tools = new ToolRegistry();
-  for (const tool of createFileTools()) {
+  for (const tool of [...createFileTools(), ...createWebTools(buildWebToolsOptions(input))]) {
     tools.register(tool);
   }
 
@@ -101,6 +104,22 @@ function createAgentDependencies(
     prices: settings.prices,
     tools,
     toolContext: { workspace: new Workspace(workspaceDirectory) },
+    confirmAction: askConfirmation,
+  };
+}
+
+function buildWebToolsOptions(input: CliSessionInput): WebToolsOptions {
+  const { settings, searchApiKey } = input.loadedSettings;
+  if (settings.search === undefined || searchApiKey === null) {
+    console.log('Веб-поиск выключен: нет ключа поиска в .env. Тул web_search не зарегистрирован.');
+    return { webFetch: settings.webFetch, search: null };
+  }
+  return {
+    webFetch: settings.webFetch,
+    search: {
+      provider: new TavilySearchProvider(settings.search, searchApiKey),
+      settings: settings.search,
+    },
   };
 }
 

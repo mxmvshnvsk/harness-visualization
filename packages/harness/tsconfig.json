@@ -3,6 +3,9 @@
   "compilerOptions": {
     "rootDir": "src",
     "outDir": "dist",
+    // DOM нужен только ради типов linkedom и Readability: они описывают разобранную
+    // HTML-страницу как Document. Браузерных глобальных объектов в Node-коде мы не используем.
+    "lib": ["ES2024", "DOM"],
     "types": ["node"]
   },
   "include": ["src"]

@@ -16,6 +16,9 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@mozilla/readability": "0.6.0",
+    "linkedom": "0.18.14",
+    "node-html-markdown": "2.0.0",
     "zod": "4.6.7"
   }
 }
