@@ -27,7 +27,9 @@ export function formatUsage(usage: TokenUsage): string {
 }
 
 export function shortenForPreview(text: string): string {
-  const singleLine = text.replaceAll('\n', ' ').trim();
+  // Схлопываем любые пробельные символы, включая \r: в терминале он возвращает
+  // курсор в начало строки, и следующий текст затирает уже напечатанный.
+  const singleLine = text.replace(/\s+/g, ' ').trim();
   if (singleLine.length <= PREVIEW_LENGTH) {
     return singleLine;
   }

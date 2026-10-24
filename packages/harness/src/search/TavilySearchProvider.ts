@@ -103,7 +103,8 @@ function describeTavilyError(status: number, body: unknown): string {
   if (bodyText === '' || bodyText === 'null') {
     return `${summary}, тело ответа пустое`;
   }
-  return `${summary}: ${bodyText.slice(0, MAX_ERROR_BODY_LENGTH)}`;
+  const compactBody = bodyText.replace(/\s+/g, ' ').trim();
+  return `${summary}: ${compactBody.slice(0, MAX_ERROR_BODY_LENGTH)}`;
 }
 
 function parseJsonOrKeepText(text: string): unknown {
