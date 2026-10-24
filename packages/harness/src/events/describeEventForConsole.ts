@@ -5,7 +5,14 @@
 import { styleText } from 'node:util';
 import type { HarnessEvent, HarnessEventType } from './harnessEvents.js';
 import { describeJsonRpcMessage } from '../mcp/describeJsonRpcMessage.js';
-import { formatMoney, formatNumber, formatUsage, shortenForPreview } from './formatForConsole.js';
+import {
+  formatAmount,
+  formatCallCount,
+  formatMoney,
+  formatNumber,
+  formatUsage,
+  shortenForPreview,
+} from './formatForConsole.js';
 
 type EventOfType<Type extends HarnessEventType> = Extract<HarnessEvent, { type: Type }>;
 
@@ -203,6 +210,10 @@ function describeToolResult(event: EventOfType<'tool_result'>): string[] {
     ),
     styleText('dim', `    ${shortenForPreview(event.content)}`),
   ];
+  if (event.cost !== null) {
+    const amount = formatAmount(event.cost.amount, event.cost.currency);
+    lines.push(`    стоимость: ${amount} (тариф ${event.cost.tariffName})`);
+  }
   if (event.details !== null) {
     lines.push(styleText('dim', `    подробности: ${describeDetails(event.details)}`));
   }
@@ -218,10 +229,19 @@ function describeDetails(details: Record<string, unknown>): string {
 
 function describeSessionFinished(event: EventOfType<'session_finished'>): string[] {
   const seconds = (event.durationMs / 1000).toFixed(1);
+  // Валюты не складываем: каждая сумма — отдельно, со своим источником.
+  const costs = [
+    `модель ${formatMoney(event.modelCost)}`,
+    ...event.toolCosts.map(
+      (toolCost) =>
+        `${toolCost.toolName} ${formatMoney(toolCost)} (${formatCallCount(toolCost.calls)})`,
+    ),
+  ];
   return [
     styleText(
       'bold',
-      `Итого: запросов к модели ${event.modelRequests}, ${formatUsage(event.usage)}, ${formatMoney(event.cost)}, ${seconds} с`,
+      `Итого: запросов к модели ${event.modelRequests}, ${formatUsage(event.usage)}, ${seconds} с`,
     ),
+    styleText('bold', `    стоимость: ${costs.join(' · ')}`),
   ];
 }

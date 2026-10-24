@@ -65,8 +65,8 @@ export class YandexSearchProvider implements SearchProvider {
         searchType: this.settings.searchType,
         rawXmlBytes: Buffer.byteLength(xml, 'utf8'),
         resultCount: results.length,
-        cost: calculateYandexSearchCost(this.settings.prices, requestedAt),
       },
+      cost: calculateYandexSearchCost(this.settings.prices, requestedAt),
     };
   }
 

@@ -64,6 +64,7 @@ export class TavilySearchProvider implements SearchProvider {
         responseTimeSeconds: data.response_time ?? null,
         resultCount: data.results.length,
       },
+      cost: null,
     };
   }
 

@@ -35,9 +35,9 @@
 | `permission_evaluated` | политика разрешений приняла решение (на каждом вызове)             | `toolCallId`, `toolName`, `effects`, `targets`, `actionDescription`, `decision`, `reason`, `checks` |
 | `permission_requested` | тулу нужно разрешение пользователя                                 | `toolCallId`, `toolName`, `actionDescription`                                                       |
 | `permission_resolved`  | пользователь ответил                                               | `toolCallId`, `toolName`, `approved`, `waitedForUserMs`                                             |
-| `tool_result`          | тул выполнен, не смог, пользователь отказал или политика запретила | `toolCallId`, `toolName`, `status`, `content`, `details`, `durationMs`                              |
+| `tool_result`          | тул выполнен, не смог, пользователь отказал или политика запретила | `toolCallId`, `toolName`, `status`, `content`, `details`, `cost`, `durationMs`                      |
 | `assistant_message`    | харнесс отдал ответ пользователю                                   | `text`                                                                                              |
-| `session_finished`     | сессия закончилась                                                 | `durationMs`, `modelRequests`, `usage`, `cost`                                                      |
+| `session_finished`     | сессия закончилась                                                 | `durationMs`, `modelRequests`, `usage`, `modelCost`, `toolCosts`                                    |
 | `error`                | ошибка, прервавшая сессию                                          | `message`                                                                                           |
 
 `model_request` и `model_response` связаны полем `requestId`, `tool_call` и `tool_result` — полем `toolCallId`. Тот же `toolCallId` стоит в ответе модели (`reply.toolCalls`) и в сообщении с результатом тула, которое уходит модели в следующем запросе.
@@ -70,7 +70,8 @@ assistant_message
 
 - `status`: `success` — тул выполнен, `error` — не выполнился (модель получит текст ошибки и сможет исправиться), `denied` — пользователь не разрешил действие, `blocked` — действие запрещено политикой харнесса.
 - `content` — ровно то, что увидит модель.
-- `details` — подробности для трейса и токеномики, модель их не видит. У `fetch_url` это адрес после перенаправлений, вес скачанного HTML и сколько символов текста из него получилось; у `web_search` — кредиты Tavily и время ответа или, у Яндекса, размер полученного XML и стоимость поиска по дневному или ночному тарифу.
+- `details` — подробности для трейса и токеномики, модель их не видит. У `fetch_url` это адрес после перенаправлений, вес скачанного HTML и сколько символов текста из него получилось; у `web_search` — кредиты Tavily и время ответа или, у Яндекса, размер полученного XML.
+- `cost` — стоимость вызова в деньгах, если тул ходит в платный сервис: валюта, сумма, тариф и дата проверки цен. Сейчас она есть у поиска Яндекса (дневной или ночной тариф); у бесплатных тулов и у Tavily, где кредиты стоят по-разному в зависимости от тарифа пользователя, — `null`.
 
 Между `tool_call` и `tool_result` всегда стоит `permission_evaluated` — «след решения» политики: все проверки по порядку (`checks`: источник, что проверялось, подошло ли, решение), итог `decision` (`allow`, `ask`, `deny`) и причина `reason`. Если итог `ask`, дальше идут `permission_requested` и `permission_resolved`. Возможность действия харнесс проверяет до вопроса: про несуществующий файл пользователя не спрашивают. Время, пока пользователь решал, записано в `waitedForUserMs` и в `durationMs` тула не входит.
 
@@ -91,6 +92,8 @@ assistant_message
 | `reasoningTokens`      | часть `outputTokens`, потраченная на рассуждения |
 
 `cost` — стоимость по таблице цен из `harness.config.json`: тариф (`peak` или `offPeak` у DeepSeek), стоимость по частям, итог и дата проверки цен. Если цен для модели нет, `cost` равно `null`.
+
+В `session_finished` суммы не складываются между валютами: `modelCost` — стоимость всех запросов к модели (`null`, если хоть для одного цена неизвестна), `toolCosts` — стоимость платных тулов по тулу и валюте: `toolName`, `currency`, `total`, `calls`. Модель считает в долларах, а поиск Яндекса — в рублях; пересчёт по курсу скрыл бы, кто сколько стоит.
 
 ## Уровень рассуждений
 

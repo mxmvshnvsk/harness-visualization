@@ -1,4 +1,4 @@
-// Типы стоимости: одного запроса к модели и всей сессии.
+// Типы стоимости: запроса к модели, вызова платного тула и всей сессии.
 
 export interface RequestCost {
   currency: string;
@@ -12,7 +12,25 @@ export interface RequestCost {
   pricesCheckedAt: string;
 }
 
+// Стоимость одного вызова тула, который ходит в платный сервис (например, поиск Яндекса).
+export interface ToolCallCost {
+  currency: string;
+  amount: number;
+  // Какой тариф применён: например, day или night у Яндекса.
+  tariffName: string;
+  pricesCheckedAt: string;
+}
+
 export interface SessionCost {
   currency: string;
   total: number;
+}
+
+// Сколько за сессию стоили вызовы одного тула в одной валюте.
+// Валюты не складываем: курс меняется, а пересчёт скрыл бы, кто сколько стоит.
+export interface ToolCostTotal {
+  toolName: string;
+  currency: string;
+  total: number;
+  calls: number;
 }

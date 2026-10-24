@@ -9,7 +9,12 @@ import type {
   ToolEffect,
 } from '../permissions/permissionTypes.js';
 import type { NetworkRequestInfo } from '../network/NetworkRouter.js';
-import type { RequestCost, SessionCost } from '../tokenomics/costTypes.js';
+import type {
+  RequestCost,
+  SessionCost,
+  ToolCallCost,
+  ToolCostTotal,
+} from '../tokenomics/costTypes.js';
 
 export interface EventMetadata {
   // Порядковый номер в сессии, начиная с 1.
@@ -179,6 +184,8 @@ export interface ToolResultPayload {
   content: string;
   // Подробности для трейса и токеномики, модель их не видит; null, если их нет.
   details: Record<string, unknown> | null;
+  // Стоимость вызова в деньгах; null, если тул бесплатный или цена неизвестна.
+  cost: ToolCallCost | null;
   durationMs: number;
 }
 
@@ -223,7 +230,10 @@ export interface SessionFinishedPayload {
   durationMs: number;
   modelRequests: number;
   usage: TokenUsage;
-  cost: SessionCost | null;
+  // Стоимость запросов к модели; null, если хоть для одного запроса цена неизвестна.
+  modelCost: SessionCost | null;
+  // Стоимость платных тулов — по тулу и валюте, в порядке первого вызова.
+  toolCosts: ToolCostTotal[];
 }
 
 export interface ErrorPayload {

@@ -6,6 +6,7 @@
 import type { ToolCall, ToolResultMessage } from '../model/chatTypes.js';
 import type { ToolResultStatus } from '../events/harnessEvents.js';
 import { evaluatePermission } from '../permissions/evaluatePermission.js';
+import type { ToolCallCost } from '../tokenomics/costTypes.js';
 import type { PreparedToolCall } from '../tools/toolTypes.js';
 import type { AgentDependencies } from './agentDependencies.js';
 
@@ -15,6 +16,7 @@ interface ToolOutcome {
   status: ToolResultStatus;
   content: string;
   details: Record<string, unknown> | null;
+  cost: ToolCallCost | null;
   // Сколько выполнялся сам тул — без времени, пока пользователь решал, разрешить ли.
   durationMs: number;
 }
@@ -40,6 +42,7 @@ export async function executeToolCall(
     status: outcome.status,
     content: outcome.content,
     details: outcome.details,
+    cost: outcome.cost,
     durationMs: outcome.durationMs,
   });
 
@@ -147,6 +150,7 @@ async function executePreparedCall(
       status: 'success',
       content: output.content,
       details: output.details ?? null,
+      cost: output.cost ?? null,
       durationMs: Math.round(performance.now() - startedAt),
     };
   } catch (error) {
@@ -156,7 +160,7 @@ async function executePreparedCall(
 
 // Ошибки до выполнения (неизвестный тул, неверные аргументы) занимают 0 мс работы тула.
 function failure(message: string, durationMs = 0): ToolOutcome {
-  return { status: 'error', content: `Ошибка: ${message}`, details: null, durationMs };
+  return { status: 'error', content: `Ошибка: ${message}`, details: null, cost: null, durationMs };
 }
 
 // Политика харнесса запретила действие. Модель должна понять, что это правило,
@@ -168,6 +172,7 @@ function blocked(actionDescription: string, reason: string): ToolOutcome {
       `Действие запрещено политикой харнесса: ${actionDescription}. ${reason}. ` +
       'Не пытайся выполнить его другим способом; если оно нужно, сообщи пользователю.',
     details: null,
+    cost: null,
     durationMs: 0,
   };
 }
@@ -180,6 +185,7 @@ function denial(actionDescription: string): ToolOutcome {
       `Пользователь не разрешил действие: ${actionDescription}. ` +
       'Не повторяй его без нового запроса пользователя.',
     details: null,
+    cost: null,
     durationMs: 0,
   };
 }

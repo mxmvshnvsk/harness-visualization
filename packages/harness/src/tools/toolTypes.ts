@@ -1,6 +1,7 @@
 // Что такое тул для харнесса.
 
 import type { ActionTarget, ToolEffect } from '../permissions/permissionTypes.js';
+import type { ToolCallCost } from '../tokenomics/costTypes.js';
 import type { Workspace } from '../workspace/Workspace.js';
 
 // То, к чему тулу разрешён доступ. Тул не получает ничего сверх этого.
@@ -14,6 +15,9 @@ export interface ToolOutput {
   // Подробности для трейса и токеномики — модель их не видит.
   // Например, сколько кредитов стоил поиск или сколько весила страница.
   details?: Record<string, unknown>;
+  // Стоимость вызова в деньгах, если тул ходит в платный сервис. Отдельно от details,
+  // чтобы токеномика складывала её, не зная устройства каждого тула.
+  cost?: ToolCallCost | null;
 }
 
 // Вызов тула после проверки аргументов, ещё не выполненный.

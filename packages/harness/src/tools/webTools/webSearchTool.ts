@@ -36,11 +36,13 @@ export function createWebSearchTool(provider: SearchProvider, defaultMaxResults:
         return {
           content: `По запросу «${toolArguments.query}» ничего не найдено`,
           details: response.details,
+          cost: response.cost,
         };
       }
       return {
         content: response.results.map(describeResult).join('\n\n'),
         details: response.details,
+        cost: response.cost,
       };
     },
   });
