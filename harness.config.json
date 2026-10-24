@@ -114,6 +114,16 @@
     "maxRedirects": 5,
     "allowPrivateNetwork": false
   },
+  "network": {
+    "defaultRoute": "proxy",
+    "rules": [
+      {
+        "description": "Поиск Яндекса работает без VPN — напрямую",
+        "hostPattern": "*.yandex.net",
+        "route": "direct"
+      }
+    ]
+  },
   "search": {
     "provider": "yandex",
     "defaultMaxResults": 5,

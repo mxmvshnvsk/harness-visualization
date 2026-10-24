@@ -10,7 +10,7 @@
     "node": ">=22.13"
   },
   "scripts": {
-    "chat": "pnpm run build && cross-env NODE_USE_ENV_PROXY=1 node packages/harness/dist/cli/main.js",
+    "chat": "pnpm run build && node packages/harness/dist/cli/main.js",
     "check-grounding": "pnpm --filter @harness-visualization/harness run build && node packages/harness/dist/cli/mainCheckGrounding.js",
     "rag-index": "pnpm --filter @harness-visualization/mcp-server run build && cross-env NODE_USE_ENV_PROXY=1 node packages/mcp-server/dist/mainRagIndex.js",
     "build": "pnpm --recursive run build",

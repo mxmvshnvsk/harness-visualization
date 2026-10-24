@@ -12,6 +12,8 @@ import {
 } from '../mcp/connectMcpServers.js';
 import type { ReasoningEffort } from '../model/chatTypes.js';
 import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
+import { NetworkRouter, type RoutedFetch } from '../network/NetworkRouter.js';
+import { readProxyUrl } from '../network/proxyFromEnvironment.js';
 import type { LoadedSettings } from '../settings/loadSettings.js';
 import type { SearchProviderName, SearchSettings } from '../settings/settingsSchema.js';
 import { createSearchProvider } from '../search/createSearchProvider.js';
@@ -45,6 +47,11 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     verbose: input.verbose,
   });
   const { events } = recording;
+  const network = new NetworkRouter({
+    settings: settings.network,
+    proxyUrl: readProxyUrl(),
+    onRequest: (request) => events.emit({ type: 'network_request', ...request }),
+  });
 
   const workspaceDirectory = join(input.projectRoot, settings.workspace.directory);
   const preparedWorkspace = await prepareWorkspace({
@@ -53,7 +60,7 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     seedDirectory: join(input.projectRoot, settings.workspace.seedDirectory),
     reset: input.freshWorkspace,
   });
-  const searchProvider = await prepareSearchProvider(input);
+  const searchProvider = await prepareSearchProvider(input, network.fetch);
   announceSession(events, {
     settings,
     reasoningEffort: input.reasoningEffort,
@@ -69,6 +76,7 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     workspaceDirectory,
     searchProvider,
     mcpServers,
+    fetchImpl: network.fetch,
   });
 
   try {
@@ -81,13 +89,17 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     process.exitCode = 1;
   } finally {
     await closeMcpServers(mcpServers.connections, events);
+    await network.close();
     await recording.finish();
   }
 }
 
-async function prepareSearchProvider(input: CliSessionInput): Promise<SearchProvider | null> {
+async function prepareSearchProvider(
+  input: CliSessionInput,
+  fetchImpl: RoutedFetch,
+): Promise<SearchProvider | null> {
   const { settings } = input.loadedSettings;
-  const searchSetup = await createSearchProvider(settings.search, input.searchProvider);
+  const searchSetup = await createSearchProvider(settings.search, input.searchProvider, fetchImpl);
   if (searchSetup.provider === null) {
     console.log(
       `Веб-поиск выключен: ${searchSetup.disabledReason}. Тул web_search не зарегистрирован.`,
@@ -101,6 +113,8 @@ interface SessionResources {
   // null — веб-поиск выключен.
   searchProvider: SearchProvider | null;
   mcpServers: ConnectedMcpServers;
+  // fetch с маршрутами из раздела network: им ходят модель, поиск и загрузка страниц.
+  fetchImpl: RoutedFetch;
 }
 
 function createAgentDependencies(
@@ -113,6 +127,7 @@ function createAgentDependencies(
     webFetch: settings.webFetch,
     search: createSearchOption(resources.searchProvider, settings.search),
     loadPage: null,
+    fetchImpl: resources.fetchImpl,
   });
   const tools = new ToolRegistry();
   for (const tool of [...createFileTools(), ...webTools, ...resources.mcpServers.tools]) {
@@ -120,7 +135,7 @@ function createAgentDependencies(
   }
 
   return {
-    provider: new OpenAiCompatibleProvider(settings.model, modelApiKey),
+    provider: new OpenAiCompatibleProvider(settings.model, modelApiKey, resources.fetchImpl),
     events,
     prices: settings.prices,
     tools,

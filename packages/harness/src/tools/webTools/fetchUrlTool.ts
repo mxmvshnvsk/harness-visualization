@@ -6,6 +6,7 @@ import { defineTool } from '../defineTool.js';
 import { ToolError } from '../ToolError.js';
 import type { Tool } from '../toolTypes.js';
 import { downloadPage, type DownloadedPage, type LoadPage } from './downloadPage.js';
+import type { RoutedFetch } from '../../network/NetworkRouter.js';
 import { extractReadableText } from './extractReadableText.js';
 
 const PLAIN_TEXT_TYPES = ['text/plain', 'text/markdown', 'application/json', 'text/csv'];
@@ -17,8 +18,12 @@ interface PageText {
 }
 
 // loadPage: null — страницы загружаются из интернета.
-export function createFetchUrlTool(settings: WebFetchSettings, loadPage: LoadPage | null): Tool {
-  const load = loadPage ?? ((url: string) => downloadPage(url, settings));
+export function createFetchUrlTool(
+  settings: WebFetchSettings,
+  fetchImpl: RoutedFetch,
+  loadPage: LoadPage | null,
+): Tool {
+  const load = loadPage ?? ((url: string) => downloadPage(url, settings, fetchImpl));
   return defineTool({
     name: 'fetch_url',
     description:

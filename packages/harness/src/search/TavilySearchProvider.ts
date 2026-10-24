@@ -1,6 +1,7 @@
 // Поиск через Tavily — поисковый API, рассчитанный на ИИ-агентов:
 // возвращает не только ссылки, но и подходящие фрагменты страниц.
 
+import type { RoutedFetch } from '../network/NetworkRouter.js';
 import { z } from 'zod';
 import { describeFetchFailure } from '../http/describeFetchFailure.js';
 import { HARNESS_USER_AGENT } from '../http/userAgent.js';
@@ -30,10 +31,12 @@ export class TavilySearchProvider implements SearchProvider {
   readonly name = 'tavily';
   private readonly settings: TavilySettings;
   private readonly apiKey: string;
+  private readonly fetchImpl: RoutedFetch;
 
-  constructor(settings: TavilySettings, apiKey: string) {
+  constructor(settings: TavilySettings, apiKey: string, fetchImpl: RoutedFetch) {
     this.settings = settings;
     this.apiKey = apiKey;
+    this.fetchImpl = fetchImpl;
   }
 
   async search(query: string, maxResults: number): Promise<SearchResponse> {
@@ -69,7 +72,7 @@ export class TavilySearchProvider implements SearchProvider {
       ? this.settings.baseUrl
       : `${this.settings.baseUrl}/`;
     try {
-      return await fetch(new URL('search', baseWithSlash), {
+      return await this.fetchImpl(new URL('search', baseWithSlash), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -3,6 +3,7 @@
 
 import { describeFetchFailure } from '../http/describeFetchFailure.js';
 import { HARNESS_USER_AGENT } from '../http/userAgent.js';
+import type { RoutedFetch } from '../network/NetworkRouter.js';
 import type { ModelSettings } from '../settings/settingsSchema.js';
 import type {
   ModelReply,
@@ -27,10 +28,12 @@ const CHAT_COMPLETIONS_PATH = 'chat/completions';
 export class OpenAiCompatibleProvider implements ModelProvider {
   private readonly settings: ModelSettings;
   private readonly apiKey: string;
+  private readonly fetchImpl: RoutedFetch;
 
-  constructor(settings: ModelSettings, apiKey: string) {
+  constructor(settings: ModelSettings, apiKey: string, fetchImpl: RoutedFetch) {
     this.settings = settings;
     this.apiKey = apiKey;
+    this.fetchImpl = fetchImpl;
   }
 
   get model(): string {
@@ -109,7 +112,7 @@ export class OpenAiCompatibleProvider implements ModelProvider {
 
   private async fetchWithReadableErrors(preparedRequest: PreparedHttpRequest): Promise<Response> {
     try {
-      return await fetch(preparedRequest.url, {
+      return await this.fetchImpl(preparedRequest.url, {
         method: preparedRequest.method,
         headers: preparedRequest.headers,
         body: JSON.stringify(preparedRequest.body),

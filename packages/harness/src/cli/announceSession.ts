@@ -4,7 +4,7 @@ import type { EventStream } from '../events/EventStream.js';
 import type { ReasoningEffort } from '../model/chatTypes.js';
 import type { HarnessSettings } from '../settings/settingsSchema.js';
 import type { PreparedWorkspace } from '../workspace/prepareWorkspace.js';
-import { readProxyStatus } from './networkProxy.js';
+import { maskProxyUrl, readProxyUrl } from '../network/proxyFromEnvironment.js';
 
 export interface SessionAnnouncement {
   settings: HarnessSettings;
@@ -35,7 +35,8 @@ export function announceSession(events: EventStream, announcement: SessionAnnoun
   });
 }
 
+// Какой прокси получат запросы с маршрутом proxy; null — прокси в окружении не задан.
 function describeNetworkProxy(): string | null {
-  const proxyStatus = readProxyStatus();
-  return proxyStatus.enabledForNode ? proxyStatus.proxyUrl : null;
+  const proxyUrl = readProxyUrl();
+  return proxyUrl === null ? null : maskProxyUrl(proxyUrl);
 }

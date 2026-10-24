@@ -25,6 +25,7 @@
 | `mcp_message`          | сообщение JSON-RPC между харнессом и MCP-сервером                  | `serverName`, `direction` (`to_server`, `from_server`), `message`                                   |
 | `mcp_server_log`       | строка из stderr сервера                                           | `serverName`, `text`                                                                                |
 | `mcp_server_stopped`   | харнесс остановил сервер в конце сессии                            | `serverName`                                                                                        |
+| `network_request`      | харнесс отправляет HTTP-запрос: к модели, поисковику или странице  | `host`, `route` (`proxy`, `direct`), `viaProxy`, `rule`, `proxyUrl` (секреты скрыты)                |
 | `user_message`         | пришёл запрос пользователя                                         | `text`                                                                                              |
 | `prompt_assembled`     | харнесс собрал контекст для модели                                 | `messages`, `toolNames`                                                                             |
 | `model_request`        | HTTP-запрос к модели собран и отправляется                         | `requestId`, `iteration`, `reasoningEffort`, `method`, `url`, `headers` (секреты скрыты), `body`    |

@@ -9,6 +9,7 @@ import type {
   TavilySettings,
   YandexSearchSettings,
 } from '../settings/settingsSchema.js';
+import type { RoutedFetch } from '../network/NetworkRouter.js';
 import type { SearchProvider } from './searchProvider.js';
 import { TavilySearchProvider } from './TavilySearchProvider.js';
 import { YandexSearchProvider } from './YandexSearchProvider.js';
@@ -19,6 +20,7 @@ export type SearchProviderSetup =
 export async function createSearchProvider(
   searchSettings: SearchSettings | undefined,
   requestedProvider: SearchProviderName | null,
+  fetchImpl: RoutedFetch,
 ): Promise<SearchProviderSetup> {
   if (searchSettings === undefined) {
     return disabled('в harness.config.json нет раздела search');
@@ -26,14 +28,15 @@ export async function createSearchProvider(
   const providerName = requestedProvider ?? searchSettings.provider;
   switch (providerName) {
     case 'tavily':
-      return createTavilyProvider(searchSettings.tavily);
+      return createTavilyProvider(searchSettings.tavily, fetchImpl);
     case 'yandex':
-      return createYandexProvider(searchSettings.yandex);
+      return createYandexProvider(searchSettings.yandex, fetchImpl);
   }
 }
 
 async function createTavilyProvider(
   settings: TavilySettings | undefined,
+  fetchImpl: RoutedFetch,
 ): Promise<SearchProviderSetup> {
   if (settings === undefined) {
     return disabled('в harness.config.json нет настроек search.tavily');
@@ -42,11 +45,12 @@ async function createTavilyProvider(
   if (apiKey === null) {
     return disabled(`нет ключа ${settings.apiKeyVariable} в .env`);
   }
-  return { provider: new TavilySearchProvider(settings, apiKey), disabledReason: null };
+  return { provider: new TavilySearchProvider(settings, apiKey, fetchImpl), disabledReason: null };
 }
 
 async function createYandexProvider(
   settings: YandexSearchSettings | undefined,
+  fetchImpl: RoutedFetch,
 ): Promise<SearchProviderSetup> {
   if (settings === undefined) {
     return disabled('в harness.config.json нет настроек search.yandex');
@@ -57,7 +61,7 @@ async function createYandexProvider(
     return disabled(`нет ${settings.apiKeyVariable} или ${settings.folderIdVariable} в .env`);
   }
   return {
-    provider: new YandexSearchProvider(settings, { apiKey, folderId }),
+    provider: new YandexSearchProvider(settings, { apiKey, folderId }, fetchImpl),
     disabledReason: null,
   };
 }

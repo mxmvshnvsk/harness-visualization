@@ -2,12 +2,10 @@
 
 import { loadSettings } from '../settings/loadSettings.js';
 import { askQuestion } from './askQuestion.js';
-import { readProxyStatus } from './networkProxy.js';
 import { parseCliArguments } from './parseCliArguments.js';
 import { runCliSession } from './runCliSession.js';
 
 async function main(): Promise<void> {
-  warnIfProxyIsIgnored();
   const cliOptions = parseCliArguments(process.argv.slice(2));
   // Команда запускается из корня репозитория, там лежат harness.config.json и .env.
   const projectRoot = process.cwd();
@@ -27,16 +25,6 @@ async function main(): Promise<void> {
     freshWorkspace: cliOptions.freshWorkspace,
     verbose: cliOptions.verbose,
   });
-}
-
-function warnIfProxyIsIgnored(): void {
-  const proxyStatus = readProxyStatus();
-  if (proxyStatus.proxyUrl !== null && !proxyStatus.enabledForNode) {
-    console.warn(
-      `В окружении задан прокси ${proxyStatus.proxyUrl}, но Node его не использует: ` +
-        'запросы пойдут напрямую. Запускайте через pnpm chat или задайте NODE_USE_ENV_PROXY=1.',
-    );
-  }
 }
 
 main().catch((error: unknown) => {
