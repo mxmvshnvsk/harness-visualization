@@ -17,7 +17,7 @@
 
 | Тип                    | Когда                                          | Главные поля                                                                                     |
 | ---------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `session_started`      | сессия началась                                | `providerName`, `baseUrl`, `model`, `reasoningEffort`                                            |
+| `session_started`      | сессия началась                                | `providerName`, `baseUrl`, `model`, `reasoningEffort`, `networkProxy`                            |
 | `workspace_prepared`   | песочница готова к сессии                      | `directory`, `createdFromSeed`, `wasReset`                                                       |
 | `user_message`         | пришёл запрос пользователя                     | `text`                                                                                           |
 | `prompt_assembled`     | харнесс собрал контекст для модели             | `messages`, `toolNames`                                                                          |

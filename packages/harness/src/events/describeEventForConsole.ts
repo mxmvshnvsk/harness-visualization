@@ -18,6 +18,10 @@ const EVENT_DESCRIBERS: EventDescribers = {
       'bold',
       `Сессия ${event.sessionId} · ${event.providerName} · ${event.model} · effort ${event.reasoningEffort}`,
     ),
+    styleText(
+      'dim',
+      event.networkProxy === null ? 'Сеть: напрямую' : `Сеть: через прокси ${event.networkProxy}`,
+    ),
   ],
   workspace_prepared: describeWorkspacePrepared,
   user_message: (event) => [`Пользователь → харнесс: «${shortenForPreview(event.text)}»`],

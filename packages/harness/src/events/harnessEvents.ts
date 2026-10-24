@@ -18,6 +18,8 @@ export interface SessionStartedPayload {
   baseUrl: string;
   model: string;
   reasoningEffort: ReasoningEffort;
+  // Через какой прокси идут запросы харнесса; null — напрямую.
+  networkProxy: string | null;
 }
 
 export interface WorkspacePreparedPayload {

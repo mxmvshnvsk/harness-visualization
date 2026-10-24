@@ -6,6 +6,7 @@ import { join, relative } from 'node:path';
 import type { AgentDependencies } from '../agent/agentDependencies.js';
 import { runAgentTurn } from '../agent/runAgentTurn.js';
 import { askConfirmation } from './askConfirmation.js';
+import { readProxyStatus } from './networkProxy.js';
 import { createConsolePrinter } from '../events/createConsolePrinter.js';
 import { EventStream } from '../events/EventStream.js';
 import { JsonlTraceWriter } from '../events/JsonlTraceWriter.js';
@@ -60,6 +61,7 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     baseUrl: settings.model.baseUrl,
     model: settings.model.model,
     reasoningEffort: input.reasoningEffort,
+    networkProxy: describeNetworkProxy(),
   });
   events.emit({
     type: 'workspace_prepared',
@@ -121,6 +123,11 @@ function buildWebToolsOptions(input: CliSessionInput): WebToolsOptions {
       settings: settings.search,
     },
   };
+}
+
+function describeNetworkProxy(): string | null {
+  const proxyStatus = readProxyStatus();
+  return proxyStatus.enabledForNode ? proxyStatus.proxyUrl : null;
 }
 
 // Короткий идентификатор удобнее читать в консоли и в именах файлов.
