@@ -14,6 +14,8 @@ interface ToolOutcome {
   status: ToolResultStatus;
   content: string;
   details: Record<string, unknown> | null;
+  // Сколько выполнялся сам тул — без времени, пока пользователь решал, разрешить ли.
+  durationMs: number;
 }
 
 export async function executeToolCall(
@@ -29,7 +31,6 @@ export async function executeToolCall(
     arguments: parsedArguments.success ? parsedArguments.value : null,
   });
 
-  const startedAt = performance.now();
   const outcome = await runTool(toolCall, parsedArguments, dependencies);
   dependencies.events.emit({
     type: 'tool_result',
@@ -38,7 +39,7 @@ export async function executeToolCall(
     status: outcome.status,
     content: outcome.content,
     details: outcome.details,
-    durationMs: Math.round(performance.now() - startedAt),
+    durationMs: outcome.durationMs,
   });
 
   return { role: 'tool', toolCallId: toolCall.id, content: outcome.content };
@@ -101,12 +102,14 @@ async function askPermission(
     toolName: toolCall.name,
     actionDescription,
   });
+  const waitStartedAt = performance.now();
   const approved = await dependencies.confirmAction({ toolName: toolCall.name, actionDescription });
   dependencies.events.emit({
     type: 'permission_resolved',
     toolCallId: toolCall.id,
     toolName: toolCall.name,
     approved,
+    waitedForUserMs: Math.round(performance.now() - waitStartedAt),
   });
   return approved;
 }
@@ -115,16 +118,23 @@ async function executePreparedCall(
   preparedCall: PreparedToolCall,
   dependencies: AgentDependencies,
 ): Promise<ToolOutcome> {
+  const startedAt = performance.now();
   try {
     const output = await preparedCall.execute(dependencies.toolContext);
-    return { status: 'success', content: output.content, details: output.details ?? null };
+    return {
+      status: 'success',
+      content: output.content,
+      details: output.details ?? null,
+      durationMs: Math.round(performance.now() - startedAt),
+    };
   } catch (error) {
-    return failure(describeError(error));
+    return failure(describeError(error), Math.round(performance.now() - startedAt));
   }
 }
 
-function failure(message: string): ToolOutcome {
-  return { status: 'error', content: `Ошибка: ${message}`, details: null };
+// Ошибки до выполнения (неизвестный тул, неверные аргументы) занимают 0 мс работы тула.
+function failure(message: string, durationMs = 0): ToolOutcome {
+  return { status: 'error', content: `Ошибка: ${message}`, details: null, durationMs };
 }
 
 // Модель должна понять, что это не сбой, а решение человека, и не пытаться обойти его.
@@ -135,6 +145,7 @@ function denial(actionDescription: string): ToolOutcome {
       `Пользователь не разрешил действие: ${actionDescription}. ` +
       'Не повторяй его без нового запроса пользователя.',
     details: null,
+    durationMs: 0,
   };
 }
 

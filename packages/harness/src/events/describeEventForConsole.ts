@@ -40,7 +40,10 @@ const EVENT_DESCRIBERS: EventDescribers = {
     styleText('magenta', `Нужно разрешение пользователя: ${event.actionDescription}`),
   ],
   permission_resolved: (event) => [
-    styleText('magenta', event.approved ? 'Пользователь разрешил' : 'Пользователь отказал'),
+    styleText(
+      'magenta',
+      `${event.approved ? 'Пользователь разрешил' : 'Пользователь отказал'} (думал ${formatNumber(event.waitedForUserMs)} мс)`,
+    ),
   ],
   tool_result: describeToolResult,
   assistant_message: (event) => [styleText('green', 'Харнесс → пользователь:'), event.text],

@@ -37,7 +37,7 @@ export class TavilySearchProvider implements SearchProvider {
 
   async search(query: string, maxResults: number): Promise<SearchResponse> {
     const response = await this.sendSearchRequest(query, maxResults);
-    const body: unknown = await response.json().catch(() => null);
+    const body = parseJsonOrKeepText(await response.text());
     if (!response.ok) {
       throw new ToolError(describeTavilyError(response.status, body));
     }
@@ -89,11 +89,27 @@ export class TavilySearchProvider implements SearchProvider {
   }
 }
 
+const MAX_ERROR_BODY_LENGTH = 300;
+
+// Сначала ищем ошибку в формате Tavily, иначе показываем начало ответа как есть:
+// причина отказа (неверный ключ, лимит, ограничение сети) обычно написана там.
 function describeTavilyError(status: number, body: unknown): string {
   const summary = `Tavily ответил ошибкой HTTP ${status}`;
   const errorValidation = tavilyErrorSchema.safeParse(body);
-  if (!errorValidation.success) {
-    return summary;
+  if (errorValidation.success) {
+    return `${summary}: ${errorValidation.data.detail.error}`;
   }
-  return `${summary}: ${errorValidation.data.detail.error}`;
+  const bodyText = typeof body === 'string' ? body : JSON.stringify(body);
+  if (bodyText === '' || bodyText === 'null') {
+    return `${summary}, тело ответа пустое`;
+  }
+  return `${summary}: ${bodyText.slice(0, MAX_ERROR_BODY_LENGTH)}`;
+}
+
+function parseJsonOrKeepText(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }

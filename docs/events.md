@@ -26,7 +26,7 @@
 | `model_error`          | запрос к модели не удался                      | `requestId`, `status`, `durationMs`, `body`, `message`                                           |
 | `tool_call`            | модель попросила вызвать тул                   | `toolCallId`, `toolName`, `argumentsText`, `arguments`                                           |
 | `permission_requested` | тулу нужно разрешение пользователя             | `toolCallId`, `toolName`, `actionDescription`                                                    |
-| `permission_resolved`  | пользователь ответил                           | `toolCallId`, `toolName`, `approved`                                                             |
+| `permission_resolved`  | пользователь ответил                           | `toolCallId`, `toolName`, `approved`, `waitedForUserMs`                                          |
 | `tool_result`          | тул выполнен, не смог или пользователь отказал | `toolCallId`, `toolName`, `status`, `content`, `details`, `durationMs`                           |
 | `assistant_message`    | харнесс отдал ответ пользователю               | `text`                                                                                           |
 | `session_finished`     | сессия закончилась                             | `durationMs`, `modelRequests`, `usage`, `cost`                                                   |
@@ -64,7 +64,7 @@ assistant_message
 - `content` — ровно то, что увидит модель.
 - `details` — подробности для трейса и токеномики, модель их не видит. У `fetch_url` это адрес после перенаправлений, вес скачанного HTML и сколько символов текста из него получилось; у `web_search` — кредиты Tavily и время ответа.
 
-Если тулу нужно разрешение, между `tool_call` и `tool_result` стоят `permission_requested` и `permission_resolved`. Возможность действия харнесс проверяет до вопроса: про несуществующий файл пользователя не спрашивают.
+Если тулу нужно разрешение, между `tool_call` и `tool_result` стоят `permission_requested` и `permission_resolved`. Возможность действия харнесс проверяет до вопроса: про несуществующий файл пользователя не спрашивают. Время, пока пользователь решал, записано в `waitedForUserMs` и в `durationMs` тула не входит.
 
 ## Токены и стоимость
 

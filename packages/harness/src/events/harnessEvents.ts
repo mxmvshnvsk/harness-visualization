@@ -116,6 +116,8 @@ export interface PermissionResolvedPayload {
   toolCallId: string;
   toolName: string;
   approved: boolean;
+  // Сколько пользователь думал. В длительность тула это время не входит.
+  waitedForUserMs: number;
 }
 
 export interface AssistantMessagePayload {
