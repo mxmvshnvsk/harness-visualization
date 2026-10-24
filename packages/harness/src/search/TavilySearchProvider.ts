@@ -4,7 +4,7 @@
 import { z } from 'zod';
 import { describeFetchFailure } from '../http/describeFetchFailure.js';
 import { HARNESS_USER_AGENT } from '../http/userAgent.js';
-import type { SearchSettings } from '../settings/settingsSchema.js';
+import type { TavilySettings } from '../settings/settingsSchema.js';
 import { ToolError } from '../tools/ToolError.js';
 import type { SearchProvider, SearchResponse } from './searchProvider.js';
 
@@ -28,10 +28,10 @@ const tavilyErrorSchema = z.object({
 
 export class TavilySearchProvider implements SearchProvider {
   readonly name = 'tavily';
-  private readonly settings: SearchSettings;
+  private readonly settings: TavilySettings;
   private readonly apiKey: string;
 
-  constructor(settings: SearchSettings, apiKey: string) {
+  constructor(settings: TavilySettings, apiKey: string) {
     this.settings = settings;
     this.apiKey = apiKey;
   }

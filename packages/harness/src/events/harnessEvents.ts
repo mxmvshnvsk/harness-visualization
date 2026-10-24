@@ -20,6 +20,8 @@ export interface SessionStartedPayload {
   reasoningEffort: ReasoningEffort;
   // Через какой прокси идут запросы харнесса; null — напрямую.
   networkProxy: string | null;
+  // Какой поисковый провайдер у тула web_search; null — поиск выключен.
+  searchProvider: string | null;
 }
 
 export interface WorkspacePreparedPayload {

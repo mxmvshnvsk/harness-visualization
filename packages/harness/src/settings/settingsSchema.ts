@@ -90,15 +90,46 @@ const webFetchSettingsSchema = z.object({
   allowPrivateNetwork: z.boolean(),
 });
 
-const searchSettingsSchema = z.object({
-  providerName: z.literal('tavily'),
+// Названия поисковых провайдеров, которые умеет харнесс.
+export const SEARCH_PROVIDER_NAMES = ['tavily', 'yandex'] as const;
+
+const tavilySettingsSchema = z.object({
   baseUrl: z.url(),
-  // Имя переменной окружения с ключом. Если переменная пуста, тул web_search не регистрируется.
+  // Имя переменной окружения с ключом. Если переменная пуста, провайдер недоступен.
   apiKeyVariable: z.string().min(1),
   requestTimeoutMs: z.number().int().positive(),
-  defaultMaxResults: z.number().int().min(1).max(20),
   // basic — 1 кредит Tavily за запрос, advanced — 2.
   searchDepth: z.enum(['basic', 'advanced', 'fast', 'ultra-fast']),
+});
+
+const yandexSearchPricesSchema = z.object({
+  currency: z.string().min(1),
+  // Цена за 1000 синхронных запросов: днём и ночью (00:00–08:00 по Москве).
+  synchronousDayPerThousand: z.number().nonnegative(),
+  synchronousNightPerThousand: z.number().nonnegative(),
+  checkedAt: z.string().min(1),
+  source: z.url(),
+});
+
+const yandexSearchSettingsSchema = z.object({
+  baseUrl: z.url(),
+  apiKeyVariable: z.string().min(1),
+  // Каталог Yandex Cloud у каждого свой, поэтому его ID тоже берётся из .env.
+  folderIdVariable: z.string().min(1),
+  requestTimeoutMs: z.number().int().positive(),
+  // Сегмент поиска: SEARCH_TYPE_RU — русскоязычный, SEARCH_TYPE_COM — международный.
+  searchType: z.string().min(1),
+  // Сколько фрагментов текста страницы вернуть для каждого результата (1–5).
+  maxPassages: z.number().int().min(1).max(5),
+  prices: yandexSearchPricesSchema,
+});
+
+const searchSettingsSchema = z.object({
+  // Какой провайдер использовать по умолчанию; для одного запуска меняется флагом --search.
+  provider: z.enum(SEARCH_PROVIDER_NAMES),
+  defaultMaxResults: z.number().int().min(1).max(20),
+  tavily: tavilySettingsSchema.optional(),
+  yandex: yandexSearchSettingsSchema.optional(),
 });
 
 export const harnessSettingsSchema = z.object({
@@ -120,3 +151,7 @@ export type Tariff = z.infer<typeof tariffSchema>;
 export type Weekday = z.infer<typeof weekdaySchema>;
 export type WebFetchSettings = z.infer<typeof webFetchSettingsSchema>;
 export type SearchSettings = z.infer<typeof searchSettingsSchema>;
+export type SearchProviderName = SearchSettings['provider'];
+export type TavilySettings = z.infer<typeof tavilySettingsSchema>;
+export type YandexSearchSettings = z.infer<typeof yandexSearchSettingsSchema>;
+export type YandexSearchPrices = z.infer<typeof yandexSearchPricesSchema>;

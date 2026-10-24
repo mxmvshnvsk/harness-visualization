@@ -13,8 +13,10 @@ import { JsonlTraceWriter } from '../events/JsonlTraceWriter.js';
 import type { ReasoningEffort } from '../model/chatTypes.js';
 import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
 import type { LoadedSettings } from '../settings/loadSettings.js';
+import type { SearchProviderName, SearchSettings } from '../settings/settingsSchema.js';
 import { SessionTokenomics } from '../tokenomics/SessionTokenomics.js';
-import { TavilySearchProvider } from '../search/TavilySearchProvider.js';
+import { createSearchProvider } from '../search/createSearchProvider.js';
+import type { SearchProvider } from '../search/searchProvider.js';
 import { createFileTools } from '../tools/fileTools/createFileTools.js';
 import { createWebTools, type WebToolsOptions } from '../tools/webTools/createWebTools.js';
 import { ToolRegistry } from '../tools/ToolRegistry.js';
@@ -26,6 +28,8 @@ export interface CliSessionInput {
   projectRoot: string;
   question: string;
   reasoningEffort: ReasoningEffort;
+  // null — провайдер поиска из harness.config.json, иначе выбранный флагом --search.
+  searchProvider: SearchProviderName | null;
   // true — пересоздать рабочую папку из примеров (флаг --fresh).
   freshWorkspace: boolean;
   verbose: boolean;
@@ -53,7 +57,11 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     seedDirectory: join(input.projectRoot, settings.workspace.seedDirectory),
     reset: input.freshWorkspace,
   });
-  const dependencies = createAgentDependencies(input, events, workspaceDirectory);
+  const searchProvider = await prepareSearchProvider(input);
+  const dependencies = createAgentDependencies(input, events, {
+    workspaceDirectory,
+    searchProvider,
+  });
   const startedAt = performance.now();
   events.emit({
     type: 'session_started',
@@ -62,6 +70,7 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     model: settings.model.model,
     reasoningEffort: input.reasoningEffort,
     networkProxy: describeNetworkProxy(),
+    searchProvider: searchProvider?.name ?? null,
   });
   events.emit({
     type: 'workspace_prepared',
@@ -89,14 +98,35 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
   }
 }
 
+async function prepareSearchProvider(input: CliSessionInput): Promise<SearchProvider | null> {
+  const { settings } = input.loadedSettings;
+  const searchSetup = await createSearchProvider(settings.search, input.searchProvider);
+  if (searchSetup.provider === null) {
+    console.log(
+      `Веб-поиск выключен: ${searchSetup.disabledReason}. Тул web_search не зарегистрирован.`,
+    );
+  }
+  return searchSetup.provider;
+}
+
+interface SessionResources {
+  workspaceDirectory: string;
+  // null — веб-поиск выключен.
+  searchProvider: SearchProvider | null;
+}
+
 function createAgentDependencies(
   input: CliSessionInput,
   events: EventStream,
-  workspaceDirectory: string,
+  resources: SessionResources,
 ): AgentDependencies {
   const { settings, modelApiKey } = input.loadedSettings;
+  const webTools = createWebTools({
+    webFetch: settings.webFetch,
+    search: createSearchOption(resources.searchProvider, settings.search),
+  });
   const tools = new ToolRegistry();
-  for (const tool of [...createFileTools(), ...createWebTools(buildWebToolsOptions(input))]) {
+  for (const tool of [...createFileTools(), ...webTools]) {
     tools.register(tool);
   }
 
@@ -105,24 +135,19 @@ function createAgentDependencies(
     events,
     prices: settings.prices,
     tools,
-    toolContext: { workspace: new Workspace(workspaceDirectory) },
+    toolContext: { workspace: new Workspace(resources.workspaceDirectory) },
     confirmAction: askConfirmation,
   };
 }
 
-function buildWebToolsOptions(input: CliSessionInput): WebToolsOptions {
-  const { settings, searchApiKey } = input.loadedSettings;
-  if (settings.search === undefined || searchApiKey === null) {
-    console.log('Веб-поиск выключен: нет ключа поиска в .env. Тул web_search не зарегистрирован.');
-    return { webFetch: settings.webFetch, search: null };
+function createSearchOption(
+  provider: SearchProvider | null,
+  searchSettings: SearchSettings | undefined,
+): WebToolsOptions['search'] {
+  if (provider === null || searchSettings === undefined) {
+    return null;
   }
-  return {
-    webFetch: settings.webFetch,
-    search: {
-      provider: new TavilySearchProvider(settings.search, searchApiKey),
-      settings: settings.search,
-    },
-  };
+  return { provider, defaultMaxResults: searchSettings.defaultMaxResults };
 }
 
 function describeNetworkProxy(): string | null {

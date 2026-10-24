@@ -23,6 +23,7 @@ async function main(): Promise<void> {
     question,
     reasoningEffort:
       cliOptions.reasoningEffort ?? loadedSettings.settings.model.defaultReasoningEffort,
+    searchProvider: cliOptions.searchProvider,
     freshWorkspace: cliOptions.freshWorkspace,
     verbose: cliOptions.verbose,
   });

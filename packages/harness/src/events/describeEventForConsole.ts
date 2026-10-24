@@ -22,6 +22,7 @@ const EVENT_DESCRIBERS: EventDescribers = {
       'dim',
       event.networkProxy === null ? 'Сеть: напрямую' : `Сеть: через прокси ${event.networkProxy}`,
     ),
+    styleText('dim', `Поиск: ${event.searchProvider ?? 'выключен'}`),
   ],
   workspace_prepared: describeWorkspacePrepared,
   user_message: (event) => [`Пользователь → харнесс: «${shortenForPreview(event.text)}»`],

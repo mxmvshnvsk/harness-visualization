@@ -79,12 +79,29 @@
     "allowPrivateNetwork": false
   },
   "search": {
-    "providerName": "tavily",
-    "baseUrl": "https://api.tavily.com",
-    "apiKeyVariable": "TAVILY_API_KEY",
-    "requestTimeoutMs": 20000,
+    "provider": "yandex",
     "defaultMaxResults": 5,
-    "searchDepth": "basic"
+    "tavily": {
+      "baseUrl": "https://api.tavily.com",
+      "apiKeyVariable": "TAVILY_API_KEY",
+      "requestTimeoutMs": 20000,
+      "searchDepth": "basic"
+    },
+    "yandex": {
+      "baseUrl": "https://searchapi.api.cloud.yandex.net",
+      "apiKeyVariable": "YANDEX_SEARCH_API_KEY",
+      "folderIdVariable": "YANDEX_SEARCH_FOLDER_ID",
+      "requestTimeoutMs": 20000,
+      "searchType": "SEARCH_TYPE_RU",
+      "maxPassages": 2,
+      "prices": {
+        "currency": "RUB",
+        "synchronousDayPerThousand": 488,
+        "synchronousNightPerThousand": 366,
+        "checkedAt": "2026-10-24",
+        "source": "https://aistudio.yandex.ru/ru/docs/search-api/pricing"
+      }
+    }
   },
   "traces": {
     "directory": "traces"

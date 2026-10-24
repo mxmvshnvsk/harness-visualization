@@ -14,17 +14,13 @@ export interface LoadedSettings {
   // Ключ держим отдельно от настроек, чтобы настройки можно было
   // спокойно показывать и записывать в трейс.
   modelApiKey: string;
-  // null — ключа веб-поиска нет, тул web_search не будет зарегистрирован.
-  searchApiKey: string | null;
 }
 
 export async function loadSettings(projectRoot: string): Promise<LoadedSettings> {
   const settings = await readConfigFile(projectRoot);
   loadEnvFileIfPresent(projectRoot);
   const modelApiKey = await readModelApiKey(settings.model.apiKeyVariable);
-  const searchApiKey =
-    settings.search === undefined ? null : await readOptionalSecret(settings.search.apiKeyVariable);
-  return { settings, modelApiKey, searchApiKey };
+  return { settings, modelApiKey };
 }
 
 async function readConfigFile(projectRoot: string): Promise<HarnessSettings> {
@@ -47,7 +43,9 @@ function loadEnvFileIfPresent(projectRoot: string): void {
   }
 }
 
-async function readOptionalSecret(variableName: string): Promise<string | null> {
+// Читает необязательный секрет из окружения (после loadSettings в нём уже есть .env).
+// null — переменная не задана: например, у пользователя нет ключа этого поисковика.
+export async function readOptionalSecret(variableName: string): Promise<string | null> {
   const rawValue = process.env[variableName];
   if (rawValue === undefined || rawValue.trim() === '') {
     return null;
