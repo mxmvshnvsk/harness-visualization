@@ -21,6 +21,10 @@ export interface DownloadedPage {
   redirects: number;
 }
 
+// Как получить страницу по адресу. Обычно — из интернета через downloadPage;
+// подменяемая функция позволяет отдавать страницы из другого источника, например в проверках без сети.
+export type LoadPage = (url: string) => Promise<DownloadedPage>;
+
 export async function downloadPage(
   startUrl: string,
   settings: WebFetchSettings,

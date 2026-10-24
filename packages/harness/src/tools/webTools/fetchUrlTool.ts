@@ -5,7 +5,7 @@ import type { WebFetchSettings } from '../../settings/settingsSchema.js';
 import { defineTool } from '../defineTool.js';
 import { ToolError } from '../ToolError.js';
 import type { Tool } from '../toolTypes.js';
-import { downloadPage, type DownloadedPage } from './downloadPage.js';
+import { downloadPage, type DownloadedPage, type LoadPage } from './downloadPage.js';
 import { extractReadableText } from './extractReadableText.js';
 
 const PLAIN_TEXT_TYPES = ['text/plain', 'text/markdown', 'application/json', 'text/csv'];
@@ -16,7 +16,9 @@ interface PageText {
   mainContentExtracted: boolean;
 }
 
-export function createFetchUrlTool(settings: WebFetchSettings): Tool {
+// loadPage: null — страницы загружаются из интернета.
+export function createFetchUrlTool(settings: WebFetchSettings, loadPage: LoadPage | null): Tool {
+  const load = loadPage ?? ((url: string) => downloadPage(url, settings));
   return defineTool({
     name: 'fetch_url',
     description:
@@ -30,7 +32,7 @@ export function createFetchUrlTool(settings: WebFetchSettings): Tool {
     describeAction: (toolArguments) => `Загрузить страницу ${toolArguments.url}`,
     targets: (toolArguments) => [{ kind: 'host', host: new URL(toolArguments.url).hostname }],
     async execute(toolArguments) {
-      const page = await downloadPage(toolArguments.url, settings);
+      const page = await load(toolArguments.url);
       const pageText = convertToText(page);
       const fullText = composeContent(page, pageText);
       const content = truncate(fullText, settings.maxCharacters);

@@ -1,32 +1,29 @@
 // Собирает сессию: поток событий, подписчиков, провайдера, песочницу и тулы —
 // и запускает один ход агента.
 
-import { randomUUID } from 'node:crypto';
-import { join, relative } from 'node:path';
+import { join } from 'node:path';
 import type { AgentDependencies } from '../agent/agentDependencies.js';
 import { runAgentTurn } from '../agent/runAgentTurn.js';
-import { askConfirmation } from './askConfirmation.js';
-import { readProxyStatus } from './networkProxy.js';
-import { createConsolePrinter } from '../events/createConsolePrinter.js';
-import { EventStream } from '../events/EventStream.js';
-import { JsonlTraceWriter } from '../events/JsonlTraceWriter.js';
-import type { ReasoningEffort } from '../model/chatTypes.js';
-import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
+import type { EventStream } from '../events/EventStream.js';
 import {
   closeMcpServers,
   connectMcpServers,
   type ConnectedMcpServers,
 } from '../mcp/connectMcpServers.js';
+import type { ReasoningEffort } from '../model/chatTypes.js';
+import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
 import type { LoadedSettings } from '../settings/loadSettings.js';
 import type { SearchProviderName, SearchSettings } from '../settings/settingsSchema.js';
-import { SessionTokenomics } from '../tokenomics/SessionTokenomics.js';
 import { createSearchProvider } from '../search/createSearchProvider.js';
 import type { SearchProvider } from '../search/searchProvider.js';
 import { createFileTools } from '../tools/fileTools/createFileTools.js';
 import { createWebTools, type WebToolsOptions } from '../tools/webTools/createWebTools.js';
 import { ToolRegistry } from '../tools/ToolRegistry.js';
-import { prepareWorkspace, type PreparedWorkspace } from '../workspace/prepareWorkspace.js';
+import { prepareWorkspace } from '../workspace/prepareWorkspace.js';
 import { Workspace } from '../workspace/Workspace.js';
+import { announceSession } from './announceSession.js';
+import { askConfirmation } from './askConfirmation.js';
+import { startSessionRecording } from './sessionRecording.js';
 
 export interface CliSessionInput {
   loadedSettings: LoadedSettings;
@@ -42,18 +39,12 @@ export interface CliSessionInput {
 
 export async function runCliSession(input: CliSessionInput): Promise<void> {
   const { settings } = input.loadedSettings;
-  const events = new EventStream(createSessionId());
-  const tokenomics = new SessionTokenomics();
-  const traceWriter = await JsonlTraceWriter.open(
-    join(input.projectRoot, settings.traces.directory),
-    events.sessionId,
-  );
-
-  // Порядок важен: токеномика должна учесть ответ модели раньше,
-  // чем придёт событие об окончании сессии.
-  events.subscribe((event) => traceWriter.write(event));
-  events.subscribe((event) => tokenomics.handleEvent(event));
-  events.subscribe(createConsolePrinter({ verbose: input.verbose }));
+  const recording = await startSessionRecording({
+    projectRoot: input.projectRoot,
+    tracesDirectory: settings.traces.directory,
+    verbose: input.verbose,
+  });
+  const { events } = recording;
 
   const workspaceDirectory = join(input.projectRoot, settings.workspace.directory);
   const preparedWorkspace = await prepareWorkspace({
@@ -63,8 +54,13 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     reset: input.freshWorkspace,
   });
   const searchProvider = await prepareSearchProvider(input);
-  const startedAt = performance.now();
-  announceSession(input, events, preparedWorkspace, searchProvider);
+  announceSession(events, {
+    settings,
+    reasoningEffort: input.reasoningEffort,
+    workspaceDirectory: settings.workspace.directory,
+    preparedWorkspace,
+    searchProviderName: searchProvider?.name ?? null,
+  });
   const mcpServers = await connectMcpServers(settings.mcpServers, {
     projectRoot: input.projectRoot,
     events,
@@ -85,39 +81,8 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     process.exitCode = 1;
   } finally {
     await closeMcpServers(mcpServers.connections, events);
-    events.emit({
-      type: 'session_finished',
-      durationMs: Math.round(performance.now() - startedAt),
-      ...tokenomics.summary(),
-    });
-    await traceWriter.close();
-    console.log(`Трейс сессии: ${relative(input.projectRoot, traceWriter.filePath)}`);
+    await recording.finish();
   }
-}
-
-// Первые события сессии: с какой моделью, через какую сеть и в какой папке работает агент.
-function announceSession(
-  input: CliSessionInput,
-  events: EventStream,
-  preparedWorkspace: PreparedWorkspace,
-  searchProvider: SearchProvider | null,
-): void {
-  const { settings } = input.loadedSettings;
-  events.emit({
-    type: 'session_started',
-    providerName: settings.model.providerName,
-    baseUrl: settings.model.baseUrl,
-    model: settings.model.model,
-    reasoningEffort: input.reasoningEffort,
-    networkProxy: describeNetworkProxy(),
-    searchProvider: searchProvider?.name ?? null,
-  });
-  events.emit({
-    type: 'workspace_prepared',
-    directory: settings.workspace.directory,
-    createdFromSeed: preparedWorkspace.createdFromSeed,
-    wasReset: preparedWorkspace.wasReset,
-  });
 }
 
 async function prepareSearchProvider(input: CliSessionInput): Promise<SearchProvider | null> {
@@ -147,6 +112,7 @@ function createAgentDependencies(
   const webTools = createWebTools({
     webFetch: settings.webFetch,
     search: createSearchOption(resources.searchProvider, settings.search),
+    loadPage: null,
   });
   const tools = new ToolRegistry();
   for (const tool of [...createFileTools(), ...webTools, ...resources.mcpServers.tools]) {
@@ -173,14 +139,4 @@ function createSearchOption(
     return null;
   }
   return { provider, defaultMaxResults: searchSettings.defaultMaxResults };
-}
-
-function describeNetworkProxy(): string | null {
-  const proxyStatus = readProxyStatus();
-  return proxyStatus.enabledForNode ? proxyStatus.proxyUrl : null;
-}
-
-// Короткий идентификатор удобнее читать в консоли и в именах файлов.
-function createSessionId(): string {
-  return randomUUID().slice(0, 8);
 }
