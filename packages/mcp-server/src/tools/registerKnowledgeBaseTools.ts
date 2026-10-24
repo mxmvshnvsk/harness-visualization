@@ -1,21 +1,14 @@
-// Тулы MCP-сервера базы знаний. Все только читают — это заявлено в annotations.readOnlyHint.
-// Важно: пометки — это заявление сервера. Клиент сам решает, верить ли им.
+// Тулы MCP-сервера базы знаний: поиск по словам, чтение документа, каталог.
+// Все только читают — это заявлено в annotations.readOnlyHint.
 
 import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import type { KnowledgeDocument } from '../knowledgeBase/documentTypes.js';
 import { searchDocuments, type SearchHit } from '../knowledgeBase/searchDocuments.js';
+import { READ_ONLY_ANNOTATIONS } from './readOnlyAnnotations.js';
 
 const DEFAULT_SEARCH_LIMIT = 5;
 const MAX_SEARCH_LIMIT = 20;
-// openWorldHint: false — тулы не ходят во внешний мир: вся база лежит рядом с сервером.
-// Без этой пометки клиент по спецификации должен считать, что ходят.
-const READ_ONLY = {
-  readOnlyHint: true,
-  destructiveHint: false,
-  idempotentHint: true,
-  openWorldHint: false,
-};
 
 export function registerKnowledgeBaseTools(
   server: McpServer,
@@ -32,7 +25,7 @@ function registerSearchTool(server: McpServer, documents: KnowledgeDocument[]): 
     {
       title: 'Поиск по базе знаний',
       description:
-        'Ищет документы базы знаний компании «Кедр Софт» по словам: регламенты, проекты, ' +
+        'Ищет документы базы знаний компании «Кедр Софт» по словам запроса: регламенты, проекты, ' +
         'протоколы встреч, FAQ, разборы инцидентов, справочник сотрудников. ' +
         'Возвращает документы с датой и подходящим фрагментом. Чтобы прочитать документ целиком, используй read_document.',
       inputSchema: z.object({
@@ -45,7 +38,7 @@ function registerSearchTool(server: McpServer, documents: KnowledgeDocument[]): 
           .optional()
           .describe(`Сколько документов вернуть, по умолчанию ${DEFAULT_SEARCH_LIMIT}`),
       }),
-      annotations: READ_ONLY,
+      annotations: READ_ONLY_ANNOTATIONS,
     },
     ({ query, limit }) => {
       const hits = searchDocuments(documents, query, limit ?? DEFAULT_SEARCH_LIMIT);
@@ -68,7 +61,7 @@ function registerReadDocumentTool(server: McpServer, documents: KnowledgeDocumen
       inputSchema: z.object({
         id: z.string().min(1).describe('Идентификатор документа, например regulations/vacation'),
       }),
-      annotations: READ_ONLY,
+      annotations: READ_ONLY_ANNOTATIONS,
     },
     ({ id }) => {
       const document = documents.find((candidate) => candidate.id === id);
@@ -101,7 +94,7 @@ function registerListDocumentsTool(server: McpServer, documents: KnowledgeDocume
           .optional()
           .describe('Тип документа: regulation, project, meeting, faq, incident, team, glossary'),
       }),
-      annotations: READ_ONLY,
+      annotations: READ_ONLY_ANNOTATIONS,
     },
     ({ type }) => {
       const selected =

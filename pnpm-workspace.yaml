@@ -1,2 +1,9 @@
 packages:
   - packages/*
+
+# Скрипты установки этих пакетов не нужны: двоичные файлы для macOS, Linux и Windows
+# уже лежат в пакете onnxruntime-node (скрипт докачивает только CUDA), а protobufjs
+# скриптом лишь проверяет версию. pnpm 10 их и так не запускает — список убирает предупреждение.
+ignoredBuiltDependencies:
+  - onnxruntime-node
+  - protobufjs

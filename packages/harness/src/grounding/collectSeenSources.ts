@@ -1,7 +1,7 @@
 // Проходит события трейса по порядку и собирает, что модель видела по каждому источнику
 // и на каком уровне. Уровень определяется тем, какой тул его показал:
 //   - read_document, read_file, fetch_url — источник прочитан целиком (full);
-//   - search, web_search, search_files — виден только фрагментом в выдаче (fragment);
+//   - search, semantic_search, web_search, search_files — виден только фрагментом в выдаче (fragment);
 //   - list_documents, list_files — виден только в каталоге (catalog).
 // Побеждает самый сильный уровень: если документ сначала мелькнул в каталоге,
 // а потом был прочитан целиком, останется full.
@@ -14,7 +14,7 @@ const LEVEL_RANK: Record<SourceLevel, number> = { full: 0, fragment: 1, catalog:
 
 // Действие тула (без префикса MCP-сервера) → уровень, который он даёт источнику.
 const FULL_READ_ACTIONS = ['read_document', 'read_file'];
-const FRAGMENT_ACTIONS = ['search', 'web_search', 'search_files'];
+const FRAGMENT_ACTIONS = ['search', 'semantic_search', 'web_search', 'search_files'];
 const CATALOG_ACTIONS = ['list_documents', 'list_files'];
 
 export type SeenSources = Map<string, SeenSource>;
