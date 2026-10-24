@@ -1,6 +1,7 @@
 // Разбирает аргументы командной строки:
 //   pnpm chat "Сколько дней отпуска положено?"
 //   pnpm chat --effort off "вопрос"   — уровень рассуждений: off, low, high, max
+//   pnpm chat --fresh "вопрос"        — начать с чистой рабочей папки (пересоздать из примеров)
 //   pnpm chat --verbose "вопрос"      — печатать и полные события в JSON
 
 import { parseArgs } from 'node:util';
@@ -11,6 +12,7 @@ export interface CliOptions {
   question: string | null;
   // null — флаг не передан, берём уровень из harness.config.json.
   reasoningEffort: ReasoningEffort | null;
+  freshWorkspace: boolean;
   verbose: boolean;
 }
 
@@ -20,6 +22,7 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
     allowPositionals: true,
     options: {
       effort: { type: 'string' },
+      fresh: { type: 'boolean', default: false },
       verbose: { type: 'boolean', default: false },
     },
   });
@@ -27,6 +30,7 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
   return {
     question: question === '' ? null : question,
     reasoningEffort: values.effort === undefined ? null : parseReasoningEffort(values.effort),
+    freshWorkspace: values.fresh,
     verbose: values.verbose,
   };
 }

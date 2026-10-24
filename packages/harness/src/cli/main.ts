@@ -21,6 +21,7 @@ async function main(): Promise<void> {
     question,
     reasoningEffort:
       cliOptions.reasoningEffort ?? loadedSettings.settings.model.defaultReasoningEffort,
+    freshWorkspace: cliOptions.freshWorkspace,
     verbose: cliOptions.verbose,
   });
 }

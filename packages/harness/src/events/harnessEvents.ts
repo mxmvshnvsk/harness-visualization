@@ -20,6 +20,16 @@ export interface SessionStartedPayload {
   reasoningEffort: ReasoningEffort;
 }
 
+export interface WorkspacePreparedPayload {
+  type: 'workspace_prepared';
+  // Папка песочницы относительно корня проекта.
+  directory: string;
+  // true — папка создана только что из примеров.
+  createdFromSeed: boolean;
+  // true — прежняя папка удалена по флагу --fresh.
+  wasReset: boolean;
+}
+
 export interface UserMessagePayload {
   type: 'user_message';
   text: string;
@@ -108,6 +118,7 @@ export interface ErrorPayload {
 
 export type HarnessEventPayload =
   | SessionStartedPayload
+  | WorkspacePreparedPayload
   | UserMessagePayload
   | PromptAssembledPayload
   | ModelRequestPayload

@@ -22,6 +22,8 @@ export interface CliSessionInput {
   projectRoot: string;
   question: string;
   reasoningEffort: ReasoningEffort;
+  // true — пересоздать рабочую папку из примеров (флаг --fresh).
+  freshWorkspace: boolean;
   verbose: boolean;
 }
 
@@ -40,7 +42,14 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
   events.subscribe((event) => tokenomics.handleEvent(event));
   events.subscribe(createConsolePrinter({ verbose: input.verbose }));
 
-  const dependencies = await createAgentDependencies(input, events);
+  const workspaceDirectory = join(input.projectRoot, settings.workspace.directory);
+  const preparedWorkspace = await prepareWorkspace({
+    projectRoot: input.projectRoot,
+    workspaceDirectory,
+    seedDirectory: join(input.projectRoot, settings.workspace.seedDirectory),
+    reset: input.freshWorkspace,
+  });
+  const dependencies = createAgentDependencies(input, events, workspaceDirectory);
   const startedAt = performance.now();
   events.emit({
     type: 'session_started',
@@ -48,6 +57,12 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     baseUrl: settings.model.baseUrl,
     model: settings.model.model,
     reasoningEffort: input.reasoningEffort,
+  });
+  events.emit({
+    type: 'workspace_prepared',
+    directory: settings.workspace.directory,
+    createdFromSeed: preparedWorkspace.createdFromSeed,
+    wasReset: preparedWorkspace.wasReset,
   });
 
   try {
@@ -69,20 +84,12 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
   }
 }
 
-async function createAgentDependencies(
+function createAgentDependencies(
   input: CliSessionInput,
   events: EventStream,
-): Promise<AgentDependencies> {
+  workspaceDirectory: string,
+): AgentDependencies {
   const { settings, modelApiKey } = input.loadedSettings;
-  const workspaceDirectory = join(input.projectRoot, settings.workspace.directory);
-  const preparedWorkspace = await prepareWorkspace(
-    workspaceDirectory,
-    join(input.projectRoot, settings.workspace.seedDirectory),
-  );
-  if (preparedWorkspace.createdFromSeed) {
-    console.log(`Рабочая папка создана из примеров: ${settings.workspace.directory}/`);
-  }
-
   const tools = new ToolRegistry();
   for (const tool of createFileTools()) {
     tools.register(tool);

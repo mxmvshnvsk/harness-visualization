@@ -19,6 +19,7 @@ const EVENT_DESCRIBERS: EventDescribers = {
       `Сессия ${event.sessionId} · ${event.providerName} · ${event.model} · effort ${event.reasoningEffort}`,
     ),
   ],
+  workspace_prepared: describeWorkspacePrepared,
   user_message: (event) => [`Пользователь → харнесс: «${shortenForPreview(event.text)}»`],
   prompt_assembled: describePromptAssembled,
   model_request: (event) => [
@@ -46,6 +47,16 @@ export function describeEventForConsole(event: HarnessEvent): string[] {
   // хотя по построению таблицы они всегда совпадают, — поэтому приводим тип явно.
   const describe = EVENT_DESCRIBERS[event.type] as (event: HarnessEvent) => string[];
   return describe(event);
+}
+
+function describeWorkspacePrepared(event: EventOfType<'workspace_prepared'>): string[] {
+  if (event.wasReset) {
+    return [`Рабочая папка пересоздана из примеров: ${event.directory}/`];
+  }
+  if (event.createdFromSeed) {
+    return [`Рабочая папка создана из примеров: ${event.directory}/`];
+  }
+  return [styleText('dim', `Рабочая папка: ${event.directory}/ (файлы прошлых сессий сохранены)`)];
 }
 
 function describePromptAssembled(event: EventOfType<'prompt_assembled'>): string[] {
