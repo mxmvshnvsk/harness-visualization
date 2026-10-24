@@ -5,7 +5,7 @@
   "description": "Учебный харнесс для ИИ-агентов с визуализацией потока данных",
   "license": "MIT",
   "type": "module",
-  "packageManager": "pnpm@12.15.0",
+  "packageManager": "pnpm@10.34.8",
   "engines": {
     "node": ">=22.13"
   },
