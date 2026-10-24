@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type { ActionTarget, ToolEffect } from '../permissions/permissionTypes.js';
 import { ToolError } from './ToolError.js';
 import type { PreparedToolCall, Tool, ToolContext, ToolOutput } from './toolTypes.js';
+import { withoutSchemaKeyword } from './withoutSchemaKeyword.js';
 
 const MAX_DEFAULT_DESCRIPTION_LENGTH = 120;
 
@@ -82,15 +83,6 @@ function describeAction<ArgumentsSchema extends z.ZodType>(
 
 // io: 'input' — описываем то, что модель должна прислать, а не то, что получится
 // после подстановки значений по умолчанию: поле с default становится необязательным.
-// Поле $schema нужно валидаторам JSON Schema, но не модели — убираем его,
-// чтобы не тратить токены в каждом запросе.
 function buildParametersSchema(argumentsSchema: z.ZodType): Record<string, unknown> {
-  const jsonSchema: Record<string, unknown> = z.toJSONSchema(argumentsSchema, { io: 'input' });
-  const parametersSchema: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(jsonSchema)) {
-    if (key !== '$schema') {
-      parametersSchema[key] = value;
-    }
-  }
-  return parametersSchema;
+  return withoutSchemaKeyword(z.toJSONSchema(argumentsSchema, { io: 'input' }));
 }

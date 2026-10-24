@@ -4,6 +4,7 @@
 
 import { styleText } from 'node:util';
 import type { HarnessEvent, HarnessEventType } from './harnessEvents.js';
+import { describeJsonRpcMessage } from '../mcp/describeJsonRpcMessage.js';
 import { formatMoney, formatNumber, formatUsage, shortenForPreview } from './formatForConsole.js';
 
 type EventOfType<Type extends HarnessEventType> = Extract<HarnessEvent, { type: Type }>;
@@ -25,6 +26,28 @@ const EVENT_DESCRIBERS: EventDescribers = {
     styleText('dim', `Поиск: ${event.searchProvider ?? 'выключен'}`),
   ],
   workspace_prepared: describeWorkspacePrepared,
+  mcp_server_starting: (event) => [
+    styleText(
+      'blue',
+      `Харнесс запускает MCP-сервер ${event.serverName}: ${event.command} ${event.args.join(' ')}`,
+    ),
+  ],
+  mcp_server_ready: describeMcpServerReady,
+  mcp_server_failed: (event) => [
+    styleText('red', `MCP-сервер ${event.serverName} не запустился: ${event.message}`),
+  ],
+  mcp_message: (event) => [
+    styleText(
+      'dim',
+      event.direction === 'to_server'
+        ? `    харнесс → MCP ${event.serverName}: ${describeJsonRpcMessage(event.message)}`
+        : `    MCP ${event.serverName} → харнесс: ${describeJsonRpcMessage(event.message)}`,
+    ),
+  ],
+  mcp_server_log: (event) => [
+    styleText('dim', `    MCP ${event.serverName} (stderr): ${event.text}`),
+  ],
+  mcp_server_stopped: (event) => [styleText('dim', `MCP-сервер ${event.serverName} остановлен`)],
   user_message: (event) => [`Пользователь → харнесс: «${shortenForPreview(event.text)}»`],
   prompt_assembled: describePromptAssembled,
   model_request: (event) => [
@@ -72,6 +95,31 @@ function describeWorkspacePrepared(event: EventOfType<'workspace_prepared'>): st
     return [`Рабочая папка создана из примеров: ${event.directory}/`];
   }
   return [styleText('dim', `Рабочая папка: ${event.directory}/ (файлы прошлых сессий сохранены)`)];
+}
+
+function describeMcpServerReady(event: EventOfType<'mcp_server_ready'>): string[] {
+  const server =
+    event.serverInfo === null ? '' : ` (${event.serverInfo.name} ${event.serverInfo.version})`;
+  const lines = [
+    styleText(
+      'blue',
+      `MCP-сервер ${event.serverName}${server} готов за ${formatNumber(event.durationMs)} мс, протокол ${event.protocolVersion ?? '—'}`,
+    ),
+  ];
+  for (const tool of event.tools) {
+    const effects =
+      tool.effects.length > 0 ? tool.effects.join(', ') : 'не заявлены — решит defaultDecision';
+    lines.push(styleText('dim', `    тул ${tool.name}: ${effects}`));
+  }
+  if (event.instructions !== null) {
+    lines.push(
+      styleText(
+        'dim',
+        `    инструкции → в системный промпт: ${shortenForPreview(event.instructions)}`,
+      ),
+    );
+  }
+  return lines;
 }
 
 function describePromptAssembled(event: EventOfType<'prompt_assembled'>): string[] {

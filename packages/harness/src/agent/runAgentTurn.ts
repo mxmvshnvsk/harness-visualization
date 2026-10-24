@@ -14,7 +14,7 @@ import type {
 import type { AgentDependencies } from './agentDependencies.js';
 import { executeToolCall } from './executeToolCall.js';
 import { requestModel } from './requestModel.js';
-import { buildSystemPrompt } from './systemPrompt.js';
+import { buildSystemPrompt, type McpServerInstructions } from './systemPrompt.js';
 
 export interface TurnOptions {
   reasoningEffort: ReasoningEffort;
@@ -29,7 +29,7 @@ export async function runAgentTurn(
   const { events, tools } = dependencies;
   events.emit({ type: 'user_message', text: userText });
 
-  const messages = assembleInitialContext(userText);
+  const messages = assembleInitialContext(userText, dependencies.mcpServerInstructions);
   events.emit({ type: 'prompt_assembled', messages: [...messages], toolNames: tools.names() });
 
   for (let iteration = 1; iteration <= options.maxIterations; iteration += 1) {
@@ -55,9 +55,12 @@ export async function runAgentTurn(
 }
 
 // Модель не помнит прошлых запросов: всё, что она должна знать, харнесс кладёт сюда.
-function assembleInitialContext(userText: string): ChatMessage[] {
+function assembleInitialContext(
+  userText: string,
+  mcpInstructions: McpServerInstructions[],
+): ChatMessage[] {
   return [
-    { role: 'system', content: buildSystemPrompt(new Date()) },
+    { role: 'system', content: buildSystemPrompt(new Date(), mcpInstructions) },
     { role: 'user', content: userText },
   ];
 }

@@ -19,6 +19,12 @@
 | ---------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
 | `session_started`      | сессия началась                                                    | `providerName`, `baseUrl`, `model`, `reasoningEffort`, `networkProxy`, `searchProvider`             |
 | `workspace_prepared`   | песочница готова к сессии                                          | `directory`, `createdFromSeed`, `wasReset`                                                          |
+| `mcp_server_starting`  | харнесс запускает MCP-сервер                                       | `serverName`, `command`, `args`, `trustAnnotations`                                                 |
+| `mcp_server_ready`     | рукопожатие прошло, список тулов получен                           | `serverName`, `serverInfo`, `protocolVersion`, `instructions`, `tools`, `durationMs`                |
+| `mcp_server_failed`    | сервер не запустился, сессия идёт без его тулов                    | `serverName`, `message`                                                                             |
+| `mcp_message`          | сообщение JSON-RPC между харнессом и MCP-сервером                  | `serverName`, `direction` (`to_server`, `from_server`), `message`                                   |
+| `mcp_server_log`       | строка из stderr сервера                                           | `serverName`, `text`                                                                                |
+| `mcp_server_stopped`   | харнесс остановил сервер в конце сессии                            | `serverName`                                                                                        |
 | `user_message`         | пришёл запрос пользователя                                         | `text`                                                                                              |
 | `prompt_assembled`     | харнесс собрал контекст для модели                                 | `messages`, `toolNames`                                                                             |
 | `model_request`        | HTTP-запрос к модели собран и отправляется                         | `requestId`, `iteration`, `reasoningEffort`, `method`, `url`, `headers` (секреты скрыты), `body`    |
@@ -66,6 +72,10 @@ assistant_message
 - `details` — подробности для трейса и токеномики, модель их не видит. У `fetch_url` это адрес после перенаправлений, вес скачанного HTML и сколько символов текста из него получилось; у `web_search` — кредиты Tavily и время ответа или, у Яндекса, размер полученного XML и стоимость поиска по дневному или ночному тарифу.
 
 Между `tool_call` и `tool_result` всегда стоит `permission_evaluated` — «след решения» политики: все проверки по порядку (`checks`: источник, что проверялось, подошло ли, решение), итог `decision` (`allow`, `ask`, `deny`) и причина `reason`. Если итог `ask`, дальше идут `permission_requested` и `permission_resolved`. Возможность действия харнесс проверяет до вопроса: про несуществующий файл пользователя не спрашивают. Время, пока пользователь решал, записано в `waitedForUserMs` и в `durationMs` тула не входит.
+
+## MCP
+
+Вызов MCP-тула для цикла агента — обычный `tool_call` → `permission_evaluated` → `tool_result`, а между ними — пара `mcp_message`: запрос `tools/call` и ответ с тем же `id`. В `tools` события `mcp_server_ready` у каждого тула есть имя для модели (`kedr__search`), имя на сервере (`search`), пометки сервера (`annotations`) и классы действий, которые харнесс из них вывел (`effects`). Пустые `effects` значат, что пометкам сервера харнесс не доверяет (`trustAnnotations: false`), и решение примет `defaultDecision`. В `details` результата MCP-тула — `mcpServer` и `mcpTool`.
 
 ## Токены и стоимость
 

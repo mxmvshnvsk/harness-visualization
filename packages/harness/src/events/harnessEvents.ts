@@ -40,6 +40,67 @@ export interface WorkspacePreparedPayload {
   wasReset: boolean;
 }
 
+export interface McpServerStartingPayload {
+  type: 'mcp_server_starting';
+  serverName: string;
+  command: string;
+  args: string[];
+  trustAnnotations: boolean;
+}
+
+// Тул MCP-сервера глазами харнесса.
+export interface McpToolSummary {
+  // Имя для модели, с префиксом сервера: kedr__search.
+  name: string;
+  // Имя на самом сервере: search.
+  mcpName: string;
+  // Пометки, которые прислал сервер; null — сервер их не указал.
+  annotations: Record<string, unknown> | null;
+  // Классы действий, которые харнесс вывел из пометок; пусто, если пометкам не доверяем.
+  effects: ToolEffect[];
+}
+
+export interface McpServerReadyPayload {
+  type: 'mcp_server_ready';
+  serverName: string;
+  // Как сервер представился: имя и версия.
+  serverInfo: { name: string; version: string } | null;
+  protocolVersion: string | null;
+  // Инструкции сервера — харнесс добавляет их в системный промпт.
+  instructions: string | null;
+  tools: McpToolSummary[];
+  durationMs: number;
+}
+
+export interface McpServerFailedPayload {
+  type: 'mcp_server_failed';
+  serverName: string;
+  message: string;
+}
+
+// to_server — от харнесса к серверу, from_server — от сервера к харнессу.
+export type McpMessageDirection = 'to_server' | 'from_server';
+
+// Одно сообщение JSON-RPC между харнессом и MCP-сервером, как есть.
+export interface McpMessagePayload {
+  type: 'mcp_message';
+  serverName: string;
+  direction: McpMessageDirection;
+  message: unknown;
+}
+
+// Строка, которую сервер написал в stderr: stdout у него занят протоколом.
+export interface McpServerLogPayload {
+  type: 'mcp_server_log';
+  serverName: string;
+  text: string;
+}
+
+export interface McpServerStoppedPayload {
+  type: 'mcp_server_stopped';
+  serverName: string;
+}
+
 export interface UserMessagePayload {
   type: 'user_message';
   text: string;
@@ -165,6 +226,12 @@ export interface ErrorPayload {
 export type HarnessEventPayload =
   | SessionStartedPayload
   | WorkspacePreparedPayload
+  | McpServerStartingPayload
+  | McpServerReadyPayload
+  | McpServerFailedPayload
+  | McpMessagePayload
+  | McpServerLogPayload
+  | McpServerStoppedPayload
   | UserMessagePayload
   | PromptAssembledPayload
   | ModelRequestPayload

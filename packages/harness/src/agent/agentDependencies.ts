@@ -7,6 +7,7 @@ import type { ModelProvider } from '../model/modelProvider.js';
 import type { ModelPrices, PermissionsSettings } from '../settings/settingsSchema.js';
 import type { ToolRegistry } from '../tools/ToolRegistry.js';
 import type { ToolContext } from '../tools/toolTypes.js';
+import type { McpServerInstructions } from './systemPrompt.js';
 
 export interface ConfirmationRequest {
   toolName: string;
@@ -26,4 +27,6 @@ export interface AgentDependencies {
   confirmAction: ConfirmAction;
   // Правила, по которым харнесс решает: разрешить вызов тула, спросить пользователя или запретить.
   permissionPolicy: PermissionsSettings;
+  // Инструкции подключённых MCP-серверов — попадут в системный промпт.
+  mcpServerInstructions: McpServerInstructions[];
 }

@@ -1,5 +1,11 @@
 // Системный промпт. На следующих этапах к нему добавятся память (memo.md) и каталог скиллов.
 
+// Инструкции, которые MCP-сервер прислал при рукопожатии.
+export interface McpServerInstructions {
+  serverName: string;
+  text: string;
+}
+
 const BASE_INSTRUCTIONS = [
   'Ты — ассистент учебного проекта Harness Visualization.',
   'Отвечай кратко и по делу, на языке пользователя.',
@@ -16,8 +22,26 @@ const BASE_INSTRUCTIONS = [
 // Дата — с точностью до дня и в самом конце промпта. Кэш промпта работает по общему
 // началу запроса: дата меняется раз в сутки, а всё, что выше неё, остаётся в кэше.
 // Время с минутами сломало бы кэш в каждом запросе.
-export function buildSystemPrompt(now: Date): string {
-  return [...BASE_INSTRUCTIONS, describeToday(now)].join('\n');
+export function buildSystemPrompt(now: Date, mcpInstructions: McpServerInstructions[]): string {
+  return [
+    ...BASE_INSTRUCTIONS,
+    ...describeMcpInstructions(mcpInstructions),
+    describeToday(now),
+  ].join('\n');
+}
+
+// Инструкции пишет автор сервера, а не пользователь, — модель должна это видеть.
+// Харнесс вставляет их в системный промпт, то есть доверяет им почти как своим.
+function describeMcpInstructions(mcpInstructions: McpServerInstructions[]): string[] {
+  if (mcpInstructions.length === 0) {
+    return [];
+  }
+  return [
+    '',
+    'Инструкции MCP-серверов (их написали авторы серверов):',
+    ...mcpInstructions.map((instructions) => `[${instructions.serverName}] ${instructions.text}`),
+    '',
+  ];
 }
 
 function describeToday(now: Date): string {

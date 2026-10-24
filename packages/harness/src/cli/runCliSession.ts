@@ -12,6 +12,11 @@ import { EventStream } from '../events/EventStream.js';
 import { JsonlTraceWriter } from '../events/JsonlTraceWriter.js';
 import type { ReasoningEffort } from '../model/chatTypes.js';
 import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
+import {
+  closeMcpServers,
+  connectMcpServers,
+  type ConnectedMcpServers,
+} from '../mcp/connectMcpServers.js';
 import type { LoadedSettings } from '../settings/loadSettings.js';
 import type { SearchProviderName, SearchSettings } from '../settings/settingsSchema.js';
 import { SessionTokenomics } from '../tokenomics/SessionTokenomics.js';
@@ -20,7 +25,7 @@ import type { SearchProvider } from '../search/searchProvider.js';
 import { createFileTools } from '../tools/fileTools/createFileTools.js';
 import { createWebTools, type WebToolsOptions } from '../tools/webTools/createWebTools.js';
 import { ToolRegistry } from '../tools/ToolRegistry.js';
-import { prepareWorkspace } from '../workspace/prepareWorkspace.js';
+import { prepareWorkspace, type PreparedWorkspace } from '../workspace/prepareWorkspace.js';
 import { Workspace } from '../workspace/Workspace.js';
 
 export interface CliSessionInput {
@@ -58,11 +63,46 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     reset: input.freshWorkspace,
   });
   const searchProvider = await prepareSearchProvider(input);
+  const startedAt = performance.now();
+  announceSession(input, events, preparedWorkspace, searchProvider);
+  const mcpServers = await connectMcpServers(settings.mcpServers, {
+    projectRoot: input.projectRoot,
+    events,
+  });
   const dependencies = createAgentDependencies(input, events, {
     workspaceDirectory,
     searchProvider,
+    mcpServers,
   });
-  const startedAt = performance.now();
+
+  try {
+    await runAgentTurn(input.question, dependencies, {
+      reasoningEffort: input.reasoningEffort,
+      maxIterations: settings.agent.maxIterations,
+    });
+  } catch (error) {
+    events.emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
+    process.exitCode = 1;
+  } finally {
+    await closeMcpServers(mcpServers.connections, events);
+    events.emit({
+      type: 'session_finished',
+      durationMs: Math.round(performance.now() - startedAt),
+      ...tokenomics.summary(),
+    });
+    await traceWriter.close();
+    console.log(`Трейс сессии: ${relative(input.projectRoot, traceWriter.filePath)}`);
+  }
+}
+
+// Первые события сессии: с какой моделью, через какую сеть и в какой папке работает агент.
+function announceSession(
+  input: CliSessionInput,
+  events: EventStream,
+  preparedWorkspace: PreparedWorkspace,
+  searchProvider: SearchProvider | null,
+): void {
+  const { settings } = input.loadedSettings;
   events.emit({
     type: 'session_started',
     providerName: settings.model.providerName,
@@ -78,24 +118,6 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     createdFromSeed: preparedWorkspace.createdFromSeed,
     wasReset: preparedWorkspace.wasReset,
   });
-
-  try {
-    await runAgentTurn(input.question, dependencies, {
-      reasoningEffort: input.reasoningEffort,
-      maxIterations: settings.agent.maxIterations,
-    });
-  } catch (error) {
-    events.emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
-    process.exitCode = 1;
-  } finally {
-    events.emit({
-      type: 'session_finished',
-      durationMs: Math.round(performance.now() - startedAt),
-      ...tokenomics.summary(),
-    });
-    await traceWriter.close();
-    console.log(`Трейс сессии: ${relative(input.projectRoot, traceWriter.filePath)}`);
-  }
 }
 
 async function prepareSearchProvider(input: CliSessionInput): Promise<SearchProvider | null> {
@@ -113,6 +135,7 @@ interface SessionResources {
   workspaceDirectory: string;
   // null — веб-поиск выключен.
   searchProvider: SearchProvider | null;
+  mcpServers: ConnectedMcpServers;
 }
 
 function createAgentDependencies(
@@ -126,7 +149,7 @@ function createAgentDependencies(
     search: createSearchOption(resources.searchProvider, settings.search),
   });
   const tools = new ToolRegistry();
-  for (const tool of [...createFileTools(), ...webTools]) {
+  for (const tool of [...createFileTools(), ...webTools, ...resources.mcpServers.tools]) {
     tools.register(tool);
   }
 
@@ -138,6 +161,7 @@ function createAgentDependencies(
     toolContext: { workspace: new Workspace(resources.workspaceDirectory) },
     confirmAction: askConfirmation,
     permissionPolicy: settings.permissions,
+    mcpServerInstructions: resources.mcpServers.instructions,
   };
 }
 

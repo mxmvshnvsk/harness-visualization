@@ -164,6 +164,25 @@ const permissionsSchema = z.object({
   rules: z.array(permissionRuleSchema).default([]),
 });
 
+// Имя сервера становится префиксом его тулов: kedr → kedr__search.
+const MCP_SERVER_NAME_PATTERN = /^[a-z][a-z0-9]*$/;
+
+const mcpServerSettingsSchema = z.object({
+  name: z.string().regex(MCP_SERVER_NAME_PATTERN, 'только строчные латинские буквы и цифры'),
+  description: z.string().min(1),
+  enabled: z.boolean().default(true),
+  // Команда запуска сервера. node — тот же Node.js, на котором работает харнесс.
+  command: z.string().min(1),
+  // Аргументы команды. Сервер запускается в корне проекта, пути — относительно него.
+  args: z.array(z.string()).default([]),
+  // Какие переменные окружения передать серверу, кроме базовых (PATH, HOME и т. п.).
+  // Остальные сервер не увидит: ключи харнесса ему знать незачем.
+  environmentVariables: z.array(z.string().min(1)).default([]),
+  // Верить ли пометкам тулов сервера (readOnlyHint и другие). Пометки пишет автор сервера:
+  // своему серверу можно верить, чужому — нет. false — тулы сервера получают defaultDecision.
+  trustAnnotations: z.boolean().default(false),
+});
+
 export const harnessSettingsSchema = z.object({
   model: modelSettingsSchema,
   agent: agentSettingsSchema,
@@ -172,6 +191,8 @@ export const harnessSettingsSchema = z.object({
   webFetch: webFetchSettingsSchema,
   // Если раздела нет, веб-поиска нет.
   search: searchSettingsSchema.optional(),
+  // MCP-серверы, которые харнесс запускает в начале сессии.
+  mcpServers: z.array(mcpServerSettingsSchema).default([]),
   prices: z.record(z.string(), modelPricesSchema).default({}),
   traces: tracesSettingsSchema,
 });
@@ -190,3 +211,4 @@ export type SearchProviderName = SearchSettings['provider'];
 export type TavilySettings = z.infer<typeof tavilySettingsSchema>;
 export type YandexSearchSettings = z.infer<typeof yandexSearchSettingsSchema>;
 export type YandexSearchPrices = z.infer<typeof yandexSearchPricesSchema>;
+export type McpServerSettings = z.infer<typeof mcpServerSettingsSchema>;

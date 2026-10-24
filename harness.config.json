@@ -24,8 +24,14 @@
           "schedule": {
             "weekdaysUtc": ["monday", "tuesday", "wednesday", "thursday", "friday"],
             "hoursUtc": [
-              { "fromHour": 1, "toHour": 4 },
-              { "fromHour": 6, "toHour": 10 }
+              {
+                "fromHour": 1,
+                "toHour": 4
+              },
+              {
+                "fromHour": 6,
+                "toHour": 10
+              }
             ]
           }
         },
@@ -50,8 +56,14 @@
           "schedule": {
             "weekdaysUtc": ["monday", "tuesday", "wednesday", "thursday", "friday"],
             "hoursUtc": [
-              { "fromHour": 1, "toHour": 4 },
-              { "fromHour": 6, "toHour": 10 }
+              {
+                "fromHour": 1,
+                "toHour": 4
+              },
+              {
+                "fromHour": 6,
+                "toHour": 10
+              }
             ]
           }
         },
@@ -127,6 +139,15 @@
       }
     }
   },
+  "mcpServers": [
+    {
+      "name": "kedr",
+      "description": "База знаний компании «Кедр Софт»: регламенты, проекты, встречи, FAQ",
+      "command": "node",
+      "args": ["packages/mcp-server/dist/main.js"],
+      "trustAnnotations": true
+    }
+  ],
   "traces": {
     "directory": "traces"
   }
