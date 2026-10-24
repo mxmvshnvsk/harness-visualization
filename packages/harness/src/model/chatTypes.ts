@@ -4,6 +4,12 @@
 
 export type ChatRole = 'system' | 'user' | 'assistant';
 
+// Насколько усердно модель рассуждает перед ответом. Это наш нейтральный уровень:
+// провайдер сам переводит его в параметры своего API (у DeepSeek — thinking и reasoning_effort).
+export const REASONING_EFFORTS = ['off', 'low', 'high', 'max'] as const;
+
+export type ReasoningEffort = (typeof REASONING_EFFORTS)[number];
+
 export interface ChatMessage {
   role: ChatRole;
   content: string;
@@ -11,6 +17,7 @@ export interface ChatMessage {
 
 export interface ModelRequest {
   messages: ChatMessage[];
+  reasoningEffort: ReasoningEffort;
 }
 
 export interface TokenUsage {

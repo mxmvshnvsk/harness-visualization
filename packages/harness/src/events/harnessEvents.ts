@@ -1,7 +1,7 @@
 // Типы событий харнесса — это и есть формат трейса.
 // Каждое событие — одна строка JSONL; подробное описание в docs/events.md.
 
-import type { ChatMessage, ModelReply, TokenUsage } from '../model/chatTypes.js';
+import type { ChatMessage, ModelReply, ReasoningEffort, TokenUsage } from '../model/chatTypes.js';
 import type { RequestCost, SessionCost } from '../tokenomics/costTypes.js';
 
 export interface EventMetadata {
@@ -17,6 +17,7 @@ export interface SessionStartedPayload {
   providerName: string;
   baseUrl: string;
   model: string;
+  reasoningEffort: ReasoningEffort;
 }
 
 export interface UserMessagePayload {
@@ -32,6 +33,7 @@ export interface PromptAssembledPayload {
 export interface ModelRequestPayload {
   type: 'model_request';
   requestId: string;
+  reasoningEffort: ReasoningEffort;
   method: string;
   url: string;
   // Секретные заголовки уже замаскированы.

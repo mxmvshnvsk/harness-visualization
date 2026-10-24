@@ -6,9 +6,9 @@
     "apiKeyVariable": "DEEPSEEK_API_KEY",
     "requestTimeoutMs": 120000,
     "maxOutputTokens": 2048,
-    "requestExtras": {
-      "thinking": { "type": "enabled" }
-    }
+    "reasoningStyle": "deepseek",
+    "defaultReasoningEffort": "high",
+    "requestExtras": {}
   },
   "prices": {
     "deepseek-flash": {

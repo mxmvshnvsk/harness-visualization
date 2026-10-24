@@ -26,14 +26,22 @@ function describeEvent(event: HarnessEvent): string[] {
   switch (event.type) {
     case 'session_started':
       return [
-        styleText('bold', `Сессия ${event.sessionId} · ${event.providerName} · ${event.model}`),
+        styleText(
+          'bold',
+          `Сессия ${event.sessionId} · ${event.providerName} · ${event.model} · effort ${event.reasoningEffort}`,
+        ),
       ];
     case 'user_message':
       return [`Пользователь → харнесс: «${shortenForPreview(event.text)}»`];
     case 'prompt_assembled':
       return [describePromptAssembled(event.messages.map((message) => message.role))];
     case 'model_request':
-      return [styleText('cyan', `Харнесс → модель: ${event.method} ${event.url}`)];
+      return [
+        styleText(
+          'cyan',
+          `Харнесс → модель: ${event.method} ${event.url} · effort ${event.reasoningEffort}`,
+        ),
+      ];
     case 'model_response':
       return describeModelResponse(event);
     case 'model_error':

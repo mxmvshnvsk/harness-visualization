@@ -6,6 +6,7 @@ import type { ModelReply, ModelRequest, TokenUsage } from './chatTypes.js';
 import type { ModelProvider, PreparedHttpRequest, RawHttpResponse } from './modelProvider.js';
 import { ModelProviderError } from './ModelProviderError.js';
 import { wireChatCompletionSchema, wireErrorSchema, type WireUsage } from './openAiWireSchema.js';
+import { buildReasoningParameters } from './reasoningParameters.js';
 
 const CHAT_COMPLETIONS_PATH = 'chat/completions';
 
@@ -33,6 +34,7 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       body: {
         // Особые поля провайдера идут первыми, чтобы не перекрыть основные.
         ...this.settings.requestExtras,
+        ...buildReasoningParameters(this.settings.reasoningStyle, request.reasoningEffort),
         model: this.settings.model,
         messages: request.messages,
         max_tokens: this.settings.maxOutputTokens,

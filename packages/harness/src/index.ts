@@ -1,10 +1,11 @@
 // Публичный интерфейс пакета harness: то, чем будут пользоваться сервер и другие пакеты.
 
-export { runSingleTurn } from './agent/runSingleTurn.js';
+export { runSingleTurn, type TurnOptions } from './agent/runSingleTurn.js';
 export type { AgentDependencies } from './agent/agentDependencies.js';
 export { EventStream, type EventListener } from './events/EventStream.js';
 export type * from './events/harnessEvents.js';
 export { JsonlTraceWriter } from './events/JsonlTraceWriter.js';
+export { REASONING_EFFORTS } from './model/chatTypes.js';
 export type * from './model/chatTypes.js';
 export type * from './model/modelProvider.js';
 export { ModelProviderError } from './model/ModelProviderError.js';

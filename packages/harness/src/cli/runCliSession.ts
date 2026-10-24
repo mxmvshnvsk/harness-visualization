@@ -7,6 +7,7 @@ import { createConsolePrinter } from '../events/createConsolePrinter.js';
 import { EventStream } from '../events/EventStream.js';
 import { JsonlTraceWriter } from '../events/JsonlTraceWriter.js';
 import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
+import type { ReasoningEffort } from '../model/chatTypes.js';
 import type { LoadedSettings } from '../settings/loadSettings.js';
 import { SessionTokenomics } from '../tokenomics/SessionTokenomics.js';
 
@@ -14,6 +15,7 @@ export interface CliSessionInput {
   loadedSettings: LoadedSettings;
   projectRoot: string;
   question: string;
+  reasoningEffort: ReasoningEffort;
   verbose: boolean;
 }
 
@@ -40,10 +42,15 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     providerName: settings.model.providerName,
     baseUrl: settings.model.baseUrl,
     model: settings.model.model,
+    reasoningEffort: input.reasoningEffort,
   });
 
   try {
-    await runSingleTurn(input.question, { provider, events, prices: settings.prices });
+    await runSingleTurn(
+      input.question,
+      { provider, events, prices: settings.prices },
+      { reasoningEffort: input.reasoningEffort },
+    );
   } catch (error) {
     events.emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
     process.exitCode = 1;

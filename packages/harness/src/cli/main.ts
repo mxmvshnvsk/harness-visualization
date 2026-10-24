@@ -15,7 +15,14 @@ async function main(): Promise<void> {
     console.log('Пустой запрос — нечего отправлять модели.');
     return;
   }
-  await runCliSession({ loadedSettings, projectRoot, question, verbose: cliOptions.verbose });
+  await runCliSession({
+    loadedSettings,
+    projectRoot,
+    question,
+    reasoningEffort:
+      cliOptions.reasoningEffort ?? loadedSettings.settings.model.defaultReasoningEffort,
+    verbose: cliOptions.verbose,
+  });
 }
 
 main().catch((error: unknown) => {

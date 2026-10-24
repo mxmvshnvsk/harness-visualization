@@ -15,17 +15,17 @@
 
 ## События этапа 1
 
-| Тип                 | Когда                                      | Главные поля                                                     |
-| ------------------- | ------------------------------------------ | ---------------------------------------------------------------- |
-| `session_started`   | сессия началась                            | `providerName`, `baseUrl`, `model`                               |
-| `user_message`      | пришёл запрос пользователя                 | `text`                                                           |
-| `prompt_assembled`  | харнесс собрал контекст для модели         | `messages`                                                       |
-| `model_request`     | HTTP-запрос к модели собран и отправляется | `requestId`, `method`, `url`, `headers` (секреты скрыты), `body` |
-| `model_response`    | модель ответила                            | `requestId`, `status`, `durationMs`, `body`, `reply`, `cost`     |
-| `model_error`       | запрос к модели не удался                  | `requestId`, `status`, `durationMs`, `body`, `message`           |
-| `assistant_message` | харнесс отдал ответ пользователю           | `text`                                                           |
-| `session_finished`  | сессия закончилась                         | `durationMs`, `modelRequests`, `usage`, `cost`                   |
-| `error`             | ошибка, прервавшая сессию                  | `message`                                                        |
+| Тип                 | Когда                                      | Главные поля                                                                        |
+| ------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `session_started`   | сессия началась                            | `providerName`, `baseUrl`, `model`, `reasoningEffort`                               |
+| `user_message`      | пришёл запрос пользователя                 | `text`                                                                              |
+| `prompt_assembled`  | харнесс собрал контекст для модели         | `messages`                                                                          |
+| `model_request`     | HTTP-запрос к модели собран и отправляется | `requestId`, `reasoningEffort`, `method`, `url`, `headers` (секреты скрыты), `body` |
+| `model_response`    | модель ответила                            | `requestId`, `status`, `durationMs`, `body`, `reply`, `cost`                        |
+| `model_error`       | запрос к модели не удался                  | `requestId`, `status`, `durationMs`, `body`, `message`                              |
+| `assistant_message` | харнесс отдал ответ пользователю           | `text`                                                                              |
+| `session_finished`  | сессия закончилась                         | `durationMs`, `modelRequests`, `usage`, `cost`                                      |
+| `error`             | ошибка, прервавшая сессию                  | `message`                                                                           |
 
 `model_request` и `model_response` связаны полем `requestId`.
 
@@ -51,6 +51,10 @@
 | `reasoningTokens`      | часть `outputTokens`, потраченная на рассуждения |
 
 `cost` — стоимость по таблице цен из `harness.config.json`: тариф (`peak` или `offPeak` у DeepSeek), стоимость по частям, итог и дата проверки цен. Если цен для модели нет, `cost` равно `null`.
+
+## Уровень рассуждений
+
+`reasoningEffort` — наш нейтральный уровень: `off`, `low`, `high`, `max`. В `session_started` — уровень сессии, в `model_request` — уровень конкретного запроса. Как он превратился в параметры API, видно в `body` того же события (у DeepSeek — `thinking` и `reasoning_effort`).
 
 ## Секреты
 

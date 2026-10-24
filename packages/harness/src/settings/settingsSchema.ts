@@ -3,6 +3,7 @@
 // поэтому ошибка в конфиге видна до первого запроса к модели.
 
 import { z } from 'zod';
+import { REASONING_EFFORTS } from '../model/chatTypes.js';
 
 const modelSettingsSchema = z.object({
   // Человекочитаемое имя провайдера — только для отображения.
@@ -13,7 +14,11 @@ const modelSettingsSchema = z.object({
   apiKeyVariable: z.string().min(1),
   requestTimeoutMs: z.number().int().positive(),
   maxOutputTokens: z.number().int().positive(),
-  // Поля, которые понимает только конкретный провайдер (например, thinking у DeepSeek).
+  // Как провайдер управляет рассуждениями: deepseek — параметры thinking и reasoning_effort,
+  // none — провайдер не умеет регулировать рассуждения, уровень effort не передаётся.
+  reasoningStyle: z.enum(['deepseek', 'none']).default('none'),
+  defaultReasoningEffort: z.enum(REASONING_EFFORTS).default('high'),
+  // Поля, которые понимает только конкретный провайдер.
   // Добавляются в тело запроса как есть.
   requestExtras: z.record(z.string(), z.unknown()).default({}),
 });
@@ -68,6 +73,7 @@ export const harnessSettingsSchema = z.object({
 
 export type HarnessSettings = z.infer<typeof harnessSettingsSchema>;
 export type ModelSettings = z.infer<typeof modelSettingsSchema>;
+export type ReasoningStyle = ModelSettings['reasoningStyle'];
 export type ModelPrices = z.infer<typeof modelPricesSchema>;
 export type Tariff = z.infer<typeof tariffSchema>;
 export type Weekday = z.infer<typeof weekdaySchema>;

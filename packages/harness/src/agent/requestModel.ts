@@ -20,6 +20,7 @@ export async function requestModel(
   events.emit({
     type: 'model_request',
     requestId,
+    reasoningEffort: request.reasoningEffort,
     method: preparedRequest.method,
     url: preparedRequest.url,
     headers: maskSecretHeaders(preparedRequest.headers),
