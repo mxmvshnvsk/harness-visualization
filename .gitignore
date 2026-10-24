@@ -147,3 +147,7 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Harness Visualization
+# Шаблон с пустыми ключами хранится в репозитории
+!.env.example
