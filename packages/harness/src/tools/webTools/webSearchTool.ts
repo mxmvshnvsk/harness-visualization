@@ -23,6 +23,10 @@ export function createWebSearchTool(provider: SearchProvider, defaultMaxResults:
         .optional()
         .describe(`Сколько результатов вернуть, по умолчанию ${defaultMaxResults}`),
     }),
+    // Запрос уходит за пределы компьютера — к поисковому провайдеру.
+    effects: ['network'],
+    describeAction: (toolArguments) =>
+      `Искать в интернете «${toolArguments.query}» через ${provider.name}`,
     async execute(toolArguments) {
       const response = await provider.search(
         toolArguments.query,

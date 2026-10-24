@@ -71,6 +71,30 @@
     "directory": "workspace",
     "seedDirectory": "examples/workspace"
   },
+  "permissions": {
+    "defaultDecision": "ask",
+    "effects": {
+      "read": "allow",
+      "write": "allow",
+      "delete": "ask",
+      "network": "allow"
+    },
+    "tools": {},
+    "rules": [
+      {
+        "description": "Регламенты — только чтение",
+        "pathPattern": "regulations/**",
+        "effect": "write",
+        "decision": "deny"
+      },
+      {
+        "description": "Регламенты нельзя удалять",
+        "pathPattern": "regulations/**",
+        "effect": "delete",
+        "decision": "deny"
+      }
+    ]
+  },
   "webFetch": {
     "requestTimeoutMs": 15000,
     "maxDownloadBytes": 2000000,

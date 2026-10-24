@@ -4,7 +4,7 @@
 
 import type { EventStream } from '../events/EventStream.js';
 import type { ModelProvider } from '../model/modelProvider.js';
-import type { ModelPrices } from '../settings/settingsSchema.js';
+import type { ModelPrices, PermissionsSettings } from '../settings/settingsSchema.js';
 import type { ToolRegistry } from '../tools/ToolRegistry.js';
 import type { ToolContext } from '../tools/toolTypes.js';
 
@@ -24,4 +24,6 @@ export interface AgentDependencies {
   tools: ToolRegistry;
   toolContext: ToolContext;
   confirmAction: ConfirmAction;
+  // Правила, по которым харнесс решает: разрешить вызов тула, спросить пользователя или запретить.
+  permissionPolicy: PermissionsSettings;
 }

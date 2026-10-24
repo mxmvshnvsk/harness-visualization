@@ -27,6 +27,10 @@ export const searchFilesTool = defineTool({
       .default('.')
       .describe('Папка, в которой искать; по умолчанию — вся рабочая папка'),
   }),
+  effects: ['read'],
+  describeAction: (toolArguments) =>
+    `Искать «${toolArguments.query}» в папке ${toolArguments.path}`,
+  targets: (toolArguments) => [{ kind: 'path', path: toolArguments.path }],
   async execute(toolArguments, context) {
     const matches = await findMatches({
       workspace: context.workspace,

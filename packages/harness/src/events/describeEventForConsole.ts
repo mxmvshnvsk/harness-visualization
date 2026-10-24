@@ -41,6 +41,7 @@ const EVENT_DESCRIBERS: EventDescribers = {
       `Харнесс → тул ${event.toolName}: ${shortenForPreview(event.argumentsText)}`,
     ),
   ],
+  permission_evaluated: describePermissionEvaluated,
   permission_requested: (event) => [
     styleText('magenta', `Нужно разрешение пользователя: ${event.actionDescription}`),
   ],
@@ -104,7 +105,28 @@ const TOOL_STATUS_LABELS = {
   success: { label: 'готово', color: 'yellow' },
   error: { label: 'ошибка', color: 'red' },
   denied: { label: 'отказано пользователем', color: 'magenta' },
+  blocked: { label: 'запрещено политикой', color: 'red' },
 } as const;
+
+const DECISION_STYLES = {
+  allow: { label: 'разрешено', color: 'dim' },
+  ask: { label: 'спросить пользователя', color: 'magenta' },
+  deny: { label: 'запрещено', color: 'red' },
+} as const;
+
+// Разрешённые вызовы печатаем одной тусклой строкой, остальные — с цепочкой проверок.
+function describePermissionEvaluated(event: EventOfType<'permission_evaluated'>): string[] {
+  const { label, color } = DECISION_STYLES[event.decision];
+  const summary = styleText(color, `Политика: ${label} — ${event.reason}`);
+  if (event.decision === 'allow') {
+    return [summary];
+  }
+  const checks = event.checks.map((check) => {
+    const result = check.matched ? `→ ${check.decision ?? '—'}` : 'не подходит';
+    return styleText('dim', `    ${check.source}: ${check.label} ${result}`);
+  });
+  return [summary, ...checks];
+}
 
 function describeToolResult(event: EventOfType<'tool_result'>): string[] {
   const { label: status, color } = TOOL_STATUS_LABELS[event.status];

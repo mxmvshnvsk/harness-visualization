@@ -17,6 +17,9 @@ export const listFilesTool = defineTool({
       .default('.')
       .describe('Папка от корня рабочей папки; по умолчанию — сам корень'),
   }),
+  effects: ['read'],
+  describeAction: (toolArguments) => `Показать содержимое папки ${toolArguments.path}`,
+  targets: (toolArguments) => [{ kind: 'path', path: toolArguments.path }],
   async execute(toolArguments, context) {
     const entries = await context.workspace.listEntries(toolArguments.path);
     if (entries.length === 0) {

@@ -26,6 +26,9 @@ export function createFetchUrlTool(settings: WebFetchSettings): Tool {
     argumentsSchema: z.object({
       url: z.url().describe('Полный адрес страницы, например https://example.com/article'),
     }),
+    effects: ['network'],
+    describeAction: (toolArguments) => `Загрузить страницу ${toolArguments.url}`,
+    targets: (toolArguments) => [{ kind: 'host', host: new URL(toolArguments.url).hostname }],
     async execute(toolArguments) {
       const page = await downloadPage(toolArguments.url, settings);
       const pageText = convertToText(page);

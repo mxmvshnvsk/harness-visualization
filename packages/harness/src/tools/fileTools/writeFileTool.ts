@@ -15,6 +15,9 @@ export const writeFileTool = defineTool({
       .describe('Путь к файлу от корня рабочей папки, например notes/answer.md'),
     content: z.string().describe('Полный текст файла'),
   }),
+  effects: ['write'],
+  describeAction: (toolArguments) => `Записать файл ${toolArguments.path}`,
+  targets: (toolArguments) => [{ kind: 'path', path: toolArguments.path }],
   async execute(toolArguments, context) {
     const writtenBytes = await context.workspace.writeText(
       toolArguments.path,

@@ -7,12 +7,14 @@ export const deleteFileTool = defineTool({
   name: 'delete_file',
   description:
     'Удаляет файл из рабочей папки. Папки удалять нельзя. ' +
-    'Перед удалением харнесс спрашивает разрешения у пользователя.',
+    'Харнесс может спросить разрешения у пользователя.',
   argumentsSchema: z.object({
     path: z.string().min(1).describe('Путь к файлу от корня рабочей папки, например notes/old.md'),
   }),
-  confirmation: (toolArguments) => `Удалить файл ${toolArguments.path}`,
-  async checkBeforeConfirmation(toolArguments, context) {
+  effects: ['delete'],
+  describeAction: (toolArguments) => `Удалить файл ${toolArguments.path}`,
+  targets: (toolArguments) => [{ kind: 'path', path: toolArguments.path }],
+  async checkBeforeExecution(toolArguments, context) {
     await context.workspace.assertExistingFile(toolArguments.path);
   },
   async execute(toolArguments, context) {

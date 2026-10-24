@@ -15,22 +15,23 @@
 
 ## События
 
-| Тип                    | Когда                                          | Главные поля                                                                                     |
-| ---------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `session_started`      | сессия началась                                | `providerName`, `baseUrl`, `model`, `reasoningEffort`, `networkProxy`, `searchProvider`          |
-| `workspace_prepared`   | песочница готова к сессии                      | `directory`, `createdFromSeed`, `wasReset`                                                       |
-| `user_message`         | пришёл запрос пользователя                     | `text`                                                                                           |
-| `prompt_assembled`     | харнесс собрал контекст для модели             | `messages`, `toolNames`                                                                          |
-| `model_request`        | HTTP-запрос к модели собран и отправляется     | `requestId`, `iteration`, `reasoningEffort`, `method`, `url`, `headers` (секреты скрыты), `body` |
-| `model_response`       | модель ответила                                | `requestId`, `status`, `durationMs`, `body`, `reply`, `cost`                                     |
-| `model_error`          | запрос к модели не удался                      | `requestId`, `status`, `durationMs`, `body`, `message`                                           |
-| `tool_call`            | модель попросила вызвать тул                   | `toolCallId`, `toolName`, `argumentsText`, `arguments`                                           |
-| `permission_requested` | тулу нужно разрешение пользователя             | `toolCallId`, `toolName`, `actionDescription`                                                    |
-| `permission_resolved`  | пользователь ответил                           | `toolCallId`, `toolName`, `approved`, `waitedForUserMs`                                          |
-| `tool_result`          | тул выполнен, не смог или пользователь отказал | `toolCallId`, `toolName`, `status`, `content`, `details`, `durationMs`                           |
-| `assistant_message`    | харнесс отдал ответ пользователю               | `text`                                                                                           |
-| `session_finished`     | сессия закончилась                             | `durationMs`, `modelRequests`, `usage`, `cost`                                                   |
-| `error`                | ошибка, прервавшая сессию                      | `message`                                                                                        |
+| Тип                    | Когда                                                              | Главные поля                                                                                        |
+| ---------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `session_started`      | сессия началась                                                    | `providerName`, `baseUrl`, `model`, `reasoningEffort`, `networkProxy`, `searchProvider`             |
+| `workspace_prepared`   | песочница готова к сессии                                          | `directory`, `createdFromSeed`, `wasReset`                                                          |
+| `user_message`         | пришёл запрос пользователя                                         | `text`                                                                                              |
+| `prompt_assembled`     | харнесс собрал контекст для модели                                 | `messages`, `toolNames`                                                                             |
+| `model_request`        | HTTP-запрос к модели собран и отправляется                         | `requestId`, `iteration`, `reasoningEffort`, `method`, `url`, `headers` (секреты скрыты), `body`    |
+| `model_response`       | модель ответила                                                    | `requestId`, `status`, `durationMs`, `body`, `reply`, `cost`                                        |
+| `model_error`          | запрос к модели не удался                                          | `requestId`, `status`, `durationMs`, `body`, `message`                                              |
+| `tool_call`            | модель попросила вызвать тул                                       | `toolCallId`, `toolName`, `argumentsText`, `arguments`                                              |
+| `permission_evaluated` | политика разрешений приняла решение (на каждом вызове)             | `toolCallId`, `toolName`, `effects`, `targets`, `actionDescription`, `decision`, `reason`, `checks` |
+| `permission_requested` | тулу нужно разрешение пользователя                                 | `toolCallId`, `toolName`, `actionDescription`                                                       |
+| `permission_resolved`  | пользователь ответил                                               | `toolCallId`, `toolName`, `approved`, `waitedForUserMs`                                             |
+| `tool_result`          | тул выполнен, не смог, пользователь отказал или политика запретила | `toolCallId`, `toolName`, `status`, `content`, `details`, `durationMs`                              |
+| `assistant_message`    | харнесс отдал ответ пользователю                                   | `text`                                                                                              |
+| `session_finished`     | сессия закончилась                                                 | `durationMs`, `modelRequests`, `usage`, `cost`                                                      |
+| `error`                | ошибка, прервавшая сессию                                          | `message`                                                                                           |
 
 `model_request` и `model_response` связаны полем `requestId`, `tool_call` и `tool_result` — полем `toolCallId`. Тот же `toolCallId` стоит в ответе модели (`reply.toolCalls`) и в сообщении с результатом тула, которое уходит модели в следующем запросе.
 
@@ -60,11 +61,11 @@ assistant_message
 
 ## Результат тула
 
-- `status`: `success` — тул выполнен, `error` — не выполнился (модель получит текст ошибки и сможет исправиться), `denied` — пользователь не разрешил действие.
+- `status`: `success` — тул выполнен, `error` — не выполнился (модель получит текст ошибки и сможет исправиться), `denied` — пользователь не разрешил действие, `blocked` — действие запрещено политикой харнесса.
 - `content` — ровно то, что увидит модель.
 - `details` — подробности для трейса и токеномики, модель их не видит. У `fetch_url` это адрес после перенаправлений, вес скачанного HTML и сколько символов текста из него получилось; у `web_search` — кредиты Tavily и время ответа или, у Яндекса, размер полученного XML и стоимость поиска по дневному или ночному тарифу.
 
-Если тулу нужно разрешение, между `tool_call` и `tool_result` стоят `permission_requested` и `permission_resolved`. Возможность действия харнесс проверяет до вопроса: про несуществующий файл пользователя не спрашивают. Время, пока пользователь решал, записано в `waitedForUserMs` и в `durationMs` тула не входит.
+Между `tool_call` и `tool_result` всегда стоит `permission_evaluated` — «след решения» политики: все проверки по порядку (`checks`: источник, что проверялось, подошло ли, решение), итог `decision` (`allow`, `ask`, `deny`) и причина `reason`. Если итог `ask`, дальше идут `permission_requested` и `permission_resolved`. Возможность действия харнесс проверяет до вопроса: про несуществующий файл пользователя не спрашивают. Время, пока пользователь решал, записано в `waitedForUserMs` и в `durationMs` тула не входит.
 
 ## Токены и стоимость
 

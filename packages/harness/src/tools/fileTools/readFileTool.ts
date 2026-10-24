@@ -15,6 +15,9 @@ export const readFileTool = defineTool({
   argumentsSchema: z.object({
     path: z.string().min(1).describe('Путь к файлу от корня рабочей папки, например notes/plan.md'),
   }),
+  effects: ['read'],
+  describeAction: (toolArguments) => `Прочитать файл ${toolArguments.path}`,
+  targets: (toolArguments) => [{ kind: 'path', path: toolArguments.path }],
   async execute(toolArguments, context) {
     const text = await context.workspace.readText(toolArguments.path);
     if (text.length <= MAX_CHARACTERS) {

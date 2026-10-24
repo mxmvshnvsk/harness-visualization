@@ -137,6 +137,7 @@ function createAgentDependencies(
     tools,
     toolContext: { workspace: new Workspace(resources.workspaceDirectory) },
     confirmAction: askConfirmation,
+    permissionPolicy: settings.permissions,
   };
 }
 

@@ -1,10 +1,11 @@
 // Выполняет один вызов тула, который попросила модель.
 // Любая ошибка — неизвестный тул, кривой JSON, неверные аргументы, сбой тула —
 // не роняет агента, а возвращается модели текстом, чтобы она могла исправиться.
-// Если тул требует подтверждения, харнесс сначала спрашивает пользователя.
+// Перед выполнением харнесс применяет политику разрешений: разрешить, спросить или запретить.
 
 import type { ToolCall, ToolResultMessage } from '../model/chatTypes.js';
 import type { ToolResultStatus } from '../events/harnessEvents.js';
+import { evaluatePermission } from '../permissions/evaluatePermission.js';
 import type { PreparedToolCall } from '../tools/toolTypes.js';
 import type { AgentDependencies } from './agentDependencies.js';
 
@@ -77,18 +78,39 @@ async function runTool(
   let preparedCall: PreparedToolCall;
   try {
     preparedCall = tool.prepare(parsedArguments.value);
-    await preparedCall.checkBeforeConfirmation(dependencies.toolContext);
+    await preparedCall.checkBeforeExecution(dependencies.toolContext);
   } catch (error) {
     return failure(describeError(error));
   }
 
-  if (preparedCall.confirmationText !== null) {
-    const approved = await askPermission(toolCall, preparedCall.confirmationText, dependencies);
-    if (!approved) {
-      return denial(preparedCall.confirmationText);
+  const evaluation = evaluatePermission(
+    { toolName: tool.name, effects: tool.effects, targets: preparedCall.targets },
+    dependencies.permissionPolicy,
+  );
+  dependencies.events.emit({
+    type: 'permission_evaluated',
+    toolCallId: toolCall.id,
+    toolName: tool.name,
+    effects: [...tool.effects],
+    targets: preparedCall.targets,
+    actionDescription: preparedCall.actionDescription,
+    decision: evaluation.decision,
+    reason: evaluation.reason,
+    checks: evaluation.checks,
+  });
+
+  switch (evaluation.decision) {
+    case 'deny':
+      return blocked(preparedCall.actionDescription, evaluation.reason);
+    case 'ask': {
+      const approved = await askPermission(toolCall, preparedCall.actionDescription, dependencies);
+      return approved
+        ? executePreparedCall(preparedCall, dependencies)
+        : denial(preparedCall.actionDescription);
     }
+    case 'allow':
+      return executePreparedCall(preparedCall, dependencies);
   }
-  return executePreparedCall(preparedCall, dependencies);
 }
 
 async function askPermission(
@@ -135,6 +157,19 @@ async function executePreparedCall(
 // Ошибки до выполнения (неизвестный тул, неверные аргументы) занимают 0 мс работы тула.
 function failure(message: string, durationMs = 0): ToolOutcome {
   return { status: 'error', content: `Ошибка: ${message}`, details: null, durationMs };
+}
+
+// Политика харнесса запретила действие. Модель должна понять, что это правило,
+// а не сбой, и не искать обходной путь.
+function blocked(actionDescription: string, reason: string): ToolOutcome {
+  return {
+    status: 'blocked',
+    content:
+      `Действие запрещено политикой харнесса: ${actionDescription}. ${reason}. ` +
+      'Не пытайся выполнить его другим способом; если оно нужно, сообщи пользователю.',
+    details: null,
+    durationMs: 0,
+  };
 }
 
 // Модель должна понять, что это не сбой, а решение человека, и не пытаться обойти его.

@@ -1,5 +1,6 @@
 // Что такое тул для харнесса.
 
+import type { ActionTarget, ToolEffect } from '../permissions/permissionTypes.js';
 import type { Workspace } from '../workspace/Workspace.js';
 
 // То, к чему тулу разрешён доступ. Тул не получает ничего сверх этого.
@@ -16,13 +17,16 @@ export interface ToolOutput {
 }
 
 // Вызов тула после проверки аргументов, ещё не выполненный.
-// Между проверкой и выполнением харнесс может спросить разрешения у пользователя.
+// Между проверкой и выполнением харнесс применяет политику разрешений
+// и, если нужно, спрашивает пользователя.
 export interface PreparedToolCall {
-  // Описание действия для человека, если тул требует подтверждения, иначе null.
-  confirmationText: string | null;
-  // Проверяет, что действие вообще возможно, ещё до вопроса пользователю:
+  // Описание действия для человека: «Удалить файл notes/a.md».
+  actionDescription: string;
+  // С чем работает вызов: пути и адреса — по ним проверяются правила политики.
+  targets: ActionTarget[];
+  // Проверяет, что действие вообще возможно, ещё до решения о разрешении:
   // незачем спрашивать разрешение удалить файл, которого нет.
-  checkBeforeConfirmation(context: ToolContext): Promise<void>;
+  checkBeforeExecution(context: ToolContext): Promise<void>;
   execute(context: ToolContext): Promise<ToolOutput>;
 }
 
@@ -32,6 +36,8 @@ export interface Tool {
   readonly description: string;
   // JSON Schema аргументов для модели.
   readonly parametersSchema: Record<string, unknown>;
+  // Что тул делает: читает, пишет, удаляет, ходит в сеть. Решения принимает политика харнесса.
+  readonly effects: readonly ToolEffect[];
   // Проверяет аргументы. При ошибке бросает ToolError с понятным модели текстом.
   prepare(rawArguments: unknown): PreparedToolCall;
 }

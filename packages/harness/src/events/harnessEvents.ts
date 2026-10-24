@@ -2,6 +2,12 @@
 // Каждое событие — одна строка JSONL; подробное описание в docs/events.md.
 
 import type { ChatMessage, ModelReply, ReasoningEffort, TokenUsage } from '../model/chatTypes.js';
+import type {
+  ActionTarget,
+  PermissionCheck,
+  PermissionDecision,
+  ToolEffect,
+} from '../permissions/permissionTypes.js';
 import type { RequestCost, SessionCost } from '../tokenomics/costTypes.js';
 
 export interface EventMetadata {
@@ -92,8 +98,8 @@ export interface ToolCallPayload {
 }
 
 // success — тул выполнен; error — не выполнился, модель получит текст ошибки и сможет исправиться;
-// denied — пользователь не разрешил действие.
-export type ToolResultStatus = 'success' | 'error' | 'denied';
+// denied — пользователь не разрешил действие; blocked — действие запрещено политикой харнесса.
+export type ToolResultStatus = 'success' | 'error' | 'denied' | 'blocked';
 
 export interface ToolResultPayload {
   type: 'tool_result';
@@ -105,6 +111,20 @@ export interface ToolResultPayload {
   // Подробности для трейса и токеномики, модель их не видит; null, если их нет.
   details: Record<string, unknown> | null;
   durationMs: number;
+}
+
+// «След решения»: какие проверки политики выполнены, какая сработала и почему.
+// Пишется на каждом вызове тула, даже разрешённом без вопросов.
+export interface PermissionEvaluatedPayload {
+  type: 'permission_evaluated';
+  toolCallId: string;
+  toolName: string;
+  effects: ToolEffect[];
+  targets: ActionTarget[];
+  actionDescription: string;
+  decision: PermissionDecision;
+  reason: string;
+  checks: PermissionCheck[];
 }
 
 export interface PermissionRequestedPayload {
@@ -151,6 +171,7 @@ export type HarnessEventPayload =
   | ModelResponsePayload
   | ModelErrorPayload
   | ToolCallPayload
+  | PermissionEvaluatedPayload
   | PermissionRequestedPayload
   | PermissionResolvedPayload
   | ToolResultPayload

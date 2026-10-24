@@ -4,6 +4,7 @@
 
 import { z } from 'zod';
 import { REASONING_EFFORTS } from '../model/chatTypes.js';
+import { PERMISSION_DECISIONS, TOOL_EFFECTS } from '../permissions/permissionTypes.js';
 
 const modelSettingsSchema = z.object({
   // Человекочитаемое имя провайдера — только для отображения.
@@ -132,10 +133,42 @@ const searchSettingsSchema = z.object({
   yandex: yandexSearchSettingsSchema.optional(),
 });
 
+const permissionDecisionSchema = z.enum(PERMISSION_DECISIONS);
+
+// Правило по аргументам: срабатывает, если выполнены все заданные условия.
+const permissionRuleSchema = z.object({
+  // Человекочитаемое описание — его видно в трейсе и в вопросе пользователю.
+  description: z.string().min(1),
+  tool: z.string().min(1).optional(),
+  effect: z.enum(TOOL_EFFECTS).optional(),
+  // Шаблон пути в песочнице: regulations/**, notes/*.md.
+  pathPattern: z.string().min(1).optional(),
+  // Шаблон адреса сайта: example.com, *.example.com.
+  hostPattern: z.string().min(1).optional(),
+  decision: permissionDecisionSchema,
+});
+
+const permissionsSchema = z.object({
+  // Для тулов, которые не объявили, что делают (например, тулы чужого MCP-сервера).
+  defaultDecision: permissionDecisionSchema,
+  // Решение для каждого класса действий.
+  effects: z.object({
+    read: permissionDecisionSchema,
+    write: permissionDecisionSchema,
+    delete: permissionDecisionSchema,
+    network: permissionDecisionSchema,
+  }),
+  // Решения для конкретных тулов — важнее классов действий.
+  tools: z.record(z.string(), permissionDecisionSchema).default({}),
+  // Правила по аргументам — важнее всего; проверяются по порядку.
+  rules: z.array(permissionRuleSchema).default([]),
+});
+
 export const harnessSettingsSchema = z.object({
   model: modelSettingsSchema,
   agent: agentSettingsSchema,
   workspace: workspaceSettingsSchema,
+  permissions: permissionsSchema,
   webFetch: webFetchSettingsSchema,
   // Если раздела нет, веб-поиска нет.
   search: searchSettingsSchema.optional(),
@@ -150,6 +183,8 @@ export type ModelPrices = z.infer<typeof modelPricesSchema>;
 export type Tariff = z.infer<typeof tariffSchema>;
 export type Weekday = z.infer<typeof weekdaySchema>;
 export type WebFetchSettings = z.infer<typeof webFetchSettingsSchema>;
+export type PermissionsSettings = z.infer<typeof permissionsSchema>;
+export type PermissionRule = z.infer<typeof permissionRuleSchema>;
 export type SearchSettings = z.infer<typeof searchSettingsSchema>;
 export type SearchProviderName = SearchSettings['provider'];
 export type TavilySettings = z.infer<typeof tavilySettingsSchema>;
