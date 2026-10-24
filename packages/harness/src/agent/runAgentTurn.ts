@@ -14,7 +14,7 @@ import type {
 import type { AgentDependencies } from './agentDependencies.js';
 import { executeToolCall } from './executeToolCall.js';
 import { requestModel } from './requestModel.js';
-import { BASE_SYSTEM_PROMPT } from './systemPrompt.js';
+import { buildSystemPrompt } from './systemPrompt.js';
 
 export interface TurnOptions {
   reasoningEffort: ReasoningEffort;
@@ -57,7 +57,7 @@ export async function runAgentTurn(
 // Модель не помнит прошлых запросов: всё, что она должна знать, харнесс кладёт сюда.
 function assembleInitialContext(userText: string): ChatMessage[] {
   return [
-    { role: 'system', content: BASE_SYSTEM_PROMPT },
+    { role: 'system', content: buildSystemPrompt(new Date()) },
     { role: 'user', content: userText },
   ];
 }
