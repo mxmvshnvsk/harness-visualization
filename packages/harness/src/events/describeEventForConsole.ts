@@ -21,7 +21,9 @@ const EVENT_DESCRIBERS: EventDescribers = {
     ),
     styleText(
       'dim',
-      event.networkProxy === null ? 'Сеть: напрямую' : `Сеть: через прокси ${event.networkProxy}`,
+      event.networkProxy === null
+        ? 'Сеть: прокси не задан, все запросы напрямую'
+        : `Сеть: прокси для маршрута proxy — ${event.networkProxy}`,
     ),
     styleText('dim', `Поиск: ${event.searchProvider ?? 'выключен'}`),
   ],
@@ -47,6 +49,7 @@ const EVENT_DESCRIBERS: EventDescribers = {
   mcp_server_log: (event) => [
     styleText('dim', `    MCP ${event.serverName} (stderr): ${event.text}`),
   ],
+  network_request: describeNetworkRequest,
   mcp_server_stopped: (event) => [styleText('dim', `MCP-сервер ${event.serverName} остановлен`)],
   user_message: (event) => [`Пользователь → харнесс: «${shortenForPreview(event.text)}»`],
   prompt_assembled: describePromptAssembled,
@@ -95,6 +98,21 @@ function describeWorkspacePrepared(event: EventOfType<'workspace_prepared'>): st
     return [`Рабочая папка создана из примеров: ${event.directory}/`];
   }
   return [styleText('dim', `Рабочая папка: ${event.directory}/ (файлы прошлых сессий сохранены)`)];
+}
+
+// Сеть: api.deepseek.com → через прокси http://127.0.0.1:12334/ (маршрут по умолчанию)
+function describeNetworkRequest(event: EventOfType<'network_request'>): string[] {
+  const rule = event.rule === null ? 'маршрут по умолчанию' : `правило «${event.rule}»`;
+  if (event.route === 'proxy' && !event.viaProxy) {
+    return [
+      styleText(
+        'yellow',
+        `    Сеть: ${event.host} → напрямую: маршрут proxy, но прокси не задан (${rule})`,
+      ),
+    ];
+  }
+  const path = event.viaProxy ? `через прокси ${event.proxyUrl ?? ''}` : 'напрямую';
+  return [styleText('dim', `    Сеть: ${event.host} → ${path} (${rule})`)];
 }
 
 function describeMcpServerReady(event: EventOfType<'mcp_server_ready'>): string[] {

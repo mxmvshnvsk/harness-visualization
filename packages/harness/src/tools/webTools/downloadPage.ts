@@ -7,6 +7,7 @@ import { HARNESS_USER_AGENT } from '../../http/userAgent.js';
 import type { WebFetchSettings } from '../../settings/settingsSchema.js';
 import { ToolError } from '../ToolError.js';
 import { assertAllowedUrl } from './assertAllowedUrl.js';
+import type { RoutedFetch } from '../../network/NetworkRouter.js';
 
 const REDIRECT_STATUSES = [301, 302, 303, 307, 308];
 
@@ -28,11 +29,12 @@ export type LoadPage = (url: string) => Promise<DownloadedPage>;
 export async function downloadPage(
   startUrl: string,
   settings: WebFetchSettings,
+  fetchImpl: RoutedFetch,
 ): Promise<DownloadedPage> {
   let currentUrl = startUrl;
   for (let redirects = 0; redirects <= settings.maxRedirects; redirects += 1) {
     const allowedUrl = await assertAllowedUrl(currentUrl, settings.allowPrivateNetwork);
-    const response = await fetchOnce(allowedUrl, settings.requestTimeoutMs);
+    const response = await fetchOnce(fetchImpl, allowedUrl, settings.requestTimeoutMs);
     if (REDIRECT_STATUSES.includes(response.status)) {
       currentUrl = resolveRedirectTarget(response, allowedUrl);
       await response.body?.cancel();
@@ -47,9 +49,9 @@ export async function downloadPage(
   throw new ToolError(`Слишком много перенаправлений: больше ${settings.maxRedirects}`);
 }
 
-async function fetchOnce(url: URL, timeoutMs: number): Promise<Response> {
+async function fetchOnce(fetchImpl: RoutedFetch, url: URL, timeoutMs: number): Promise<Response> {
   try {
-    return await fetch(url, {
+    return await fetchImpl(url, {
       redirect: 'manual',
       headers: {
         'User-Agent': HARNESS_USER_AGENT,

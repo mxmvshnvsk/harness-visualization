@@ -2,6 +2,7 @@
 // Ответ приходит как XML, закодированный в Base64, — его нужно раскодировать и разобрать.
 // Это наглядно в трейсе: сколько пришло от Яндекса и сколько текста ушло модели.
 
+import type { RoutedFetch } from '../network/NetworkRouter.js';
 import { z } from 'zod';
 import { describeFetchFailure } from '../http/describeFetchFailure.js';
 import { HARNESS_USER_AGENT } from '../http/userAgent.js';
@@ -32,10 +33,16 @@ export class YandexSearchProvider implements SearchProvider {
   readonly name = 'yandex';
   private readonly settings: YandexSearchSettings;
   private readonly credentials: YandexCredentials;
+  private readonly fetchImpl: RoutedFetch;
 
-  constructor(settings: YandexSearchSettings, credentials: YandexCredentials) {
+  constructor(
+    settings: YandexSearchSettings,
+    credentials: YandexCredentials,
+    fetchImpl: RoutedFetch,
+  ) {
     this.settings = settings;
     this.credentials = credentials;
+    this.fetchImpl = fetchImpl;
   }
 
   async search(query: string, maxResults: number): Promise<SearchResponse> {
@@ -68,7 +75,7 @@ export class YandexSearchProvider implements SearchProvider {
       ? this.settings.baseUrl
       : `${this.settings.baseUrl}/`;
     try {
-      return await fetch(new URL(WEB_SEARCH_PATH, baseWithSlash), {
+      return await this.fetchImpl(new URL(WEB_SEARCH_PATH, baseWithSlash), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

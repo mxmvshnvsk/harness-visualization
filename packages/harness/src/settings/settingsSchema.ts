@@ -183,6 +183,29 @@ const mcpServerSettingsSchema = z.object({
   trustAnnotations: z.boolean().default(false),
 });
 
+// Маршруты сети: какой запрос идёт через прокси, какой напрямую.
+// Нужно, потому что сервисы доступны по-разному: один — только через VPN (прокси),
+// другой через VPN, наоборот, недоступен. Решение принимается по адресу хоста.
+export const NETWORK_ROUTES = ['proxy', 'direct'] as const;
+
+const networkRouteSchema = z.enum(NETWORK_ROUTES);
+
+const networkRuleSchema = z.object({
+  // Человекочитаемое описание — видно в трейсе и в интерфейсе.
+  description: z.string().min(1),
+  // Шаблон адреса: api.tavily.com или *.yandex.net.
+  hostPattern: z.string().min(1),
+  route: networkRouteSchema,
+});
+
+const networkSettingsSchema = z.object({
+  // Маршрут для хостов, под которые не подошло ни одно правило.
+  // proxy означает «через прокси, если он задан в окружении, иначе напрямую».
+  defaultRoute: networkRouteSchema.default('proxy'),
+  // Правила по адресу, проверяются по порядку; первое подходящее решает.
+  rules: z.array(networkRuleSchema).default([]),
+});
+
 export const harnessSettingsSchema = z.object({
   model: modelSettingsSchema,
   agent: agentSettingsSchema,
@@ -193,6 +216,8 @@ export const harnessSettingsSchema = z.object({
   search: searchSettingsSchema.optional(),
   // MCP-серверы, которые харнесс запускает в начале сессии.
   mcpServers: z.array(mcpServerSettingsSchema).default([]),
+  // Маршруты сети. Если раздела нет, все запросы идут по маршруту proxy по умолчанию.
+  network: networkSettingsSchema.default({ defaultRoute: 'proxy', rules: [] }),
   prices: z.record(z.string(), modelPricesSchema).default({}),
   traces: tracesSettingsSchema,
 });
@@ -212,3 +237,6 @@ export type TavilySettings = z.infer<typeof tavilySettingsSchema>;
 export type YandexSearchSettings = z.infer<typeof yandexSearchSettingsSchema>;
 export type YandexSearchPrices = z.infer<typeof yandexSearchPricesSchema>;
 export type McpServerSettings = z.infer<typeof mcpServerSettingsSchema>;
+export type NetworkSettings = z.infer<typeof networkSettingsSchema>;
+export type NetworkRule = z.infer<typeof networkRuleSchema>;
+export type NetworkRoute = z.infer<typeof networkRouteSchema>;

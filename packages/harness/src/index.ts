@@ -38,6 +38,13 @@ export { collectSeenSources, normalizeReference } from './grounding/collectSeenS
 export { extractReferences } from './grounding/extractReferences.js';
 export { readTrace } from './grounding/readTrace.js';
 export type * from './grounding/referenceTypes.js';
+export {
+  NetworkRouter,
+  type RoutedFetch,
+  type NetworkRequestInfo,
+} from './network/NetworkRouter.js';
+export { maskProxyUrl, readProxyUrl } from './network/proxyFromEnvironment.js';
+export { resolveNetworkRoute, type NetworkRouteDecision } from './network/resolveNetworkRoute.js';
 export { prepareWorkspace } from './workspace/prepareWorkspace.js';
 export { Workspace, type WorkspaceEntry } from './workspace/Workspace.js';
 export type * from './tokenomics/costTypes.js';

@@ -8,6 +8,7 @@ import type {
   PermissionDecision,
   ToolEffect,
 } from '../permissions/permissionTypes.js';
+import type { NetworkRequestInfo } from '../network/NetworkRouter.js';
 import type { RequestCost, SessionCost } from '../tokenomics/costTypes.js';
 
 export interface EventMetadata {
@@ -24,7 +25,8 @@ export interface SessionStartedPayload {
   baseUrl: string;
   model: string;
   reasoningEffort: ReasoningEffort;
-  // Через какой прокси идут запросы харнесса; null — напрямую.
+  // Прокси для запросов с маршрутом proxy (из окружения, секреты скрыты); null — прокси не задан,
+  // все запросы идут напрямую. Маршрут каждого запроса — в событиях network_request.
   networkProxy: string | null;
   // Какой поисковый провайдер у тула web_search; null — поиск выключен.
   searchProvider: string | null;
@@ -99,6 +101,12 @@ export interface McpServerLogPayload {
 export interface McpServerStoppedPayload {
   type: 'mcp_server_stopped';
   serverName: string;
+}
+
+// Исходящий HTTP-запрос харнесса и маршрут, которым он пошёл: через прокси или напрямую.
+// Пишется перед каждым запросом к модели, поисковику и загрузкой страницы.
+export interface NetworkRequestPayload extends NetworkRequestInfo {
+  type: 'network_request';
 }
 
 export interface UserMessagePayload {
@@ -232,6 +240,7 @@ export type HarnessEventPayload =
   | McpMessagePayload
   | McpServerLogPayload
   | McpServerStoppedPayload
+  | NetworkRequestPayload
   | UserMessagePayload
   | PromptAssembledPayload
   | ModelRequestPayload
