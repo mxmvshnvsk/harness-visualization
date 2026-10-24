@@ -1,0 +1,70 @@
+{
+  "model": {
+    "providerName": "deepseek",
+    "baseUrl": "https://api.deepseek.com",
+    "model": "deepseek-flash",
+    "apiKeyVariable": "DEEPSEEK_API_KEY",
+    "requestTimeoutMs": 120000,
+    "maxOutputTokens": 2048,
+    "requestExtras": {
+      "thinking": { "type": "enabled" }
+    }
+  },
+  "prices": {
+    "deepseek-flash": {
+      "currency": "USD",
+      "checkedAt": "2026-10-24",
+      "source": "https://api-docs.deepseek.com/quick_start/pricing",
+      "tariffs": [
+        {
+          "name": "peak",
+          "inputCacheHitPerMillion": 0.006,
+          "inputCacheMissPerMillion": 0.3,
+          "outputPerMillion": 1.2,
+          "schedule": {
+            "weekdaysUtc": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+            "hoursUtc": [
+              { "fromHour": 1, "toHour": 4 },
+              { "fromHour": 6, "toHour": 10 }
+            ]
+          }
+        },
+        {
+          "name": "offPeak",
+          "inputCacheHitPerMillion": 0.003,
+          "inputCacheMissPerMillion": 0.15,
+          "outputPerMillion": 0.6
+        }
+      ]
+    },
+    "deepseek-v4-pro": {
+      "currency": "USD",
+      "checkedAt": "2026-10-24",
+      "source": "https://api-docs.deepseek.com/quick_start/pricing",
+      "tariffs": [
+        {
+          "name": "peak",
+          "inputCacheHitPerMillion": 0.044,
+          "inputCacheMissPerMillion": 1.32,
+          "outputPerMillion": 3.96,
+          "schedule": {
+            "weekdaysUtc": ["monday", "tuesday", "wednesday", "thursday", "friday"],
+            "hoursUtc": [
+              { "fromHour": 1, "toHour": 4 },
+              { "fromHour": 6, "toHour": 10 }
+            ]
+          }
+        },
+        {
+          "name": "offPeak",
+          "inputCacheHitPerMillion": 0.022,
+          "inputCacheMissPerMillion": 0.66,
+          "outputPerMillion": 1.98
+        }
+      ]
+    }
+  },
+  "traces": {
+    "directory": "traces"
+  }
+}

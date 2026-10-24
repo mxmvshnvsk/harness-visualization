@@ -151,3 +151,5 @@ vite.config.ts.timestamp-*
 # Harness Visualization
 # Шаблон с пустыми ключами хранится в репозитории
 !.env.example
+# Трейсы сессий: в них запросы и ответы модели, в git не кладём
+traces/
