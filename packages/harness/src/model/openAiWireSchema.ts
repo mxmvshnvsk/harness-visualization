@@ -4,11 +4,22 @@
 
 import { z } from 'zod';
 
+const wireToolCallSchema = z.object({
+  id: z.string(),
+  type: z.string().optional(),
+  function: z.object({
+    name: z.string(),
+    // Аргументы — строка с JSON, а не объект.
+    arguments: z.string(),
+  }),
+});
+
 const wireMessageSchema = z.object({
   role: z.string(),
   content: z.string().nullable().optional(),
   // Есть у моделей с рассуждениями, например у DeepSeek в режиме thinking.
   reasoning_content: z.string().nullable().optional(),
+  tool_calls: z.array(wireToolCallSchema).nullish(),
 });
 
 const wireChoiceSchema = z.object({
@@ -43,3 +54,4 @@ export const wireErrorSchema = z.object({
 
 export type WireChatCompletion = z.infer<typeof wireChatCompletionSchema>;
 export type WireUsage = z.infer<typeof wireUsageSchema>;
+export type WireToolCall = z.infer<typeof wireToolCallSchema>;

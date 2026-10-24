@@ -64,6 +64,13 @@
       ]
     }
   },
+  "agent": {
+    "maxIterations": 10
+  },
+  "workspace": {
+    "directory": "workspace",
+    "seedDirectory": "examples/workspace"
+  },
   "traces": {
     "directory": "traces"
   }

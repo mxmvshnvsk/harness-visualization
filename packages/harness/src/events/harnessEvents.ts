@@ -28,11 +28,15 @@ export interface UserMessagePayload {
 export interface PromptAssembledPayload {
   type: 'prompt_assembled';
   messages: ChatMessage[];
+  // Какие тулы харнесс предложит модели.
+  toolNames: string[];
 }
 
 export interface ModelRequestPayload {
   type: 'model_request';
   requestId: string;
+  // Номер шага цикла агента: 1 — первый запрос, дальше — после каждого вызова тулов.
+  iteration: number;
   reasoningEffort: ReasoningEffort;
   method: string;
   url: string;
@@ -63,6 +67,27 @@ export interface ModelErrorPayload {
   message: string;
 }
 
+export interface ToolCallPayload {
+  type: 'tool_call';
+  toolCallId: string;
+  toolName: string;
+  // Аргументы, как их прислала модель, — строка с JSON.
+  argumentsText: string;
+  // Те же аргументы после разбора; null, если JSON не разобрался.
+  arguments: unknown;
+}
+
+export interface ToolResultPayload {
+  type: 'tool_result';
+  toolCallId: string;
+  toolName: string;
+  // true — тул не выполнился; модель получит текст ошибки и сможет исправиться.
+  isError: boolean;
+  // Ровно то, что увидит модель.
+  content: string;
+  durationMs: number;
+}
+
 export interface AssistantMessagePayload {
   type: 'assistant_message';
   text: string;
@@ -88,6 +113,8 @@ export type HarnessEventPayload =
   | ModelRequestPayload
   | ModelResponsePayload
   | ModelErrorPayload
+  | ToolCallPayload
+  | ToolResultPayload
   | AssistantMessagePayload
   | SessionFinishedPayload
   | ErrorPayload;

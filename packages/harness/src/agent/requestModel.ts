@@ -13,6 +13,7 @@ import type { AgentDependencies } from './agentDependencies.js';
 export async function requestModel(
   request: ModelRequest,
   dependencies: AgentDependencies,
+  iteration: number,
 ): Promise<ModelReply> {
   const { provider, events } = dependencies;
   const requestId = randomUUID();
@@ -20,6 +21,7 @@ export async function requestModel(
   events.emit({
     type: 'model_request',
     requestId,
+    iteration,
     reasoningEffort: request.reasoningEffort,
     method: preparedRequest.method,
     url: preparedRequest.url,

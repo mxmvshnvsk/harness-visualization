@@ -1,15 +1,21 @@
-// Собирает сессию: поток событий, подписчиков, провайдера — и запускает один ход агента.
+// Собирает сессию: поток событий, подписчиков, провайдера, песочницу и тулы —
+// и запускает один ход агента.
 
 import { randomUUID } from 'node:crypto';
 import { join, relative } from 'node:path';
-import { runSingleTurn } from '../agent/runSingleTurn.js';
+import type { AgentDependencies } from '../agent/agentDependencies.js';
+import { runAgentTurn } from '../agent/runAgentTurn.js';
 import { createConsolePrinter } from '../events/createConsolePrinter.js';
 import { EventStream } from '../events/EventStream.js';
 import { JsonlTraceWriter } from '../events/JsonlTraceWriter.js';
-import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
 import type { ReasoningEffort } from '../model/chatTypes.js';
+import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
 import type { LoadedSettings } from '../settings/loadSettings.js';
 import { SessionTokenomics } from '../tokenomics/SessionTokenomics.js';
+import { createFileTools } from '../tools/fileTools/createFileTools.js';
+import { ToolRegistry } from '../tools/ToolRegistry.js';
+import { prepareWorkspace } from '../workspace/prepareWorkspace.js';
+import { Workspace } from '../workspace/Workspace.js';
 
 export interface CliSessionInput {
   loadedSettings: LoadedSettings;
@@ -20,13 +26,12 @@ export interface CliSessionInput {
 }
 
 export async function runCliSession(input: CliSessionInput): Promise<void> {
-  const { settings, modelApiKey } = input.loadedSettings;
-  const sessionId = createSessionId();
-  const events = new EventStream(sessionId);
+  const { settings } = input.loadedSettings;
+  const events = new EventStream(createSessionId());
   const tokenomics = new SessionTokenomics();
   const traceWriter = await JsonlTraceWriter.open(
     join(input.projectRoot, settings.traces.directory),
-    sessionId,
+    events.sessionId,
   );
 
   // Порядок важен: токеномика должна учесть ответ модели раньше,
@@ -35,7 +40,7 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
   events.subscribe((event) => tokenomics.handleEvent(event));
   events.subscribe(createConsolePrinter({ verbose: input.verbose }));
 
-  const provider = new OpenAiCompatibleProvider(settings.model, modelApiKey);
+  const dependencies = await createAgentDependencies(input, events);
   const startedAt = performance.now();
   events.emit({
     type: 'session_started',
@@ -46,11 +51,10 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
   });
 
   try {
-    await runSingleTurn(
-      input.question,
-      { provider, events, prices: settings.prices },
-      { reasoningEffort: input.reasoningEffort },
-    );
+    await runAgentTurn(input.question, dependencies, {
+      reasoningEffort: input.reasoningEffort,
+      maxIterations: settings.agent.maxIterations,
+    });
   } catch (error) {
     events.emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
     process.exitCode = 1;
@@ -63,6 +67,34 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     await traceWriter.close();
     console.log(`Трейс сессии: ${relative(input.projectRoot, traceWriter.filePath)}`);
   }
+}
+
+async function createAgentDependencies(
+  input: CliSessionInput,
+  events: EventStream,
+): Promise<AgentDependencies> {
+  const { settings, modelApiKey } = input.loadedSettings;
+  const workspaceDirectory = join(input.projectRoot, settings.workspace.directory);
+  const preparedWorkspace = await prepareWorkspace(
+    workspaceDirectory,
+    join(input.projectRoot, settings.workspace.seedDirectory),
+  );
+  if (preparedWorkspace.createdFromSeed) {
+    console.log(`Рабочая папка создана из примеров: ${settings.workspace.directory}/`);
+  }
+
+  const tools = new ToolRegistry();
+  for (const tool of createFileTools()) {
+    tools.register(tool);
+  }
+
+  return {
+    provider: new OpenAiCompatibleProvider(settings.model, modelApiKey),
+    events,
+    prices: settings.prices,
+    tools,
+    toolContext: { workspace: new Workspace(workspaceDirectory) },
+  };
 }
 
 // Короткий идентификатор удобнее читать в консоли и в именах файлов.

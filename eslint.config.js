@@ -24,8 +24,9 @@ const typeScriptRules = {
     { selector: 'enumMember', format: ['PascalCase'] },
     // Поля внешних API приходят в snake_case (finish_reason, tool_calls).
     { selector: 'typeProperty', format: ['camelCase', 'snake_case'] },
-    // HTTP-заголовки и JSON-ключи в литералах объектов не проверяем.
-    { selector: 'objectLiteralProperty', format: null },
+    // Ключи в литералах объектов не проверяем: это HTTP-заголовки, JSON-поля
+    // и таблицы по типам событий (session_started: ...).
+    { selector: ['objectLiteralProperty', 'objectLiteralMethod'], format: null },
     { selector: 'import', format: null },
   ],
   '@typescript-eslint/explicit-module-boundary-types': 'error',

@@ -65,8 +65,23 @@ const tracesSettingsSchema = z.object({
   directory: z.string().min(1),
 });
 
+const agentSettingsSchema = z.object({
+  // Сколько раз подряд агент может обратиться к модели за один ход.
+  // Защищает от бесконечного цикла, если модель зациклится на тулах.
+  maxIterations: z.number().int().positive().default(10),
+});
+
+const workspaceSettingsSchema = z.object({
+  // Песочница, в которой работают файловые тулы.
+  directory: z.string().min(1),
+  // Откуда взять файлы, если песочницы ещё нет.
+  seedDirectory: z.string().min(1),
+});
+
 export const harnessSettingsSchema = z.object({
   model: modelSettingsSchema,
+  agent: agentSettingsSchema,
+  workspace: workspaceSettingsSchema,
   prices: z.record(z.string(), modelPricesSchema).default({}),
   traces: tracesSettingsSchema,
 });

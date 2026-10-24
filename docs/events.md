@@ -13,21 +13,38 @@
 | `sessionId` | короткий идентификатор сессии          |
 | `timestamp` | время в ISO 8601, UTC                  |
 
-## События этапа 1
+## События
 
-| Тип                 | Когда                                      | Главные поля                                                                        |
-| ------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------- |
-| `session_started`   | сессия началась                            | `providerName`, `baseUrl`, `model`, `reasoningEffort`                               |
-| `user_message`      | пришёл запрос пользователя                 | `text`                                                                              |
-| `prompt_assembled`  | харнесс собрал контекст для модели         | `messages`                                                                          |
-| `model_request`     | HTTP-запрос к модели собран и отправляется | `requestId`, `reasoningEffort`, `method`, `url`, `headers` (секреты скрыты), `body` |
-| `model_response`    | модель ответила                            | `requestId`, `status`, `durationMs`, `body`, `reply`, `cost`                        |
-| `model_error`       | запрос к модели не удался                  | `requestId`, `status`, `durationMs`, `body`, `message`                              |
-| `assistant_message` | харнесс отдал ответ пользователю           | `text`                                                                              |
-| `session_finished`  | сессия закончилась                         | `durationMs`, `modelRequests`, `usage`, `cost`                                      |
-| `error`             | ошибка, прервавшая сессию                  | `message`                                                                           |
+| Тип                 | Когда                                      | Главные поля                                                                                     |
+| ------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| `session_started`   | сессия началась                            | `providerName`, `baseUrl`, `model`, `reasoningEffort`                                            |
+| `user_message`      | пришёл запрос пользователя                 | `text`                                                                                           |
+| `prompt_assembled`  | харнесс собрал контекст для модели         | `messages`, `toolNames`                                                                          |
+| `model_request`     | HTTP-запрос к модели собран и отправляется | `requestId`, `iteration`, `reasoningEffort`, `method`, `url`, `headers` (секреты скрыты), `body` |
+| `model_response`    | модель ответила                            | `requestId`, `status`, `durationMs`, `body`, `reply`, `cost`                                     |
+| `model_error`       | запрос к модели не удался                  | `requestId`, `status`, `durationMs`, `body`, `message`                                           |
+| `tool_call`         | модель попросила вызвать тул               | `toolCallId`, `toolName`, `argumentsText`, `arguments`                                           |
+| `tool_result`       | тул выполнен (или не смог)                 | `toolCallId`, `toolName`, `isError`, `content`, `durationMs`                                     |
+| `assistant_message` | харнесс отдал ответ пользователю           | `text`                                                                                           |
+| `session_finished`  | сессия закончилась                         | `durationMs`, `modelRequests`, `usage`, `cost`                                                   |
+| `error`             | ошибка, прервавшая сессию                  | `message`                                                                                        |
 
-`model_request` и `model_response` связаны полем `requestId`.
+`model_request` и `model_response` связаны полем `requestId`, `tool_call` и `tool_result` — полем `toolCallId`. Тот же `toolCallId` стоит в ответе модели (`reply.toolCalls`) и в сообщении с результатом тула, которое уходит модели в следующем запросе.
+
+## Цикл агента в событиях
+
+Один ход с тулами выглядит так:
+
+```
+user_message → prompt_assembled
+model_request (шаг 1) → model_response (просит тулы)
+  tool_call → tool_result
+  tool_call → tool_result
+model_request (шаг 2) → model_response (ответ текстом)
+assistant_message
+```
+
+Каждый следующий `model_request` несёт в `body.messages` всю историю: ответы модели с `tool_calls` и результаты тулов с ролью `tool`. Модель ничего не помнит между запросами — помнит харнесс.
 
 ## Два слоя ответа модели
 

@@ -2,11 +2,23 @@
 // Запросы отправляются встроенным fetch, без SDK, — так виден ровно тот HTTP-запрос, что уходит.
 
 import type { ModelSettings } from '../settings/settingsSchema.js';
-import type { ModelReply, ModelRequest, TokenUsage } from './chatTypes.js';
+import type {
+  ModelReply,
+  ModelRequest,
+  TokenUsage,
+  ToolCall,
+  ToolDefinition,
+} from './chatTypes.js';
 import type { ModelProvider, PreparedHttpRequest, RawHttpResponse } from './modelProvider.js';
 import { ModelProviderError } from './ModelProviderError.js';
-import { wireChatCompletionSchema, wireErrorSchema, type WireUsage } from './openAiWireSchema.js';
+import {
+  wireChatCompletionSchema,
+  wireErrorSchema,
+  type WireToolCall,
+  type WireUsage,
+} from './openAiWireSchema.js';
 import { buildReasoningParameters } from './reasoningParameters.js';
+import { toWireMessages, toWireTools } from './toWireFormat.js';
 
 const CHAT_COMPLETIONS_PATH = 'chat/completions';
 
@@ -36,7 +48,8 @@ export class OpenAiCompatibleProvider implements ModelProvider {
         ...this.settings.requestExtras,
         ...buildReasoningParameters(this.settings.reasoningStyle, request.reasoningEffort),
         model: this.settings.model,
-        messages: request.messages,
+        messages: toWireMessages(request.messages, this.settings.reasoningStyle),
+        ...buildToolsParameter(request.tools),
         max_tokens: this.settings.maxOutputTokens,
         stream: false,
       },
@@ -86,6 +99,7 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       finishReason: firstChoice.finish_reason ?? 'unknown',
       text: firstChoice.message.content ?? null,
       reasoningText: firstChoice.message.reasoning_content ?? null,
+      toolCalls: (firstChoice.message.tool_calls ?? []).map(fromWireToolCall),
       usage: normalizeUsage(completion.usage),
     };
   }
@@ -106,6 +120,22 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       );
     }
   }
+}
+
+// Без тулов поле tools не передаём совсем: часть API не принимает пустой список.
+function buildToolsParameter(tools: ToolDefinition[]): Record<string, unknown> {
+  if (tools.length === 0) {
+    return {};
+  }
+  return { tools: toWireTools(tools) };
+}
+
+function fromWireToolCall(wireToolCall: WireToolCall): ToolCall {
+  return {
+    id: wireToolCall.id,
+    name: wireToolCall.function.name,
+    argumentsText: wireToolCall.function.arguments,
+  };
 }
 
 function buildUrl(baseUrl: string, path: string): string {
