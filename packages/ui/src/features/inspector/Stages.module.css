@@ -1,0 +1,208 @@
+/* Этапы инспектора: карточки на всю ширину. --c — цвет группы этапа, --a — чем выделен текущий:
+   в светлой теме цветом группы, в тёмной (монохром) — акцентом (токены --card-*). */
+.stages {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.empty {
+  color: var(--muted);
+}
+
+.card {
+  --c: var(--meta);
+  --a: var(--card-active, var(--c));
+  --i: var(--card-icon, var(--c));
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: var(--space-card);
+  border-radius: var(--radius-card);
+  border: 1px solid color-mix(in srgb, var(--c) var(--card-tint), var(--line));
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 var(--edge-hi);
+  /* Подскролл оставляет место под шапкой и над доком плеера. */
+  scroll-margin: 100px 0 260px;
+  transition:
+    border-color 0.3s,
+    opacity 0.3s,
+    box-shadow 0.3s;
+}
+
+.card[data-kind='agent'] {
+  --c: var(--model);
+}
+
+.card[data-kind='answer'] {
+  --c: var(--dialog);
+}
+
+.card[data-state='future'] {
+  opacity: 0.42;
+}
+
+.card[data-state='active'] {
+  border-color: var(--a);
+  box-shadow:
+    0 0 0 1px var(--a),
+    0 18px 50px -24px color-mix(in srgb, var(--a) calc(30% + var(--glow) * 25%), transparent),
+    inset 0 1px 0 var(--edge-hi);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.icon {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: var(--i);
+  background: color-mix(in srgb, var(--i) 14%, transparent);
+  transition:
+    background 0.3s,
+    color 0.3s,
+    box-shadow 0.3s;
+}
+
+.card[data-state='active'] .icon {
+  background: var(--a);
+  color: var(--surface);
+  box-shadow: 0 0 calc(var(--glow) * 18px) color-mix(in srgb, var(--a) 50%, transparent);
+}
+
+.title {
+  font-size: 18px;
+  letter-spacing: -0.01em;
+}
+
+.badge {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--card-icon, var(--c)) 50%, transparent);
+  color: var(--card-icon, var(--c));
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.when {
+  margin-left: auto;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.card[data-state='active'] .when {
+  color: var(--a);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 0 54px;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  transition: opacity 0.4s;
+}
+
+.row[data-pending='true'] {
+  opacity: 0.28;
+}
+
+.rowButton {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  width: calc(100% + 20px);
+  margin-left: -10px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  font-size: 14px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.rowButton:hover {
+  background: var(--accent-soft);
+}
+
+.row[data-now='true'] .rowButton {
+  background: color-mix(in srgb, var(--a) 10%, transparent);
+}
+
+.time {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-left: 54px;
+}
+
+.more {
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.more:hover {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.followChip {
+  position: fixed;
+  left: 50%;
+  bottom: calc(210px + env(safe-area-inset-bottom, 0px));
+  z-index: 5;
+  transform: translateX(-50%);
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--raised);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+@media (width <= 640px) {
+  .rows,
+  .details {
+    margin-left: 0;
+  }
+}

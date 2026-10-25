@@ -178,7 +178,15 @@ function StreamViews({ events, live }: StreamViewsProps): ReactElement {
       {viewName === 'flow' && (
         <FlowView clock={clock} schedule={schedule} liveStartedAt={liveStartedAt} />
       )}
-      {viewName === 'inspector' && <InspectorView view={view} />}
+      {viewName === 'inspector' && (
+        <InspectorView
+          view={view}
+          events={events}
+          shown={cursor}
+          clock={clock}
+          schedule={schedule}
+        />
+      )}
       {viewName === 'events' && <EventList events={shown} />}
       <div className={styles.dock}>
         <div className={styles.dockInner}>
