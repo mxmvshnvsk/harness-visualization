@@ -320,6 +320,24 @@ const subagentsSettingsSchema = z.object({
   agents: z.record(z.string().regex(/^[a-z][a-z0-9_-]*$/u), subagentSchema).default({}),
 });
 
+// Оркестрация (этап 6d). Пайплайн — детерминированная оркестрация: шаги и их порядок задаёт код.
+const pipelineSettingsSchema = z.object({
+  // Каким тулом код ищет документы по вопросу; null — тем же, что retrieval.toolName.
+  searchTool: z.string().min(1).nullable().default(null),
+  // Сколько найденных документов раздать исследователям — по одному на каждого.
+  maxDocuments: z.number().int().min(1).max(8).default(3),
+  // Кто исследует документ — имя из subagents.agents.
+  researcher: z.string().min(1).default('researcher'),
+});
+
+const orchestrationSettingsSchema = z.object({
+  pipeline: pipelineSettingsSchema.default({
+    searchTool: null,
+    maxDocuments: 3,
+    researcher: 'researcher',
+  }),
+});
+
 export const harnessSettingsSchema = z.object({
   model: modelSettingsSchema,
   agent: agentSettingsSchema,
@@ -350,6 +368,9 @@ export const harnessSettingsSchema = z.object({
   grounding: groundingSettingsSchema.default({ similarityThreshold: 0.87 }),
   skills: skillsSettingsSchema.default({ directory: 'skills', always: [], manual: [] }),
   subagents: subagentsSettingsSchema.default({ enabled: false, parallel: true, agents: {} }),
+  orchestration: orchestrationSettingsSchema.default({
+    pipeline: { searchTool: null, maxDocuments: 3, researcher: 'researcher' },
+  }),
   server: serverSettingsSchema.default({
     port: 4317,
     permissionTimeoutSeconds: 120,
@@ -361,6 +382,7 @@ export const harnessSettingsSchema = z.object({
 
 export type HarnessSettings = z.infer<typeof harnessSettingsSchema>;
 export type ModelSettings = z.infer<typeof modelSettingsSchema>;
+export type PipelineSettings = z.infer<typeof pipelineSettingsSchema>;
 export type ContextSettings = z.infer<typeof contextSettingsSchema>;
 export type ReasoningStyle = ModelSettings['reasoningStyle'];
 export type ModelPrices = z.infer<typeof modelPricesSchema>;

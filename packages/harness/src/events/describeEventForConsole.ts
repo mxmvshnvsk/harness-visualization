@@ -80,6 +80,53 @@ type EventDescribers = {
   [Type in HarnessEventType]: (event: EventOfType<Type>) => string[];
 };
 
+const ORCHESTRATION_MODE_NAMES = {
+  pipeline: 'пайплайн — шаги задаёт код',
+  superagent: 'суперагент — план и поручения решает модель',
+  hybrid: 'гибрид — каркас задаёт код, внутри шага решает модель',
+} as const;
+
+const STEP_STATUS_COLORS = { done: 'cyan', warning: 'yellow', failed: 'red' } as const;
+
+// Оркестрация (этап 6d): режим, план, шаги кода и итог.
+const ORCHESTRATION_DESCRIBERS: Pick<
+  EventDescribers,
+  | 'orchestration_started'
+  | 'plan_created'
+  | 'pipeline_step_started'
+  | 'pipeline_step_finished'
+  | 'orchestration_finished'
+> = {
+  orchestration_started: (event) => [
+    styleText('bold', `Оркестрация: ${ORCHESTRATION_MODE_NAMES[event.mode]}`),
+    ...event.steps.map((step, index) =>
+      styleText('dim', `    ${String(index + 1)}. ${step.title}`),
+    ),
+  ],
+  plan_created: (event) => [
+    styleText(
+      'cyan',
+      `План (${event.author === 'code' ? 'составил код' : 'составила модель'}): ${String(event.tasks.length)} поручений`,
+    ),
+    ...event.tasks.map((task) =>
+      styleText('dim', `    ${task.taskId} → ${task.agent}: ${task.title}`),
+    ),
+  ],
+  pipeline_step_started: (event) => [styleText('cyan', `Шаг «${event.title}»`)],
+  pipeline_step_finished: (event) => [
+    styleText(
+      STEP_STATUS_COLORS[event.status],
+      `    шаг ${event.stepId}: ${event.summary} · ${formatNumber(event.durationMs)} мс`,
+    ),
+  ],
+  orchestration_finished: (event) => [
+    styleText(
+      event.status === 'done' ? 'bold' : 'red',
+      `Оркестрация закончена: поручений ${String(event.tasks)}, доработок ${String(event.reworks)} · ${formatNumber(event.durationMs)} мс`,
+    ),
+  ],
+};
+
 const EVENT_DESCRIBERS: EventDescribers = {
   session_started: (event) => [
     styleText(
@@ -105,6 +152,9 @@ const EVENT_DESCRIBERS: EventDescribers = {
         ? 'Субагенты: выключены'
         : `Субагенты: ${event.subagents.agents.join(', ')}${event.subagents.parallel ? ' · поручения параллельно' : ''}`,
     ),
+    ...(event.orchestration === undefined || event.orchestration === null
+      ? []
+      : [styleText('dim', `Оркестрация: ${ORCHESTRATION_MODE_NAMES[event.orchestration]}`)]),
   ],
   workspace_prepared: describeWorkspacePrepared,
   mcp_server_starting: (event) => [
@@ -261,6 +311,7 @@ const EVENT_DESCRIBERS: EventDescribers = {
       `    ${String(event.modelRequests)} запросов к модели · ${formatUsage(event.usage)} · ${formatMoney(event.modelCost)} · ${formatNumber(event.durationMs)} мс`,
     ),
   ],
+  ...ORCHESTRATION_DESCRIBERS,
   session_finished: describeSessionFinished,
   error: (event) => [styleText('red', `Ошибка: ${event.message}`)],
 };

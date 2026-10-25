@@ -2,6 +2,7 @@
 
 import type { EventStream } from '../events/EventStream.js';
 import type { ReasoningEffort } from '../model/chatTypes.js';
+import type { OrchestrationMode } from '../events/harnessEvents.js';
 import type { HarnessSettings, RetrievalMode } from '../settings/settingsSchema.js';
 import type { PreparedWorkspace } from '../workspace/prepareWorkspace.js';
 import { maskProxyUrl, readProxyUrl } from '../network/proxyFromEnvironment.js';
@@ -17,6 +18,7 @@ export interface SessionAnnouncement {
   retrievalMode: RetrievalMode;
   // null — субагенты выключены.
   subagents: { agents: string[]; parallel: boolean } | null;
+  orchestration: OrchestrationMode | null;
   demoProject: boolean;
 }
 
@@ -32,6 +34,7 @@ export function announceSession(events: EventStream, announcement: SessionAnnoun
     searchProvider: announcement.searchProviderName,
     retrievalMode: announcement.retrievalMode,
     subagents: announcement.subagents,
+    orchestration: announcement.orchestration,
     demoProject: announcement.demoProject,
   });
   events.emit({

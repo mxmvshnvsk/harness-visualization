@@ -26,6 +26,7 @@ async function main(): Promise<void> {
     retrievalToolName: cliOptions.retrievalToolName,
     freshWorkspace: cliOptions.freshWorkspace,
     subagents: cliOptions.subagents,
+    orchestration: cliOptions.orchestration,
     demoProject: cliOptions.demoProject,
     workspaceDirectory: null,
     verbose: cliOptions.verbose,

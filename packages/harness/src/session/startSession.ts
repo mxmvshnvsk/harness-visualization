@@ -45,6 +45,8 @@ import { SkillLibrary } from '../skills/SkillLibrary.js';
 import { prepareWorkspace } from '../workspace/prepareWorkspace.js';
 import { Workspace } from '../workspace/Workspace.js';
 import { announceSession } from './announceSession.js';
+import type { OrchestrationMode } from '../events/harnessEvents.js';
+import { runPipelineTurn, type PipelineOptions } from '../orchestration/runPipelineTurn.js';
 import { startSessionRecording, type SessionRecording } from './sessionRecording.js';
 
 export interface SessionInput {
@@ -63,6 +65,8 @@ export interface SessionInput {
   freshWorkspace: boolean;
   // Дать ли модели субагентов (этап 6c); null — как в harness.config.json (subagents.enabled).
   subagents: boolean | null;
+  // Оркестрация (этап 6d): кто решает порядок шагов; null — обычный агент.
+  orchestration: OrchestrationMode | null;
   // false — сессия без демо-проекта: без «Кедр Софт», MCP, поиска в базе, скиллов, памяти,
   // плана и субагентов; своя пустая песочница, тулы файлов и веба.
   demoProject: boolean;
@@ -160,9 +164,13 @@ async function runDialog(
     retrieval: createRetrievalOptions(input),
   };
   const conversation: ChatMessage[] = [];
+  const pipeline = pipelineOf(input);
   let question: string | null = input.question;
   for (let turn = 1; question !== null; turn += 1) {
-    await runAgentTurn(question, dependencies, options, conversation);
+    // Пайплайн каждый вопрос проходит заново по тем же шагам: истории у него нет.
+    await (pipeline === null
+      ? runAgentTurn(question, dependencies, options, conversation)
+      : runPipelineTurn(question, dependencies, pipeline));
     if (hooks.nextQuestion === undefined) {
       return;
     }
@@ -193,6 +201,7 @@ async function prepareSession(
     searchProviderName: searchProvider?.name ?? null,
     retrievalMode: input.demoProject ? input.retrievalMode : 'tool',
     subagents: subagentsOf(input),
+    orchestration: orchestrationOf(input),
     demoProject: input.demoProject,
   });
   const workspace = new Workspace(resolve(input.projectRoot, workspaceSetting));
@@ -384,9 +393,36 @@ function registerDelegateTool(input: SessionInput, dependencies: AgentDependenci
   }
 }
 
+// Оркестрация — только в демо-проекте: исследователи читают базу знаний «Кедр Софт».
+function orchestrationOf(input: SessionInput): OrchestrationMode | null {
+  return input.demoProject ? input.orchestration : null;
+}
+
+// Настройки пайплайна (этап 6d): исследователь — из описанных субагентов, поиск — тул харнесса.
+function pipelineOf(input: SessionInput): PipelineOptions | null {
+  if (orchestrationOf(input) !== 'pipeline') {
+    return null;
+  }
+  const { orchestration, subagents, retrieval } = input.loadedSettings.settings;
+  const researcher = subagents.agents[orchestration.pipeline.researcher];
+  if (researcher === undefined) {
+    throw new Error(
+      `Для пайплайна нужен субагент «${orchestration.pipeline.researcher}» в subagents.agents ` +
+        '(orchestration.pipeline.researcher в harness.config.json).',
+    );
+  }
+  return {
+    settings: orchestration.pipeline,
+    researcher,
+    searchTool: input.retrievalToolName ?? orchestration.pipeline.searchTool ?? retrieval.toolName,
+    reasoningEffort: input.reasoningEffort,
+  };
+}
+
 // Субагенты этой сессии: включены флагом или галочкой, иначе — как в настройках.
+// В оркестрации поручения даёт не модель тулом, а код или оркестратор — delegate_task не нужен.
 function subagentsOf(input: SessionInput): { agents: string[]; parallel: boolean } | null {
-  if (!input.demoProject) {
+  if (!input.demoProject || orchestrationOf(input) !== null) {
     return null;
   }
   const settings = input.loadedSettings.settings.subagents;

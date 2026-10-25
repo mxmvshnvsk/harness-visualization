@@ -41,6 +41,12 @@ const EVENT_GROUPS: Record<HarnessEventType, EventGroup> = {
   iteration_limit_reached: 'model',
   subagent_started: 'tool',
   subagent_finished: 'tool',
+  // Оркестрация (этап 6d) — работа харнесса, как цикл агента.
+  orchestration_started: 'meta',
+  plan_created: 'meta',
+  pipeline_step_started: 'meta',
+  pipeline_step_finished: 'meta',
+  orchestration_finished: 'meta',
   memory_updated: 'tool',
   progress_updated: 'tool',
   session_finished: 'meta',

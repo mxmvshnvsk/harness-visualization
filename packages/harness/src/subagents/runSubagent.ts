@@ -18,6 +18,8 @@ export interface SubagentAssignment {
   settings: SubagentSettings;
   task: string;
   parentToolCallId: string;
+  // Шаг оркестрации, если поручил код (этап 6d).
+  stepId?: string;
 }
 
 export interface SubagentOutcome {
@@ -29,7 +31,7 @@ export async function runSubagent(
   assignment: SubagentAssignment,
   dependencies: AgentDependencies,
 ): Promise<SubagentOutcome> {
-  const { subagentId, agent, settings, task, parentToolCallId } = assignment;
+  const { subagentId, agent, settings, task, parentToolCallId, stepId } = assignment;
   const tokenomics = new SessionTokenomics();
   const events = dependencies.events.forAgent(subagentId, (event) => {
     tokenomics.handleEvent(event);
@@ -40,6 +42,7 @@ export async function runSubagent(
     subagentId,
     agent,
     parentToolCallId,
+    ...(stepId === undefined ? {} : { stepId }),
     task,
     toolNames: tools.names(),
     maxIterations: settings.maxIterations,

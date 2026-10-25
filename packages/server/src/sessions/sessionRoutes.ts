@@ -208,6 +208,7 @@ function toSessionInput(
     retrievalToolName: body.retrievalToolName ?? null,
     freshWorkspace: body.freshWorkspace ?? false,
     subagents: body.subagents ?? null,
+    orchestration: body.orchestration ?? null,
     demoProject: body.demoProject ?? true,
     workspaceDirectory: null,
   };

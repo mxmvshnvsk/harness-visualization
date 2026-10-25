@@ -82,6 +82,14 @@ const DESCRIBERS: Describers = {
   iteration_limit_reached: (event) =>
     `лимит ${String(event.limit)} шагов (${event.setting}): последний шаг — без тулов`,
   subagent_started: (event) => `${event.subagentId}: «${event.task}»`,
+  orchestration_started: (event) =>
+    `${event.mode}: ${event.steps.map((step) => step.title).join(' → ')}`,
+  plan_created: (event) =>
+    `${event.author === 'code' ? 'код' : 'модель'}: ${event.tasks.map((task) => task.title).join(', ')}`,
+  pipeline_step_started: (event) => event.title,
+  pipeline_step_finished: (event) => `${event.stepId} · ${event.status}: ${event.summary}`,
+  orchestration_finished: (event) =>
+    `${event.mode} · ${event.status}: поручений ${String(event.tasks)}, доработок ${String(event.reworks)}`,
   subagent_finished: (event) =>
     event.status === 'done'
       ? `${event.subagentId}: отчёт, ${plural(event.modelRequests, MODEL_REQUESTS)} к модели`

@@ -52,6 +52,11 @@
 | `iteration_limit_reached` | агент дошёл до последнего разрешённого шага: харнесс просит ответить по найденному                            | `limit`, `setting` (где лимит в конфиге), `note` (пометка харнесса модели); следующий `model_request` — с `tool_choice: none`                                                                                                                                                       |
 | `subagent_started`        | главный агент поручил задачу субагенту тулом `delegate_task` (этап 6c); событие главного агента               | `subagentId`, `agent` (имя из `subagents.agents`), `parentToolCallId` (вызов `delegate_task`), `task`, `toolNames`, `maxIterations`, `reasoningEffort`                                                                                                                              |
 | `subagent_finished`       | субагент закончил: отчёт ушёл главному как результат `delegate_task` или не дошёл до отчёта                   | `subagentId`, `agent`, `parentToolCallId`, `status` (`done`, `failed`), `report`, `errorMessage`, `durationMs`, `modelRequests`, `usage`, `modelCost`                                                                                                                               |
+| `orchestration_started`   | сессия идёт в режиме оркестрации (этап 6d)                                                                    | `mode` (`pipeline`, `superagent`, `hybrid`), `steps` (известные заранее шаги: `stepId`, `title`, `kind` — `code`, `model`, `agents`), `settings`                                                                                                                                    |
+| `plan_created`            | готов план поручений                                                                                          | `author` (`code` — составил харнесс, `model` — оркестратор), `stepId`, `tasks` (`taskId`, `title`, `agent`)                                                                                                                                                                         |
+| `pipeline_step_started`   | начался шаг оркестрации                                                                                       | `stepId`, `title`, `kind`                                                                                                                                                                                                                                                           |
+| `pipeline_step_finished`  | шаг закончен                                                                                                  | `stepId`, `status` (`done`, `warning`, `failed`), `summary`, `durationMs`                                                                                                                                                                                                           |
+| `orchestration_finished`  | оркестрация закончена                                                                                         | `mode`, `status` (`done`, `failed`), `tasks`, `reworks` (возвраты на доработку), `durationMs`                                                                                                                                                                                       |
 | `assistant_message`       | харнесс отдал ответ пользователю                                                                              | `text`                                                                                                                                                                                                                                                                              |
 | `awaiting_question`       | ответ отдан, сессия ждёт следующего вопроса того же диалога (этап 6.1)                                        | `turn` — сколько ходов уже было                                                                                                                                                                                                                                                     |
 | `session_finished`        | сессия закончилась                                                                                            | `durationMs`, `modelRequests`, `usage`, `modelCost`, `toolCosts`                                                                                                                                                                                                                    |
@@ -89,6 +94,30 @@ tool_result delegate_task (call_7) — content: отчёт
 ```
 
 Несколько `delegate_task` в одном шаге харнесс запускает одновременно (`subagents.parallel`), и события субагентов в трейсе перемешаны — разбирать их по `agentId`. Остальные тулы — всегда по очереди. `session_finished` считает токены и стоимость всех агентов, `subagent_finished` — только своего субагента.
+
+## Оркестрация в событиях
+
+С этапа 6d сессия может идти не обычным циклом агента, а оркестрацией: кто решает порядок шагов — код (`pipeline`), модель (`superagent`) или оба (`hybrid`). Включается флагом `--orchestration pipeline` в CLI или полем `"orchestration": "pipeline"` в `POST /api/sessions`; в `session_started` — поле `orchestration`.
+
+Пайплайн — детерминированная оркестрация: все пять шагов известны заранее и приходят в `orchestration_started`. Ход вопроса:
+
+```text
+user_message
+orchestration_started (mode pipeline, steps find → research → collect → answer → verify)
+pipeline_step_started (find) → context_retrieved → pipeline_step_finished (найденные документы)
+plan_created (author code: по исследователю на документ)
+pipeline_step_started (research)
+  subagent_started (researcher-1, stepId research, parentToolCallId «») … subagent_finished
+  subagent_started (researcher-2 …) — одновременно с первым
+pipeline_step_finished (research: конспектов N из N)
+pipeline_step_started (collect) → pipeline_step_finished
+pipeline_step_started (answer) → prompt_assembled → model_request → model_response → pipeline_step_finished
+pipeline_step_started (verify) → pipeline_step_finished (какие документы названы в ответе)
+assistant_message
+orchestration_finished
+```
+
+Поручения в пайплайне даёт код, а не модель: у `subagent_started` пустой `parentToolCallId` и поле `stepId` — шаг, на котором дано поручение. `delegate_task` модели в режиме оркестрации не даётся.
 
 ## Два слоя ответа модели
 

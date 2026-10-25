@@ -56,6 +56,8 @@ export interface SessionStartedPayload {
   // Субагенты сессии (этап 6c): кому модель может поручать задачи; null — выключены.
   // В трейсах до этого поля нет — субагентов там не было.
   subagents?: { agents: string[]; parallel: boolean } | null;
+  // Оркестрация (этап 6d); null или нет поля — обычный агент.
+  orchestration?: OrchestrationMode | null;
   // false — сессия без демо-проекта: без «Кедр Софт» в system prompt, MCP, поиска в базе,
   // скиллов и памяти, с пустой песочницей. Нет поля — демо-проект (трейсы до этого режима).
   demoProject?: boolean;
@@ -450,7 +452,10 @@ export interface SubagentStartedPayload {
   // Кто из описанных в harness.config.json (subagents.agents).
   agent: string;
   // Вызов delegate_task у главного агента: по нему видно, какой шаг породил субагента.
+  // Пустая строка — поручил не агент, а код харнесса (пайплайн, этап 6d).
   parentToolCallId: string;
+  // Шаг оркестрации, на котором дано поручение (этап 6d); нет поля — поручил агент тулом.
+  stepId?: string;
   task: string;
   // Тулы, которые харнесс дал субагенту.
   toolNames: string[];
@@ -459,6 +464,71 @@ export interface SubagentStartedPayload {
 }
 
 export type SubagentStatus = 'done' | 'failed';
+
+// Оркестрация (этап 6d): кто решает порядок шагов — код (pipeline), модель (superagent) или оба.
+export type OrchestrationMode = 'pipeline' | 'superagent' | 'hybrid';
+
+// Шаг оркестрации: code — делает сам харнесс; model — один запрос к модели; agents — поручения
+// субагентам.
+export type OrchestrationStepKind = 'code' | 'model' | 'agents';
+
+export interface OrchestrationStep {
+  stepId: string;
+  title: string;
+  kind: OrchestrationStepKind;
+}
+
+export interface OrchestrationStartedPayload {
+  type: 'orchestration_started';
+  mode: OrchestrationMode;
+  // Шаги, известные заранее: у пайплайна — все, их задал код.
+  steps: OrchestrationStep[];
+  settings: Record<string, unknown>;
+}
+
+export interface PlannedTask {
+  taskId: string;
+  title: string;
+  // Кому поручено: имя субагента из subagents.agents.
+  agent: string;
+}
+
+export interface PlanCreatedPayload {
+  type: 'plan_created';
+  // Кто составил план: код харнесса или модель.
+  author: 'code' | 'model';
+  // На каком шаге оркестрации; null — вне шагов.
+  stepId: string | null;
+  tasks: PlannedTask[];
+}
+
+export interface PipelineStepStartedPayload {
+  type: 'pipeline_step_started';
+  stepId: string;
+  title: string;
+  kind: OrchestrationStepKind;
+}
+
+export type PipelineStepStatus = 'done' | 'warning' | 'failed';
+
+export interface PipelineStepFinishedPayload {
+  type: 'pipeline_step_finished';
+  stepId: string;
+  status: PipelineStepStatus;
+  // Что получилось на шаге — коротко, для консоли и интерфейса.
+  summary: string;
+  durationMs: number;
+}
+
+export interface OrchestrationFinishedPayload {
+  type: 'orchestration_finished';
+  mode: OrchestrationMode;
+  status: 'done' | 'failed';
+  tasks: number;
+  // Сколько раз работу вернули на доработку (этап 6d.2); у пайплайна приёмки нет — 0.
+  reworks: number;
+  durationMs: number;
+}
 
 export interface SubagentFinishedPayload {
   type: 'subagent_finished';
@@ -551,6 +621,11 @@ export type HarnessEventPayload =
   | IterationLimitReachedPayload
   | SubagentStartedPayload
   | SubagentFinishedPayload
+  | OrchestrationStartedPayload
+  | PlanCreatedPayload
+  | PipelineStepStartedPayload
+  | PipelineStepFinishedPayload
+  | OrchestrationFinishedPayload
   | SessionFinishedPayload
   | ErrorPayload;
 

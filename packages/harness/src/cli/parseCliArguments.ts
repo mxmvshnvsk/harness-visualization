@@ -7,12 +7,14 @@
 //   pnpm chat --retrieval auto --retrieval-tool kedr__hybrid_search "вопрос" — каким тулом ищет харнесс
 //   pnpm chat --fresh "вопрос"        — начать с чистой рабочей папки (пересоздать из примеров)
 //   pnpm chat --subagents "вопрос"    — дать модели субагентов (этап 6c), даже если в настройках выключены
+//   pnpm chat --orchestration pipeline "вопрос" — оркестрация (этап 6d): pipeline — шаги задаёт код
 //   pnpm chat --no-demo "вопрос"      — агент без демо-проекта: без «Кедр Софт», MCP, базы знаний,
 //                                       скиллов и памяти; пустая песочница, файлы и веб
 //   pnpm chat --verbose "вопрос"      — печатать и полные события в JSON
 
 import { parseArgs } from 'node:util';
 import { REASONING_EFFORTS, type ReasoningEffort } from '../model/chatTypes.js';
+import type { OrchestrationMode } from '../events/harnessEvents.js';
 import {
   RETRIEVAL_MODES,
   SEARCH_PROVIDER_NAMES,
@@ -34,6 +36,8 @@ export interface CliOptions {
   freshWorkspace: boolean;
   // true — флаг --subagents; null — как в harness.config.json.
   subagents: true | null;
+  // Оркестрация (этап 6d); null — обычный агент.
+  orchestration: OrchestrationMode | null;
   // false — флаг --no-demo.
   demoProject: boolean;
   verbose: boolean;
@@ -50,6 +54,7 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
       'retrieval-tool': { type: 'string' },
       fresh: { type: 'boolean', default: false },
       subagents: { type: 'boolean', default: false },
+      orchestration: { type: 'string' },
       'no-demo': { type: 'boolean', default: false },
       verbose: { type: 'boolean', default: false },
     },
@@ -63,9 +68,24 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
     retrievalToolName: values['retrieval-tool'] ?? null,
     freshWorkspace: values.fresh,
     subagents: values.subagents ? true : null,
+    orchestration:
+      values.orchestration === undefined ? null : parseOrchestration(values.orchestration),
     demoProject: !values['no-demo'],
     verbose: values.verbose,
   };
+}
+
+// Пока готов только пайплайн; суперагент и гибрид — шаги 6d.2 и 6d.3.
+const ORCHESTRATION_MODES = ['pipeline'] as const;
+
+function parseOrchestration(value: string): OrchestrationMode {
+  const mode = ORCHESTRATION_MODES.find((item) => item === value);
+  if (mode === undefined) {
+    throw new Error(
+      `Неизвестный режим оркестрации «${value}». Допустимые: ${ORCHESTRATION_MODES.join(', ')}.`,
+    );
+  }
+  return mode;
 }
 
 function parseSearchProvider(value: string): SearchProviderName {
