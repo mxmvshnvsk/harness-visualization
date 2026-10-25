@@ -1,14 +1,23 @@
 // Рисует кадр «Потока» в готовый SVG: меняет атрибуты, текст и классы у заранее созданных
 // элементов. Никаких новых элементов в кадре — только переиспользуемые пулы точек и подписей.
 
+import type { FlowAction } from '../../timeline/actions';
 import type { Frame, WaitingNode } from '../../timeline/frame';
-import { FLOW_NODES, LANES, type FlowNode, type FlowNodeId, type Point } from './flowGraph';
+import {
+  FLOW_NODES,
+  hopsOf,
+  LANES,
+  routePoint,
+  type FlowNode,
+  type FlowNodeId,
+  type Point,
+} from './flowGraph';
 
 export const DOT_POOL = 4;
 export const LABEL_POOL = 6;
 export const TRAIL = 6;
 // Шаг шлейфа вдоль полосы: доля пути между соседними кружками.
-const TRAIL_STEP = 0.022;
+const TRAIL_STEP = 0.03;
 
 export interface FlowElements {
   lanes: Record<string, SVGPathElement | null>;
@@ -36,22 +45,30 @@ export function drawFrame(elements: FlowElements, frame: Frame): void {
   }
 }
 
-function laneKey(from: FlowNodeId, to: FlowNodeId, lane: 'out' | 'back'): string {
-  return lane === 'out' ? `${from}>${to}` : `${to}>${from}`;
-}
-
 function drawLanes(elements: FlowElements, frame: Frame): void {
+  // Подсвечен весь маршрут действия: видно, через кого идёт вызов.
   const active = new Map<string, string>();
   for (const dot of frame.dots) {
-    active.set(laneKey(dot.action.from, dot.action.to, dot.lane), dot.action.group);
+    for (const hop of hopsOf(dot.action.route, dot.lane)) {
+      active.set(hop, dot.action.group);
+    }
   }
   for (const action of frame.parked) {
-    active.set(laneKey(action.from, action.to, 'out'), action.group);
+    for (const hop of hopsOf(action.route, 'out')) {
+      active.set(hop, action.group);
+    }
   }
   for (const [key, path] of Object.entries(elements.lanes)) {
     path?.setAttribute('data-active', String(active.has(key)));
     path?.setAttribute('data-group', active.get(key) ?? '');
   }
+}
+
+// Подпись стоит у адресата: «туда» — на последнем переходе, «обратно» — на первом.
+function labelPoint(route: FlowAction['route'], lane: 'out' | 'back'): Point {
+  const hops = hopsOf(route, lane);
+  const hop = lane === 'out' ? hops.at(-1) : hops[0];
+  return LANES[hop ?? '']?.label ?? { x: 0, y: 0 };
 }
 
 function drawNodes(elements: FlowElements, frame: Frame): void {
@@ -69,10 +86,11 @@ function drawNode(group: SVGGElement, node: FlowNode, frame: Frame): void {
   const share = frame.busyShare[node.id] ?? 0;
   group.setAttribute('data-busy', String(waiting !== undefined));
   group.setAttribute('data-group', waiting?.group ?? inside?.action.group ?? '');
-  group.setAttribute('data-heat', String(share > 0));
+  group.setAttribute('data-heat', String(share >= 0.01));
   const sub = group.querySelector<SVGTextElement>('text:nth-of-type(2)');
   if (sub !== null) {
-    sub.textContent = subtitleOf(node, waiting, share);
+    sub.textContent =
+      group.dataset.idle === 'true' ? 'в этой сессии не работал' : subtitleOf(node, waiting, share);
   }
   const heat = group.querySelector<SVGRectElement>('rect:last-of-type');
   heat?.setAttribute('width', ((node.width - 32) * share).toFixed(1));
@@ -83,7 +101,7 @@ function subtitleOf(node: FlowNode, waiting: WaitingNode | undefined, share: num
   if (waiting !== undefined) {
     return `${waiting.label} ${formatSeconds(waiting.elapsedMs)}`;
   }
-  return share > 0 ? `занят ${String(Math.round(share * 100))} % времени` : node.role;
+  return share >= 0.01 ? `занят ${String(Math.round(share * 100))} % времени` : node.role;
 }
 
 function drawLabels(elements: FlowElements, frame: Frame): void {
@@ -91,7 +109,7 @@ function drawLabels(elements: FlowElements, frame: Frame): void {
     ...frame.labels.map((label) => ({
       text: label.lane === 'out' ? label.action.out : (label.action.back ?? ''),
       group: label.action.group,
-      at: LANES[laneKey(label.action.from, label.action.to, label.lane)]?.label ?? { x: 0, y: 0 },
+      at: labelPoint(label.action.route, label.lane),
       opacity: label.opacity,
     })),
     ...frame.insideLabels.map((label) => {
@@ -142,43 +160,60 @@ function placeLabel(
   group.setAttribute('opacity', opacity.toFixed(2));
 }
 
+interface DotSpec {
+  route: FlowAction['route'];
+  lane: 'out' | 'back';
+  progress: number;
+  group: string;
+}
+
 function drawDots(elements: FlowElements, frame: Frame): void {
-  const moving = frame.dots.map((dot) => ({
-    lane: LANES[laneKey(dot.action.from, dot.action.to, dot.lane)],
-    progress: dot.progress,
-    group: dot.action.group,
-  }));
-  const parked = frame.parked.map((action) => ({
-    lane: LANES[`${action.from}>${action.to}`],
-    progress: 1,
-    group: action.group,
-  }));
   // Пользователь просил меньше движения — точки сразу у адресата, без полёта.
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const all = [...moving, ...parked].map((dot) => (reduced ? { ...dot, progress: 1 } : dot));
+  const all: DotSpec[] = [
+    ...frame.dots.map((dot) => ({
+      route: dot.action.route,
+      lane: dot.lane,
+      progress: reduced ? 1 : dot.progress,
+      group: dot.action.group,
+    })),
+    ...frame.parked.map((action) => ({
+      route: action.route,
+      lane: 'out' as const,
+      progress: 1,
+      group: action.group,
+    })),
+  ];
   elements.dots.forEach((group, index) => {
     const dot = all[index];
     if (group === null) {
       return;
     }
-    if (dot?.lane === undefined) {
+    if (dot === undefined) {
       group.setAttribute('opacity', '0');
       return;
     }
     group.setAttribute('opacity', '1');
     group.setAttribute('data-group', dot.group);
-    const circles = group.querySelectorAll('circle');
-    const travelling = dot.progress < 1;
-    circles.forEach((circle, circleIndex) => {
-      const isHead = circleIndex === circles.length - 1;
-      const back = isHead ? 0 : (TRAIL - circleIndex) * TRAIL_STEP;
-      const point = dot.lane?.at(Math.max(0, ease(dot.progress) - back)) ?? { x: 0, y: 0 };
-      circle.setAttribute('cx', point.x.toFixed(1));
-      circle.setAttribute('cy', point.y.toFixed(1));
-      if (!isHead) {
-        circle.setAttribute('opacity', travelling ? (0.12 + circleIndex * 0.04).toFixed(2) : '0');
-      }
-    });
+    placeDot(group, dot);
+  });
+}
+
+// Голова, ореол и шлейф: шлейф отстаёт по маршруту и виден только в полёте.
+function placeDot(group: SVGGElement, dot: DotSpec): void {
+  const circles = group.querySelectorAll('circle');
+  const travelling = dot.progress < 1;
+  const hops = Math.max(1, dot.route.length - 1);
+  circles.forEach((circle, circleIndex) => {
+    const isTrail = circle.dataset.part === 'trail';
+    // Кружки шлейфа идут после ореола: первый отстаёт сильнее всех.
+    const back = isTrail ? (TRAIL + 1 - circleIndex) * (TRAIL_STEP / hops) : 0;
+    const point = routePoint(dot.route, dot.lane, ease(dot.progress) - back);
+    circle.setAttribute('cx', point.x.toFixed(1));
+    circle.setAttribute('cy', point.y.toFixed(1));
+    if (isTrail) {
+      circle.setAttribute('opacity', travelling ? (0.12 + circleIndex * 0.04).toFixed(2) : '0');
+    }
   });
 }
 

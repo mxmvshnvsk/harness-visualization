@@ -63,15 +63,16 @@ describe('buildActions', () => {
   it('собирает действия по участникам, а не по событиям', () => {
     const actions = buildActions(session().events, context);
 
-    expect(actions.map((action) => `${action.kind}:${action.from}>${action.to}`)).toEqual([
-      'message:user>harness',
-      'exchange:harness>model',
-      'exchange:harness>mcp',
-      'inside:harness>harness',
-      'exchange:harness>tools',
-      'inside:harness>harness',
+    // Вызов tool идёт через политику к исполнению, тул MCP-сервера — дальше, к серверу.
+    expect(actions.map((action) => `${action.kind}:${action.route.join('>')}`)).toEqual([
+      'message:user>loop',
+      'exchange:loop>model',
+      'exchange:loop>policy>tools>mcp',
+      'inside:policy',
+      'exchange:loop>policy>tools',
+      'inside:policy',
       'exchange:tools>network',
-      'message:harness>user',
+      'message:loop>user',
     ]);
   });
 
@@ -98,7 +99,8 @@ describe('buildSchedule', () => {
 
     expect(searchItem).toBeDefined();
     if (searchItem !== undefined) {
-      expect(searchItem.outTo - searchItem.outFrom).toBe(TRAVEL_MS);
+      // Три перехода: первый — TRAVEL_MS, два следующих — по половине.
+      expect(searchItem.outTo - searchItem.outFrom).toBe(TRAVEL_MS * 2);
       expect(searchItem.backFrom).toBeGreaterThanOrEqual(searchItem.outTo + MIN_DWELL_MS);
     }
   });

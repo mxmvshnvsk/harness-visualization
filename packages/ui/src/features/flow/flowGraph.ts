@@ -1,85 +1,131 @@
-// Схема потока: узлы и связи между ними. Координаты — в единицах viewBox SVG (960 × 460),
+// Схема потока: участники и связи между ними. Координаты — в единицах viewBox SVG (1120 × 600),
 // схема масштабируется вместе с контейнером.
+//
+// Харнесс — не один узел, а контейнер с частями: цикл агента, контекст и prompt, политика,
+// retrieval, исполнение тулов. Рамка «агент» обводит цикл и модель: модель снаружи харнесса,
+// цикл внутри — так видно, где кончается агент и начинается харнесс (docs/plan.md, этап 8c).
 
-export type FlowNodeId = 'user' | 'harness' | 'model' | 'mcp' | 'tools' | 'network';
+export type FlowNodeId =
+  'user' | 'loop' | 'context' | 'policy' | 'retrieval' | 'tools' | 'model' | 'mcp' | 'network';
 
 export interface FlowNode {
   id: FlowNodeId;
   title: string;
   // Подпись под названием: что это за участник.
   role: string;
+  // Подсказка при наведении: что он делает в сессии.
+  about: string;
+  // Часть харнесса — рисуется внутри его контейнера.
+  part: boolean;
   x: number;
   y: number;
   width: number;
   height: number;
 }
 
-export const VIEW_WIDTH = 960;
-export const VIEW_HEIGHT = 460;
+export const VIEW_WIDTH = 1120;
+export const VIEW_HEIGHT = 600;
 
-export const FLOW_NODES: Record<FlowNodeId, FlowNode> = {
+export interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export const HARNESS_BOX: Box = { x: 220, y: 30, width: 590, height: 545 };
+export const AGENT_BOX: Box = { x: 395, y: 98, width: 700, height: 124 };
+
+type NodeSpec = Omit<FlowNode, 'id'>;
+
+function place(x: number, y: number, width: number, height: number): Box {
+  return { x, y, width, height };
+}
+
+const SPECS: Record<FlowNodeId, NodeSpec> = {
   user: {
-    id: 'user',
     title: 'Пользователь',
     role: 'вопрос и разрешения',
-    x: 100,
-    y: 200,
-    width: 160,
-    height: 76,
+    about: 'Задаёт вопрос, отвечает на запросы разрешения, получает ответ.',
+    part: false,
+    ...place(115, 300, 170, 72),
   },
-  harness: {
-    id: 'harness',
-    title: 'Харнесс',
-    role: 'prompt, политика, цикл агента',
-    x: 420,
-    y: 200,
-    width: 220,
-    height: 104,
+  loop: {
+    title: 'Цикл агента',
+    role: 'решает, что делать с ответом',
+    about:
+      'Часть агента внутри харнесса: отправляет prompt модели, разбирает ответ, вызывает тулы, решает, когда закончить.',
+    part: true,
+    ...place(515, 150, 220, 72),
   },
-  model: {
-    id: 'model',
-    title: 'Модель',
-    role: 'LLM по API',
-    x: 820,
-    y: 70,
-    width: 170,
-    height: 76,
+  context: {
+    title: 'Контекст и prompt',
+    role: 'история, system, тулы',
+    about: 'Собирает prompt: system, историю диалога, результаты тулов и описания тулов.',
+    part: true,
+    ...place(335, 315, 170, 66),
   },
-  mcp: {
-    id: 'mcp',
-    title: 'MCP-сервер',
-    role: 'отдельный процесс',
-    x: 820,
-    y: 230,
-    width: 170,
-    height: 76,
+  policy: {
+    title: 'Политика',
+    role: 'можно ли выполнить',
+    about: 'Каждый вызов tool проходит через неё: выполнить, спросить пользователя или запретить.',
+    part: true,
+    ...place(515, 315, 150, 66),
+  },
+  retrieval: {
+    title: 'Retrieval',
+    role: 'ищет до вопроса модели',
+    about: 'Ищет сам, до первого запроса к модели, и подмешивает найденное в контекст.',
+    part: true,
+    ...place(705, 315, 170, 66),
   },
   tools: {
-    id: 'tools',
-    title: 'Тулы харнесса',
-    role: 'файлы, поиск, страницы',
-    x: 420,
-    y: 390,
-    width: 200,
-    height: 76,
+    title: 'Исполнение тулов',
+    role: 'свои тулы и MCP-клиент',
+    about:
+      'Выполняет вызовы: свои тулы (файлы, поиск, страницы) и тулы MCP-серверов через MCP-клиент.',
+    part: true,
+    ...place(515, 475, 190, 66),
+  },
+  model: {
+    title: 'Модель',
+    role: 'LLM по API',
+    about: 'Часть агента снаружи харнесса: получает prompt, возвращает текст или tool_calls.',
+    part: false,
+    ...place(990, 150, 170, 72),
+  },
+  mcp: {
+    title: 'MCP-сервер',
+    role: 'отдельный процесс',
+    about: 'Отдельный процесс со своими тулами; харнесс говорит с ним по JSON-RPC.',
+    part: false,
+    ...place(990, 380, 170, 72),
   },
   network: {
-    id: 'network',
     title: 'Интернет',
     role: 'поиск и сайты',
-    x: 820,
-    y: 390,
-    width: 170,
-    height: 76,
+    about: 'Куда тулы ходят по сети: напрямую или через прокси.',
+    part: false,
+    ...place(990, 510, 170, 72),
   },
 };
 
-// Связи рисуются всегда — по ним видно, кто с кем вообще может говорить.
+export const FLOW_NODES = Object.fromEntries(
+  Object.entries(SPECS).map(([id, spec]) => [id, { id, ...spec }]),
+) as Record<FlowNodeId, FlowNode>;
+
+// Связи рисуются всегда — по ним видно, кто с кем вообще может говорить. Вызов tool идёт из
+// цикла через политику к исполнению: политика — шлагбаум на этом пути.
 export const FLOW_EDGES: readonly [FlowNodeId, FlowNodeId][] = [
-  ['user', 'harness'],
-  ['harness', 'model'],
-  ['harness', 'mcp'],
-  ['harness', 'tools'],
+  ['user', 'loop'],
+  ['loop', 'model'],
+  ['loop', 'context'],
+  ['loop', 'policy'],
+  ['loop', 'retrieval'],
+  ['policy', 'tools'],
+  ['retrieval', 'model'],
+  ['retrieval', 'mcp'],
+  ['tools', 'mcp'],
   ['tools', 'network'],
 ];
 
@@ -181,3 +227,22 @@ export const LANES: Record<string, Lane | undefined> = Object.fromEntries(
     [`${toId}>${fromId}`, laneOf(toId, fromId)],
   ]),
 );
+
+// Маршрут действия — цепочка участников: цикл → политика → исполнение → MCP-сервер.
+// «Туда» точка идёт по маршруту, «обратно» — по нему же в обратную сторону.
+export type Route = readonly FlowNodeId[];
+
+export function hopsOf(route: Route, lane: 'out' | 'back'): string[] {
+  const path = lane === 'out' ? route : [...route].reverse();
+  return path.slice(1).map((node, index) => `${path[index] ?? node}>${node}`);
+}
+
+// Точка на маршруте: каждому переходу — равная доля пути.
+export function routePoint(route: Route, lane: 'out' | 'back', progress: number): Point {
+  const hops = hopsOf(route, lane);
+  const clamped = Math.max(0, Math.min(1, progress));
+  const scaled = clamped * hops.length;
+  const index = Math.min(hops.length - 1, Math.floor(scaled));
+  const point = LANES[hops[index] ?? '']?.at(scaled - index);
+  return point ?? { x: 0, y: 0 };
+}

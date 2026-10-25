@@ -115,12 +115,19 @@ function waitFor(gap: number): number {
   return Math.min(WAIT_MAX_MS, Math.max(WAIT_MIN_MS, gap));
 }
 
+// Перелёт по маршруту: первый переход — TRAVEL_MS, каждый следующий — ещё половина.
+// Цикл → политика → исполнение → MCP-сервер идёт дольше, чем цикл → модель, но не втрое.
+export function travelFor(action: FlowAction): number {
+  const hops = Math.max(1, action.route.length - 1);
+  return TRAVEL_MS * (1 + (hops - 1) / 2);
+}
+
 function durationOf(moment: Moment): number {
   switch (moment.item.action.kind) {
     case 'exchange':
-      return TRAVEL_MS;
+      return travelFor(moment.item.action);
     case 'message':
-      return TRAVEL_MS + HOLD_MS;
+      return travelFor(moment.item.action) + HOLD_MS;
     case 'inside':
       return INSIDE_MS;
   }

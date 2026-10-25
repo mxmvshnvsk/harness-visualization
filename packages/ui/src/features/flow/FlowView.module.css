@@ -19,11 +19,20 @@
   width: 100%;
   height: auto;
   /* Схема целиком над доком плеера: не выше окна за вычетом шапки и плеера. */
-  max-height: max(420px, calc(100vh - 400px));
+  max-height: max(420px, calc(100vh - 470px));
   display: block;
   border-radius: var(--radius-card);
-  background: var(--bg);
+  background:
+    radial-gradient(
+      120% 90% at 50% 0%,
+      color-mix(in srgb, var(--accent-2) calc(var(--glow) * 6%), transparent),
+      transparent 60%
+    ),
+    var(--canvas);
   border: 1px solid var(--line);
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 var(--edge-hi);
   font-family: var(--font-text);
 }
 
@@ -60,25 +69,94 @@
   --c: var(--meta);
 }
 
+/* Холст: точечная сетка, контейнер харнесса, рамка агента. */
+.gridDot {
+  fill: var(--grid);
+}
+
+.harness {
+  fill: color-mix(in srgb, var(--surface) 55%, transparent);
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.harnessTitle {
+  fill: var(--text);
+  font-size: 20px;
+  font-weight: var(--weight-strong);
+  letter-spacing: -0.01em;
+}
+
+.harnessSub,
+.agentLabel {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.harnessSub {
+  fill: var(--muted);
+}
+
+.agent {
+  fill: color-mix(in srgb, var(--accent) 5%, transparent);
+  stroke: color-mix(in srgb, var(--accent) 70%, var(--muted));
+  stroke-width: 1.3;
+  stroke-dasharray: 2 6;
+  stroke-linecap: round;
+}
+
+.agentLabel {
+  fill: color-mix(in srgb, var(--accent) 80%, var(--text));
+}
+
 /* Две дорожки у каждой связи: «туда» и «обратно». По активной идёт точка. */
 .lane {
   fill: none;
-  stroke: var(--line);
-  stroke-width: 1.5;
-  stroke-dasharray: 5 6;
-  transition: stroke 0.3s;
+  stroke: color-mix(in srgb, var(--muted) 40%, transparent);
+  stroke-width: 1.4;
+  stroke-dasharray: 4 6;
+  transition:
+    stroke 0.25s,
+    opacity 0.25s;
 }
 
 .lane[data-active='true'] {
   stroke: var(--c, var(--muted));
   stroke-dasharray: none;
-  opacity: 0.8;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 calc(var(--glow) * 5px) var(--c, var(--muted)));
+}
+
+/* Наведение на участника: его связи ярче, остальные приглушены. */
+.lane[data-near='true'] {
+  stroke: var(--text);
+  opacity: 0.7;
+}
+
+.diagram:not([data-focus='']) .lane:not([data-near='true'], [data-active='true']) {
+  opacity: 0.25;
+}
+
+.node {
+  cursor: default;
+  outline: none;
+}
+
+.node[data-idle='true'] {
+  opacity: 0.45;
+}
+
+.node:hover .box,
+.node:focus-visible .box {
+  stroke: color-mix(in srgb, var(--text) 35%, var(--line));
 }
 
 .box {
   fill: var(--surface);
   stroke: var(--line);
-  stroke-width: 1.5;
+  stroke-width: 1.3;
   transition:
     stroke 0.4s,
     fill 0.4s;
@@ -89,6 +167,7 @@
   stroke-width: 2;
 }
 
+.part .box,
 .node[data-busy='true'] .box {
   fill: var(--raised);
 }
@@ -97,9 +176,10 @@
   fill: none;
   stroke: var(--c, var(--muted));
   stroke-width: 1.5;
-  stroke-dasharray: 8 6;
+  stroke-dasharray: 6 7;
   opacity: 0;
   animation: march 1.4s linear infinite;
+  filter: drop-shadow(0 0 calc(var(--glow) * 6px) var(--c, var(--muted)));
 }
 
 .node[data-busy='true'] .ring {
@@ -108,7 +188,7 @@
 
 .title {
   fill: var(--text);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: var(--weight-strong);
 }
 
@@ -132,7 +212,7 @@
 }
 
 .heat {
-  fill: var(--muted);
+  fill: var(--c, var(--muted));
 }
 
 .node[data-heat='true'] .heatTrack,
@@ -156,8 +236,13 @@
 /* Прозрачность точек и подписей кадр ставит атрибутом opacity: CSS-свойство его бы перебило. */
 .dot {
   fill: var(--c, var(--text));
-  stroke: var(--surface);
+  stroke: var(--canvas);
   stroke-width: 2;
+}
+
+.halo {
+  fill: var(--c, var(--text));
+  opacity: calc(0.15 + var(--glow) * 0.3);
 }
 
 .trail {
@@ -166,21 +251,47 @@
 
 @keyframes march {
   to {
-    stroke-dashoffset: -28;
+    stroke-dashoffset: -26;
   }
+}
+
+/* Подсказка у участника: сбоку, чтобы не закрывать соседей. */
+.tip {
+  position: absolute;
+  z-index: 2;
+  max-width: 260px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--raised);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  line-height: 1.45;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.tip[data-side='left'] {
+  transform: translate(-100%, -50%);
+}
+
+.tip b {
+  display: block;
+  font-weight: var(--weight-strong);
 }
 
 .caption {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 12px;
+  gap: 6px 14px;
   align-items: baseline;
-  min-height: 48px;
-  padding: 0 4px;
+  min-height: 56px;
+  padding: 18px 8px 0;
 }
 
 .what {
-  font-size: 17px;
+  font-size: 19px;
+  letter-spacing: -0.01em;
   font-weight: var(--weight-medium);
 }
 

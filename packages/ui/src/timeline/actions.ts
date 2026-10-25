@@ -1,20 +1,23 @@
 // Действия сессии для «Потока» — то, что делают участники, а не отдельные события.
 // exchange — обмен с длительностью: харнесс спросил модель и получил ответ, вызвал tool и получил
 // результат, спросил пользователя и дождался ответа. message — сообщение в одну сторону.
-// inside — событие внутри участника: харнесс собрал prompt, политика приняла решение.
+// inside — событие внутри части харнесса: политика приняла решение, retrieval получил query.
 //
 // Действие строится из пары событий, поэтому у него есть настоящая длительность — именно её
-// и показывает «Поток»: где сессия ждала и сколько.
+// и показывает «Поток»: где сессия ждала и сколько. У действия маршрут — через кого идёт точка:
+// вызов tool идёт из цикла через политику к исполнению, а тул MCP-сервера — дальше, к серверу.
 
 import type { HarnessEvent, HarnessEventType } from '@harness-visualization/harness';
 import type { EventGroup } from '../events/eventGroups';
 import type { EventOfType } from '../events/eventTypes';
-import type { FlowNodeId } from '../features/flow/flowGraph';
+import type { FlowNodeId, Route } from '../features/flow/flowGraph';
 import { plural } from '../text/plural';
 
 export interface FlowAction {
   id: string;
   kind: 'exchange' | 'message' | 'inside';
+  // Через кого идёт точка; from и to — концы маршрута. У inside маршрут из одной части.
+  route: Route;
   from: FlowNodeId;
   to: FlowNodeId;
   group: EventGroup;
@@ -86,8 +89,7 @@ const HANDLERS: Handlers = {
       `mcp:${event.serverName}`,
       { event, at },
       {
-        from: 'harness',
-        to: 'mcp',
+        route: ['tools', 'mcp'],
         group: 'meta',
         out: 'initialize · tools/list',
         busy: 'запускается…',
@@ -126,8 +128,7 @@ const HANDLERS: Handlers = {
       { event, at },
       {
         kind: 'message',
-        from: 'user',
-        to: 'harness',
+        route: ['user', 'loop'],
         group: 'dialog',
         out: 'вопрос',
         what: 'Пользователь спрашивает',
@@ -141,8 +142,7 @@ const HANDLERS: Handlers = {
       { event, at },
       {
         kind: 'message',
-        from: 'harness',
-        to: 'user',
+        route: ['loop', 'user'],
         group: 'dialog',
         out: 'ответ',
         what: 'Пользователь получает ответ',
@@ -151,14 +151,29 @@ const HANDLERS: Handlers = {
     );
   },
   prompt_assembled: (builder, event, at) => {
-    addInside(
+    // Сборка мгновенна, но это своя часть харнесса: цикл просит, контекст отдаёт prompt.
+    const key = `prompt:${String(event.sequence)}`;
+    openExchange(
       builder,
+      key,
       { event, at },
       {
+        route: ['loop', 'context'],
         group: 'model',
-        out: `prompt: ${String(event.messages.length)} messages · ${String(event.toolNames.length)} tools`,
+        out: 'собрать prompt',
+        busy: 'собирает…',
         what: 'Харнесс собирает prompt',
-        detail: `${plural(event.messages.length, MESSAGES)} и описания ${plural(event.toolNames.length, TOOLS)}`,
+        detail: 'system prompt, история диалога, результаты и описания тулов',
+      },
+    );
+    closeExchange(
+      builder,
+      key,
+      { event, at },
+      {
+        back: `${String(event.messages.length)} messages · ${String(event.toolNames.length)} tools`,
+        whatBack: 'Prompt собран',
+        detailBack: `${plural(event.messages.length, MESSAGES)} и описания ${plural(event.toolNames.length, TOOLS)}`,
       },
     );
   },
@@ -167,6 +182,7 @@ const HANDLERS: Handlers = {
       builder,
       { event, at },
       {
+        node: 'retrieval',
         group: 'retrieval',
         out: `query: ${event.query}`,
         what: 'Харнесс получил поисковый query',
@@ -182,8 +198,7 @@ const HANDLERS: Handlers = {
       key,
       { event, at: at - event.durationMs },
       {
-        from: 'harness',
-        to: 'mcp',
+        route: ['loop', 'retrieval', 'mcp'],
         group: 'retrieval',
         out: `поиск харнесса · ${event.toolName}`,
         busy: 'ищет…',
@@ -227,8 +242,7 @@ const HANDLERS: Handlers = {
       `tool:${event.toolCallId}`,
       { event, at },
       {
-        from: 'harness',
-        to: mcp ? 'mcp' : 'tools',
+        route: mcp ? ['loop', 'policy', 'tools', 'mcp'] : ['loop', 'policy', 'tools'],
         group: 'tool',
         out: event.toolName,
         busy: 'выполняет…',
@@ -244,8 +258,9 @@ const HANDLERS: Handlers = {
       builder,
       { event, at },
       {
+        node: 'policy',
         group: 'permission',
-        out: `политика: ${event.decision}`,
+        out: event.decision,
         what: 'Политика решает, можно ли выполнить',
         detail: event.reason,
       },
@@ -259,8 +274,7 @@ const HANDLERS: Handlers = {
       `question:${event.toolCallId}`,
       { event, at },
       {
-        from: 'harness',
-        to: 'user',
+        route: ['policy', 'loop', 'user'],
         group: 'permission',
         out: 'разрешить?',
         busy: 'решает…',
@@ -297,8 +311,7 @@ const HANDLERS: Handlers = {
       `network:${String(event.sequence)}`,
       { event, at },
       {
-        from: 'tools',
-        to: 'network',
+        route: ['tools', 'network'],
         group: 'tool',
         out: `${shortHost(event.host)} · ${event.viaProxy ? 'прокси' : 'напрямую'}`,
         busy: 'отвечает…',
@@ -312,6 +325,7 @@ const HANDLERS: Handlers = {
       builder,
       { event, at },
       {
+        node: 'loop',
         group: 'error',
         out: 'ошибка',
         what: 'Сессия завершилась ошибкой',
@@ -337,9 +351,14 @@ export function buildActions(
   return builder.actions;
 }
 
-type ExchangeStart = Pick<FlowAction, 'from' | 'to' | 'group' | 'out' | 'busy' | 'what' | 'detail'>;
+type ExchangeStart = Pick<FlowAction, 'route' | 'group' | 'out' | 'busy' | 'what' | 'detail'>;
 type ExchangeEnd = Pick<FlowAction, 'back' | 'whatBack' | 'detailBack'>;
-type ActionSpec = Pick<FlowAction, 'kind' | 'from' | 'to' | 'group' | 'out' | 'what' | 'detail'>;
+type ActionSpec = Pick<FlowAction, 'kind' | 'route' | 'group' | 'out' | 'what' | 'detail'>;
+
+interface InsideSpec extends Pick<FlowAction, 'group' | 'out' | 'what' | 'detail'> {
+  // В какой части харнесса это происходит.
+  node: FlowNodeId;
+}
 
 function addAction(
   builder: Builder,
@@ -349,6 +368,8 @@ function addAction(
 ): FlowAction {
   const action: FlowAction = {
     ...spec,
+    from: spec.route[0] ?? 'loop',
+    to: spec.route.at(-1) ?? 'loop',
     id: id ?? `${spec.kind}:${String(event.sequence)}`,
     start: at,
     end: null,
@@ -363,12 +384,8 @@ function addAction(
   return action;
 }
 
-function addInside(
-  builder: Builder,
-  origin: Origin,
-  spec: Pick<FlowAction, 'group' | 'out' | 'what' | 'detail'>,
-): void {
-  addAction(builder, origin, { ...spec, kind: 'inside', from: 'harness', to: 'harness' });
+function addInside(builder: Builder, origin: Origin, { node, ...spec }: InsideSpec): void {
+  addAction(builder, origin, { ...spec, kind: 'inside', route: [node] });
 }
 
 function openExchange(builder: Builder, key: string, origin: Origin, start: ExchangeStart): void {
@@ -406,11 +423,12 @@ function closeTool(builder: Builder, event: EventOfType<'tool_result'>, at: numb
   const key = `tool:${event.toolCallId}`;
   const action = builder.open.get(key);
   if (action !== undefined && (event.status === 'denied' || event.status === 'blocked')) {
-    // Запрещённый tool никуда не ходил: это решение внутри харнесса.
+    // Запрещённый tool дальше политики не ушёл: это решение внутри харнесса.
     Object.assign(action, {
       kind: 'inside',
-      from: 'harness',
-      to: 'harness',
+      route: ['policy'],
+      from: 'policy',
+      to: 'policy',
       group: 'permission',
       out: `${event.toolName}: ${event.status}`,
       busy: null,
@@ -446,7 +464,7 @@ function closeNetwork(builder: Builder, origin: Origin): void {
 }
 
 function describeModelRequest(event: EventOfType<'model_request'>): ExchangeStart {
-  const base = { from: 'harness', to: 'model', busy: 'думает…' } as const;
+  const base = { route: ['loop', 'model'], busy: 'думает…' } as const;
   const step = String(event.iteration ?? '?');
   switch (event.purpose) {
     case 'agentStep':
@@ -458,8 +476,10 @@ function describeModelRequest(event: EventOfType<'model_request'>): ExchangeStar
         detail: 'запрос с полным контекстом: prompt, история, результаты тулов',
       };
     case 'queryRewrite':
+      // Retrieval спрашивает модель сам, мимо цикла агента.
       return {
         ...base,
+        route: ['retrieval', 'model'],
         group: 'retrieval',
         out: 'query rewrite',
         what: 'Модель переформулирует вопрос в поисковый query',
