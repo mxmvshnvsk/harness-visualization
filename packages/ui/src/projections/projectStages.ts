@@ -40,6 +40,24 @@ type Describe<Type extends HarnessEventType> = (
 
 type Describers = { [Type in HarnessEventType]?: Describe<Type> };
 
+const SKILL_TRIGGERS = {
+  always: 'скилл загружен при старте: инструкция в system prompt',
+  model: 'модель загрузила скилл тулом load_skill',
+  user: 'пользователь загрузил скилл командой /имя',
+} as const;
+
+function describeRestored(restored: EventOfType<'history_compacted'>['restored']): string {
+  if (restored === undefined) {
+    return '';
+  }
+  const parts = [
+    ...(restored.memo ? ['memo.md'] : []),
+    ...(restored.progress ? ['план'] : []),
+    ...restored.skills.map((name) => `скилл ${name}`),
+  ];
+  return parts.length === 0 ? '' : `; к сводке дописаны как есть: ${parts.join(', ')}`;
+}
+
 const DESCRIBE: Describers = {
   mcp_server_starting: (event) => ({
     code: event.serverName,
@@ -95,7 +113,30 @@ const DESCRIBE: Describers = {
   }),
   history_compacted: (event) => ({
     code: null,
-    text: `харнесс заменил прошлые ходы сводкой (${String(event.replacedMessages)} сообщений → 1): prompt ≈${format(event.beforeTokens)} → ≈${format(event.afterTokens)}; история с начала изменилась — кэш не совпадёт`,
+    text: `харнесс заменил прошлые ходы сводкой (${String(event.replacedMessages)} сообщений → 1): prompt ≈${format(event.beforeTokens)} → ≈${format(event.afterTokens)}; история с начала изменилась — кэш не совпадёт${describeRestored(event.restored)}`,
+  }),
+  skill_catalog: (event) => ({
+    code: event.directory,
+    text:
+      event.skills.length === 0
+        ? 'скиллов нет'
+        : `каталог скиллов в system prompt: ${event.skills.map((skill) => skill.name).join(', ')}`,
+  }),
+  skill_loaded: (event) => ({ code: event.name, text: SKILL_TRIGGERS[event.trigger] }),
+  memory_loaded: (event) => ({
+    code: event.memoPath,
+    text:
+      event.memoCharacters === null
+        ? 'памяти ещё нет — агент начинает с чистого листа'
+        : `memo.md в system prompt: ${format(event.memoCharacters)} симв.`,
+  }),
+  memory_updated: (event) => ({
+    code: event.newPath === null ? event.path : `${event.path} → ${event.newPath}`,
+    text: `агент изменил память: ${event.command}`,
+  }),
+  progress_updated: (event) => ({
+    code: event.path,
+    text: `план v${String(event.version)}: ${event.goal} — сделано ${String(event.steps.filter((step) => step.status === 'done').length)} из ${String(event.steps.length)}`,
   }),
   assistant_message: (event) => ({ code: null, text: shorten(event.text) }),
   awaiting_question: (event) => ({

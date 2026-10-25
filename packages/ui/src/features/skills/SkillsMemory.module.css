@@ -1,0 +1,233 @@
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block);
+}
+
+.empty,
+.muted {
+  color: var(--muted);
+}
+
+.muted {
+  margin: 0;
+  font-size: 13px;
+}
+
+.intro {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  max-width: 80ch;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: var(--space-card);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: var(--weight-medium);
+}
+
+.subtitle {
+  margin: 8px 0 0;
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  color: var(--muted);
+}
+
+.meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.badge {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.list,
+.timeline,
+.steps {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Скилл: загруженный — с полосой цвета части «скиллы», только в каталоге — приглушён. */
+.skill {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0 12px 14px;
+  border-bottom: 1px solid var(--line);
+  border-left: 3px solid transparent;
+}
+
+.skill[data-loaded='true'] {
+  border-left-color: var(--part-skills);
+}
+
+.skill[data-loaded='false'] .description {
+  color: var(--muted);
+}
+
+.skillHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.description {
+  margin: 0;
+  font-size: 14px;
+  max-width: 90ch;
+}
+
+.event {
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--part-skills);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.problem {
+  margin: 0;
+  color: var(--error, var(--text));
+  font-size: 13px;
+}
+
+.memo {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-small);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--part-memory);
+  background: var(--raised);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.timeline li[data-future='true'],
+.version[data-future='true'] {
+  opacity: 0.35;
+}
+
+.timelineRow {
+  display: grid;
+  grid-template-columns: 64px auto auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.timelineRow:hover {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.place {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.detail {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.versions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.version {
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.version[aria-pressed='true'] {
+  background: var(--selected);
+  border-color: transparent;
+  color: var(--selected-text);
+}
+
+.goal {
+  margin: 0;
+  font-size: 15px;
+}
+
+.steps li {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.stepStatus {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.steps li[data-status='done'] > span:nth-child(2) {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.steps li[data-status='in_progress'] .stepStatus {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}

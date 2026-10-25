@@ -393,6 +393,61 @@ const HANDLERS: Handlers = {
       },
     );
   },
+  skill_catalog: (builder, event, at) => {
+    if (event.skills.length === 0) {
+      return;
+    }
+    addInside(
+      builder,
+      { event, at },
+      {
+        node: 'context',
+        group: 'model',
+        out: `скиллы: ${String(event.skills.length)}`,
+        what: 'Каталог скиллов — в system prompt',
+        detail: `имя и описание: ${event.skills.map((skill) => skill.name).join(', ')}; инструкцию модель загрузит сама`,
+      },
+    );
+  },
+  memory_loaded: (builder, event, at) => {
+    addInside(
+      builder,
+      { event, at },
+      {
+        node: 'context',
+        group: 'model',
+        out: event.memoCharacters === null ? 'памяти нет' : 'memo.md',
+        what:
+          event.memoCharacters === null
+            ? 'Памяти ещё нет'
+            : 'Память с прошлых сессий — в system prompt',
+        detail:
+          event.memoCharacters === null
+            ? `${event.memoPath} появится, когда агент что-то запомнит`
+            : `${event.memoPath}: ${String(event.memoCharacters)} симв.`,
+      },
+    );
+  },
+  skill_loaded: (builder, event, at) => {
+    // Загрузку моделью видно вызовом load_skill; здесь — загрузки без тула.
+    if (event.trigger === 'model') {
+      return;
+    }
+    addInside(
+      builder,
+      { event, at },
+      {
+        node: 'context',
+        group: 'model',
+        out: `скилл ${event.name}`,
+        what:
+          event.trigger === 'user'
+            ? 'Пользователь загрузил скилл командой'
+            : 'Скилл always — в system prompt',
+        detail: `инструкция ${event.name} — в prompt`,
+      },
+    );
+  },
   network_request: (builder, event, at) => {
     if (event.host === builder.context.modelHost) {
       return;

@@ -23,6 +23,7 @@ import { EventList } from '../features/EventList';
 import { ContextView } from '../features/context/ContextView';
 import { FlowView } from '../features/flow/FlowView';
 import { InspectorView } from '../features/inspector/InspectorView';
+import { SkillsMemoryView } from '../features/skills/SkillsMemoryView';
 import { TokenomicsLine } from '../features/TokenomicsLine';
 import { DialogPanel } from '../features/dialog/DialogPanel';
 import { PermissionCard } from '../features/PermissionCard';
@@ -166,6 +167,7 @@ const VIEWS = [
   { value: 'flow', label: 'Поток' },
   { value: 'inspector', label: 'Инспектор' },
   { value: 'context', label: 'Контекст' },
+  { value: 'skills', label: 'Скиллы и память' },
   { value: 'events', label: 'Сырые события' },
 ] as const;
 
@@ -265,6 +267,9 @@ function ViewSwitch({ events, replay, liveStartedAt }: ViewSwitchProps): ReactEl
       )}
       {viewName === 'context' && (
         <ContextView events={events} shown={cursor} clock={clock} schedule={schedule} />
+      )}
+      {viewName === 'skills' && (
+        <SkillsMemoryView events={events} shown={cursor} clock={clock} schedule={schedule} />
       )}
       {viewName === 'events' && <EventList events={shown} />}
     </div>

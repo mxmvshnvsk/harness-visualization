@@ -17,6 +17,7 @@ export const HELP_TOPICS = [
   'retrieval',
   'flow',
   'context-budget',
+  'skills-memory',
 ] as const;
 
 export type HelpTopic = (typeof HELP_TOPICS)[number];
