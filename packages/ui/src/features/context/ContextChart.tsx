@@ -20,6 +20,7 @@ export interface ChartState {
   columns: Columns;
   shown: number;
   current: string | null;
+  selected: string | null;
   hovered: string | null;
 }
 
@@ -170,6 +171,7 @@ function Bar(props: BarProps): ReactElement {
       className={styles.column}
       data-future={request.index >= props.shown ? 'true' : undefined}
       data-current={request.requestId === props.current ? 'true' : undefined}
+      data-selected={request.requestId === props.selected ? 'true' : undefined}
       data-hovered={request.requestId === props.hovered ? 'true' : undefined}
       onMouseEnter={() => {
         props.onHover(request.requestId);

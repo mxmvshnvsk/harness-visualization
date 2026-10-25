@@ -15,6 +15,8 @@ export interface ContextRequest {
   step: number | null;
   purpose: string;
   budget: PromptBudget;
+  // Тело запроса — что именно ушло в модель (экран показывает его по клику).
+  body: Record<string, unknown>;
   // Из usage ответа; null — ответа ещё нет.
   exactTokens: number | null;
   cacheHitTokens: number | null;
@@ -50,6 +52,7 @@ export function projectContext(events: readonly HarnessEvent[]): ContextRequest[
         step: event.purpose === 'agentStep' ? event.iteration : null,
         purpose: event.purpose,
         budget: event.budget,
+        body: event.body,
         exactTokens: null,
         cacheHitTokens: null,
         ...pending,

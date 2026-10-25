@@ -57,7 +57,7 @@ export function ContextTooltip({ request, left, right, width }: ContextTooltipPr
           {action}
         </div>
       ))}
-      <span className={styles.tooltipHint}>клик — перемотать сюда</span>
+      <span className={styles.tooltipHint}>клик — показать prompt и перемотать сюда</span>
     </div>
   );
 }

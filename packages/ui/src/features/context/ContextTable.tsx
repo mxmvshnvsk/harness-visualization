@@ -8,10 +8,16 @@ import { actionsOf, cachePercent, errorPercent, formatTokens, PARTS } from './co
 interface ContextTableProps {
   requests: readonly ContextRequest[];
   shown: number;
+  selected: string | null;
   onSeek: (request: ContextRequest) => void;
 }
 
-export function ContextTable({ requests, shown, onSeek }: ContextTableProps): ReactElement {
+export function ContextTable({
+  requests,
+  shown,
+  selected,
+  onSeek,
+}: ContextTableProps): ReactElement {
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
@@ -34,6 +40,7 @@ export function ContextTable({ requests, shown, onSeek }: ContextTableProps): Re
               key={request.requestId}
               request={request}
               future={request.index >= shown}
+              selected={request.requestId === selected}
               onSeek={onSeek}
             />
           ))}
@@ -46,16 +53,18 @@ export function ContextTable({ requests, shown, onSeek }: ContextTableProps): Re
 interface RowProps {
   request: ContextRequest;
   future: boolean;
+  selected: boolean;
   onSeek: (request: ContextRequest) => void;
 }
 
-function Row({ request, future, onSeek }: RowProps): ReactElement {
+function Row({ request, future, selected, onSeek }: RowProps): ReactElement {
   const { estimate } = request.budget;
   const error = errorPercent(request);
   const cache = cachePercent(request);
   return (
     <tr
       data-future={future ? 'true' : undefined}
+      data-selected={selected ? 'true' : undefined}
       onClick={() => {
         onSeek(request);
       }}

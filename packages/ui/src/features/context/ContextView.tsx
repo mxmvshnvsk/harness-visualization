@@ -17,6 +17,7 @@ import { ContextTable } from './ContextTable';
 import { ContextTooltip } from './ContextTooltip';
 import { contextScale, formatTokens } from './contextScale';
 import { columnsOf } from './geometry';
+import { PromptContents } from './PromptContents';
 import { useWidth } from './useWidth';
 
 interface ContextViewProps {
@@ -34,9 +35,9 @@ const MODES = [
 export function ContextView({ events, shown, clock, schedule }: ContextViewProps): ReactElement {
   const requests = useMemo(() => projectContext(events), [events]);
   const [mode, setMode] = useState<'chart' | 'table'>('chart');
-  const seek = (request: ContextRequest): void => {
+  const choice = useChosenRequest(requests, shown, (request) => {
     clock.seek(timeAt(schedule, request.at));
-  };
+  });
   const first = requests[0];
   if (first === undefined) {
     return (
@@ -45,15 +46,11 @@ export function ContextView({ events, shown, clock, schedule }: ContextViewProps
       </div>
     );
   }
-  const { preset, limitTokens, thresholdTokens } = first.budget;
+  const selectedId = choice.selected?.requestId ?? null;
   return (
     <section className={styles.view}>
       <div className={styles.head}>
-        <p className={styles.summary}>
-          <Term topic="context-budget">Бюджет prompt</Term>: пресет {preset}, лимит{' '}
-          {formatTokens(limitTokens)}, порог {formatTokens(thresholdTokens)} · запросов к модели:{' '}
-          {requests.length}
-        </p>
+        <Summary request={first} count={requests.length} />
         <Segmented
           label="Представление"
           options={MODES}
@@ -63,29 +60,85 @@ export function ContextView({ events, shown, clock, schedule }: ContextViewProps
         />
       </div>
       {mode === 'chart' ? (
-        <Charts requests={requests} shown={shown} onSeek={seek} />
+        <Charts
+          requests={requests}
+          shown={shown}
+          current={choice.current?.requestId ?? null}
+          selected={selectedId}
+          onSeek={choice.select}
+        />
       ) : (
-        <ContextTable requests={requests} shown={shown} onSeek={seek} />
+        <ContextTable
+          requests={requests}
+          shown={shown}
+          selected={selectedId}
+          onSeek={choice.select}
+        />
+      )}
+      {choice.selected !== null && (
+        <PromptContents request={choice.selected} previous={choice.previous} />
       )}
     </section>
   );
 }
 
+function Summary({ request, count }: { request: ContextRequest; count: number }): ReactElement {
+  const { preset, limitTokens, thresholdTokens } = request.budget;
+  return (
+    <p className={styles.summary}>
+      <Term topic="context-budget">Бюджет prompt</Term>: пресет {preset}, лимит{' '}
+      {formatTokens(limitTokens)}, порог {formatTokens(thresholdTokens)} · запросов к модели:{' '}
+      {count}
+    </p>
+  );
+}
+
+interface ChosenRequest {
+  // Последний запрос, до которого дошёл повтор.
+  current: ContextRequest | null;
+  // Чей prompt показываем: выбранный кликом, а пока не выбран — текущий.
+  selected: ContextRequest | null;
+  // Прошлый шаг агента перед выбранным — с ним сравниваем, что в prompt нового.
+  previous: ContextRequest | null;
+  select: (request: ContextRequest) => void;
+}
+
+function useChosenRequest(
+  requests: readonly ContextRequest[],
+  shown: number,
+  seek: (request: ContextRequest) => void,
+): ChosenRequest {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const current = requests.filter((request) => request.index < shown).at(-1) ?? null;
+  const id = selectedId ?? current?.requestId;
+  const position = requests.findIndex((request) => request.requestId === id);
+  return {
+    current,
+    selected: requests[position] ?? null,
+    previous: previousOf(requests, position),
+    select: (request) => {
+      setSelectedId(request.requestId);
+      seek(request);
+    },
+  };
+}
+
 interface ChartsProps {
   requests: readonly ContextRequest[];
   shown: number;
+  current: string | null;
+  selected: string | null;
   onSeek: (request: ContextRequest) => void;
 }
 
-function Charts({ requests, shown, onSeek }: ChartsProps): ReactElement {
+function Charts({ requests, shown, current, selected, onSeek }: ChartsProps): ReactElement {
   const [ref, width] = useWidth<HTMLDivElement>(800);
   const [hovered, setHovered] = useState<string | null>(null);
   const scale = useMemo(() => contextScale(requests), [requests]);
   const columns = columnsOf(width, requests.length);
-  const current = requests.filter((request) => request.index < shown).at(-1)?.requestId ?? null;
   const position = requests.findIndex((request) => request.requestId === hovered);
   const hoveredRequest = requests[position];
-  const state = { requests, scale, columns, shown, current, hovered };
+  const state = { requests, scale, columns, shown, current, selected, hovered };
   return (
     <>
       <ContextLegend />
@@ -107,5 +160,16 @@ function Charts({ requests, shown, onSeek }: ChartsProps): ReactElement {
         </div>
       </div>
     </>
+  );
+}
+
+// С чем сравнивать: служебные запросы (сводка) несут свой prompt — их пропускаем,
+// иначе после компакции «новым» оказался бы весь prompt шага.
+function previousOf(requests: readonly ContextRequest[], position: number): ContextRequest | null {
+  return (
+    requests
+      .slice(0, Math.max(0, position))
+      .filter((request) => request.purpose === 'agentStep')
+      .at(-1) ?? null
   );
 }

@@ -273,3 +273,143 @@
 .table tr[data-future='true'] {
   opacity: 0.4;
 }
+
+.column[data-selected='true'] .hit {
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+
+.table tr[data-selected='true'] {
+  background: var(--accent-soft);
+}
+
+/* Содержимое выбранного запроса. */
+.contents {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.contentsHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.contentsTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--weight-medium);
+}
+
+.contentsMeta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Полоса: каждое сообщение — отрезок по своей доле; новое с прошлого запроса подчёркнуто. */
+.strip {
+  display: flex;
+  gap: 2px;
+  height: 14px;
+}
+
+.stripPart {
+  min-width: 2px;
+  border-radius: 3px;
+}
+
+.stripPart[data-new='true'] {
+  box-shadow: 0 3px 0 -1px var(--text);
+}
+
+.rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  border-bottom: 1px solid var(--line);
+}
+
+.rowSummary {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto 72px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+}
+
+.rowSummary::-webkit-details-marker {
+  display: none;
+}
+
+.rowRole {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.rowRole::before {
+  content: '';
+  flex: none;
+  width: 4px;
+  height: 16px;
+  border-radius: 2px;
+  background: var(--swatch);
+}
+
+.rowPreview {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--muted);
+}
+
+.rowMarks {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.badge {
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--text);
+}
+
+.badge[data-mark='new'] {
+  border-color: var(--text);
+}
+
+.rowTokens {
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.rowText {
+  margin: 0 0 10px;
+  padding: 12px;
+  max-height: 360px;
+  overflow: auto;
+  border-radius: var(--radius-small);
+  border: 1px solid var(--line);
+  background: var(--raised);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
