@@ -32,6 +32,7 @@ import { buildSchedule } from '../timeline/schedule';
 import { useTimeline } from '../timeline/useTimeline';
 import styles from './App.module.css';
 import { Sidebar } from './Sidebar';
+import { ThemeSwitch } from './ThemeSwitch';
 import { useSelection, type Selection } from './useSelection';
 
 export function App(): ReactElement {
@@ -120,6 +121,7 @@ function Topbar({ onOpenSources, ...header }: TopbarProps): ReactElement {
     <header className={styles.topbar}>
       <StreamHeader {...header} />
       <div className={styles.toolbar}>
+        <ThemeSwitch />
         <Button variant="quiet" onClick={onOpenSources}>
           Сессии и трейсы
         </Button>
@@ -136,7 +138,10 @@ function StartScreen({ children }: { children: ReactNode }): ReactElement {
   return (
     <div className={styles.start}>
       <div className={styles.startIntro}>
-        <span className={styles.eyebrow}>Harness Visualization</span>
+        <div className={styles.startTop}>
+          <span className={styles.eyebrow}>Harness Visualization</span>
+          <ThemeSwitch />
+        </div>
         <h1 className={styles.startTitle}>Как вопрос проходит через харнесс</h1>
         <p className={styles.startText}>
           Задайте вопрос агенту или откройте записанный трейс — и посмотрите по шагам: prompt,

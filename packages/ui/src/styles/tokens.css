@@ -1,6 +1,7 @@
 /*
   Токены дизайна. Светлая тема — «Индиго», тёмная — «Лайм» в монохроме: прототип v5,
-  выбран автором (docs/plan.md, «Этап 8c: решения»). Тема — по системной настройке.
+  выбран автором (docs/plan.md, «Этап 8c: решения»). Тема — по выбору в шапке (авто, светлая,
+  тёмная); «авто» следует системной настройке.
   Толщина шрифта тоже токен: светлый текст на тёмном фоне кажется жирнее, поэтому в тёмной
   теме начертания на ступень тоньше.
   Глубина — слоями: фон → холст с точечной сеткой → поверхности со светлой кромкой сверху
@@ -8,7 +9,7 @@
 */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   --font-text: 'Onest', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -74,53 +75,54 @@
   --glass-line: rgb(255 255 255 / 90%);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #050605;
-    --canvas: #0a0b09;
-    --surface: #121411;
-    --raised: #1a1c18;
-    --text: #eef0e6;
-    --muted: #9a9e90;
-    --line: #262a22;
-    --grid: rgb(230 255 77 / 8%);
-    --edge-hi: rgb(230 255 77 / 8%);
-    --shadow: 0 1px 0 rgb(255 255 255 / 3%), 0 18px 40px -18px rgb(0 0 0 / 90%);
-    --glow: 1;
+/* Тёмная тема: data-theme ставит скрипт в index.html — по выбору в шапке или по системе. */
+:root[data-theme='dark'] {
+  color-scheme: dark;
 
-    --accent: #e6ff4d;
-    --accent-2: #e6ff4d;
-    --accent-text: #0b0c06;
-    --accent-soft: rgb(230 255 77 / 10%);
-    --ink: #eef0e6;
-    --ink-text: #050605;
-    --selected: #e6ff4d;
-    --selected-text: #0b0c06;
-    --selected-line: #e6ff4d;
-    --track: #9a9e90;
-    --scrim: rgb(0 0 0 / 60%);
+  --bg: #050605;
+  --canvas: #0a0b09;
+  --surface: #121411;
+  --raised: #1a1c18;
+  --text: #eef0e6;
+  --muted: #9a9e90;
+  --line: #262a22;
+  --grid: rgb(230 255 77 / 8%);
+  --edge-hi: rgb(230 255 77 / 8%);
+  --shadow: 0 1px 0 rgb(255 255 255 / 3%), 0 18px 40px -18px rgb(0 0 0 / 90%);
+  --glow: 1;
 
-    /* Монохром: цвета групп приглушены, яркий только лайм у текущего. Ошибка остаётся заметной. */
-    --dialog: #8fd9ad;
-    --model: #c9cdbd;
-    --tool: #e3c27f;
-    --permission: #e7a3cf;
-    --retrieval: #85cfd1;
-    --judge: #c4bce0;
-    --error: #f28b7d;
-    --meta: #9a9e90;
+  --accent: #e6ff4d;
+  --accent-2: #e6ff4d;
+  --accent-text: #0b0c06;
+  --accent-soft: rgb(230 255 77 / 10%);
+  --ink: #eef0e6;
+  --ink-text: #050605;
+  --selected: #e6ff4d;
+  --selected-text: #0b0c06;
+  --selected-line: #e6ff4d;
+  --track: #9a9e90;
+  --scrim: rgb(0 0 0 / 60%);
 
-    --card-tint: 0%;
-    --card-active: var(--accent);
-    --card-icon: var(--muted);
+  /* Монохром: цвета групп приглушены, яркий только лайм у текущего. Ошибка остаётся заметной. */
+  --dialog: #8fd9ad;
+  --model: #c9cdbd;
+  --tool: #e3c27f;
+  --permission: #e7a3cf;
+  --retrieval: #85cfd1;
+  --judge: #c4bce0;
+  --error: #f28b7d;
+  --meta: #9a9e90;
 
-    --weight-strong: 500;
-    --weight-medium: 400;
+  --card-tint: 0%;
+  --card-active: var(--accent);
+  --card-icon: var(--muted);
 
-    --glass: rgb(10 11 9 / 60%);
-    --glass-line: rgb(230 255 77 / 10%);
+  --weight-strong: 500;
+  --weight-medium: 400;
 
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-  }
+  --glass: rgb(10 11 9 / 60%);
+  --glass-line: rgb(230 255 77 / 10%);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

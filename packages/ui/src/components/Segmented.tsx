@@ -9,10 +9,12 @@ interface SegmentedProps<Value extends string> {
   options: readonly { value: Value; label: string }[];
   value: Value;
   onChange: (value: Value) => void;
+  // small — компактный, для второстепенного выбора (тема).
+  size?: 'normal' | 'small';
 }
 
 export function Segmented<Value extends string>(props: SegmentedProps<Value>): ReactElement {
-  const { label, options, value, onChange } = props;
+  const { label, options, value, onChange, size = 'normal' } = props;
   const groupRef = useRef<HTMLDivElement>(null);
   const thumbRef = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
@@ -36,7 +38,7 @@ export function Segmented<Value extends string>(props: SegmentedProps<Value>): R
     };
   }, [value]);
   return (
-    <div ref={groupRef} className={styles.group} role="group" aria-label={label}>
+    <div ref={groupRef} className={styles.group} data-size={size} role="group" aria-label={label}>
       <span ref={thumbRef} className={styles.thumb} aria-hidden="true" />
       {options.map((option) => (
         <button

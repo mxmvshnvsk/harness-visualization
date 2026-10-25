@@ -49,3 +49,9 @@
 .option[aria-pressed='true'] {
   color: var(--selected-text);
 }
+
+.group[data-size='small'] .option {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}

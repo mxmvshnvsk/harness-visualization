@@ -4,6 +4,19 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Harness Visualization</title>
+    <script>
+      // Тема до первой отрисовки, чтобы страница не мигала светлой. Та же логика — в theme.ts.
+      (function () {
+        var choice = 'auto';
+        try {
+          choice = localStorage.getItem('hv-theme') || 'auto';
+        } catch (error) {}
+        var dark =
+          choice === 'dark' ||
+          (choice === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
