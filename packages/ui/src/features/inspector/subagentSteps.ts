@@ -11,7 +11,16 @@ export interface SubagentSteps {
   stages: Stage[];
 }
 
-export const SubagentStepsContext = createContext<ReadonlyMap<string, SubagentSteps>>(new Map());
+export interface SubagentStepsValue {
+  steps: ReadonlyMap<string, SubagentSteps>;
+  // Пришли во вкладку по ссылке на поручение (из «Агентов») — его шаги раскрыты сразу.
+  focused: string | null;
+}
+
+export const SubagentStepsContext = createContext<SubagentStepsValue>({
+  steps: new Map(),
+  focused: null,
+});
 
 export function useSubagentStepsOf(events: readonly HarnessEvent[]): Map<string, SubagentSteps> {
   return useMemo(
@@ -27,5 +36,23 @@ export function useSubagentStepsOf(events: readonly HarnessEvent[]): Map<string,
 }
 
 export function useSubagentSteps(subagentId: string): SubagentSteps | null {
-  return useContext(SubagentStepsContext).get(subagentId) ?? null;
+  return useContext(SubagentStepsContext).steps.get(subagentId) ?? null;
+}
+
+export function useFocusedSubagent(): string | null {
+  return useContext(SubagentStepsContext).focused;
+}
+
+// Ссылка на вызов delegate_task — это ссылка на субагента, которого он запустил.
+export function subagentOfCall(
+  steps: ReadonlyMap<string, SubagentSteps>,
+  toolCallId: string | null,
+): string | null {
+  if (toolCallId === null) {
+    return null;
+  }
+  return (
+    [...steps.values()].find((item) => item.run.parentToolCallId === toolCallId)?.run.subagentId ??
+    null
+  );
 }

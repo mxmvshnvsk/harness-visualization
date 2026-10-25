@@ -14,7 +14,7 @@ import type { Stage } from '../../projections/projectStages';
 import type { Focus } from './focus';
 import { McpPairsContext, useMcpPairs } from './mcpPairs';
 import { StageCard } from './StageCard';
-import { SubagentStepsContext, useSubagentStepsOf } from './subagentSteps';
+import { SubagentStepsContext, subagentOfCall, useSubagentStepsOf } from './subagentSteps';
 import styles from './Stages.module.css';
 import { useFollowActive } from './useFollowActive';
 
@@ -42,7 +42,11 @@ export function InspectorView({
   const follow = useFollowActive(active?.id ?? null, clock);
   const mcpPairs = useMcpPairs(events, shown);
   const target = focusTarget(events, focus ?? null);
-  const subagents = useSubagentStepsOf(events);
+  const steps = useSubagentStepsOf(events);
+  const subagents = useMemo(
+    () => ({ steps, focused: subagentOfCall(steps, focus?.toolCallId ?? null) }),
+    [steps, focus?.toolCallId],
+  );
   if (stages.length === 0) {
     return <div className={styles.empty}>Событий пока нет.</div>;
   }
@@ -57,7 +61,7 @@ export function InspectorView({
               view={view}
               shown={shown}
               active={stage.id === active?.id}
-              focus={inStage(stage, target)}
+              focus={subagents.focused === null ? inStage(stage, target) : null}
               cardRef={follow.register(stage.id)}
               onSeek={(at) => {
                 clock.seek(timeAt(schedule, at));

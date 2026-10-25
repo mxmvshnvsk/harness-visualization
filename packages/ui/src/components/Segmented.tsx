@@ -25,8 +25,11 @@ export function Segmented<Value extends string>(props: SegmentedProps<Value>): R
     const place = (): void => {
       const pressed = group.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
       if (pressed !== null && thumbRef.current !== null) {
+        // Кнопки переносятся на узком экране — ползунок встаёт на строку выбранной.
         thumbRef.current.style.left = `${String(pressed.offsetLeft)}px`;
         thumbRef.current.style.width = `${String(pressed.offsetWidth)}px`;
+        thumbRef.current.style.top = `${String(pressed.offsetTop)}px`;
+        thumbRef.current.style.height = `${String(pressed.offsetHeight)}px`;
       }
     };
     place();

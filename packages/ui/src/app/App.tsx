@@ -34,6 +34,7 @@ import { DialogRail } from '../features/dialog/DialogRail';
 import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
+import { AgentsView } from '../features/agents/AgentsView';
 import { McpLab } from '../features/mcp/McpLab';
 import { McpSessionView } from '../features/mcp/session/McpSessionView';
 import { RagLab } from '../features/rag/RagLab';
@@ -337,11 +338,18 @@ const VIEWS = [
   { value: 'context', label: 'Контекст' },
   { value: 'rag', label: 'RAG' },
   { value: 'mcp', label: 'MCP' },
+  { value: 'agents', label: 'Агенты' },
   { value: 'skills', label: 'Скиллы и память' },
   { value: 'events', label: 'Сырые события' },
 ] as const;
 
 type ViewName = (typeof VIEWS)[number]['value'];
+
+// «Агенты» — только у сессии с поручениями субагентам (этап 6c).
+function viewsFor(events: readonly HarnessEvent[]): readonly (typeof VIEWS)[number][] {
+  const delegated = events.some((event) => event.type === 'subagent_started');
+  return delegated ? VIEWS : VIEWS.filter((view) => view.value !== 'agents');
+}
 
 interface OpenStreamProps {
   events: HarnessEvent[];
@@ -430,7 +438,7 @@ function ViewSwitch({ events, replay, liveStartedAt, traceFile }: ViewSwitchProp
   return (
     <ViewLinksContext.Provider value={links}>
       <div className={styles.views}>
-        <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
+        <Segmented label="Вид" options={viewsFor(events)} value={viewName} onChange={setViewName} />
         {viewName === 'flow' && (
           <FlowView clock={clock} schedule={schedule} liveStartedAt={liveStartedAt} />
         )}
@@ -465,6 +473,7 @@ function ViewSwitch({ events, replay, liveStartedAt, traceFile }: ViewSwitchProp
             focus={link.focusFor('mcp')}
           />
         )}
+        {viewName === 'agents' && <AgentsView events={events} shown={cursor} />}
         {viewName === 'skills' && (
           <SkillsMemoryView events={events} shown={cursor} clock={clock} schedule={schedule} />
         )}
