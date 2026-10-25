@@ -181,6 +181,30 @@ describe('computeFrame', () => {
     expect(frame.caption?.what).toBe('Модель просит 2 тула');
   });
 
+  it('с моментами потока (этап 8d.3) узел модели показывает фазу запроса', () => {
+    const events = new EventLog()
+      .add(sessionStarted())
+      .add({ type: 'user_message', text: 'удалёнка' })
+      .add(modelRequest('r1', 1))
+      .add(
+        modelResponse('r1', {
+          usage: usage(1963, 1792),
+          toolCalls: [search],
+          timing: { firstTokenMs: 50, firstAnswerTokenMs: 120, lastTokenMs: 190, chunks: 9 },
+        }),
+      ).events;
+    const schedule = buildSchedule(buildActions(events, context));
+    const model = schedule.actions.find((item) => item.action.to === 'model');
+    const time = ((model?.outTo ?? 0) + (model?.backFrom ?? 0)) / 2;
+    const start = model?.action.start ?? 0;
+    const at = (elapsed: number): unknown =>
+      computeFrame(schedule, time, start + elapsed).waiting[0];
+
+    expect(at(30)).toMatchObject({ phase: 'wait', label: 'ждёт 1-й токен' });
+    expect(at(80)).toMatchObject({ phase: 'reasoning', label: 'рассуждает' });
+    expect(at(150)).toMatchObject({ phase: 'answer', label: 'зовёт тулы' });
+  });
+
   it('к концу видно, кто был занят дольше', () => {
     const schedule = buildSchedule(buildActions(session().events, context));
     const frame = computeFrame(schedule, schedule.total);

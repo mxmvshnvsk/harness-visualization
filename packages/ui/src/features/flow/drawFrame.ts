@@ -84,9 +84,7 @@ function drawNode(group: SVGGElement, node: FlowNode, frame: Frame): void {
   const waiting = frame.waiting.find((item) => item.node === node.id);
   const inside = frame.insideLabels.find((label) => label.action.to === node.id);
   const share = frame.busyShare[node.id] ?? 0;
-  group.setAttribute('data-busy', String(waiting !== undefined));
-  group.setAttribute('data-group', waiting?.group ?? inside?.action.group ?? '');
-  group.setAttribute('data-heat', String(share >= 0.01));
+  markNode(group, waiting, inside?.action.group ?? '', share);
   const sub = group.querySelector<SVGTextElement>('text:nth-of-type(2)');
   if (sub !== null) {
     sub.textContent =
@@ -94,6 +92,18 @@ function drawNode(group: SVGGElement, node: FlowNode, frame: Frame): void {
   }
   const heat = group.querySelector<SVGRectElement>('rect:last-of-type');
   heat?.setAttribute('width', ((node.width - 32) * share).toFixed(1));
+}
+
+function markNode(
+  group: SVGGElement,
+  waiting: WaitingNode | undefined,
+  insideGroup: string,
+  share: number,
+): void {
+  group.setAttribute('data-busy', String(waiting !== undefined));
+  group.setAttribute('data-phase', waiting?.phase ?? '');
+  group.setAttribute('data-group', waiting?.group ?? insideGroup);
+  group.setAttribute('data-heat', String(share >= 0.01));
 }
 
 // Под названием узла: что он делает сейчас, иначе сколько времени был занят, иначе его роль.

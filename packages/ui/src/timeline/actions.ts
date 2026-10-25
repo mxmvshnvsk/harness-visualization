@@ -42,6 +42,16 @@ export interface FlowAction {
   detail: string;
   whatBack: string | null;
   detailBack: string | null;
+  // Моменты фаз запроса к модели (этап 8d.3) от его начала; null — не запрос к модели
+  // или ответ пришёл целиком (трейс до 8d.2).
+  phases: ModelPhases | null;
+}
+
+export interface ModelPhases {
+  firstMs: number;
+  answerAtMs: number;
+  lastMs: number;
+  toolCalls: boolean;
 }
 
 export interface ActionContext {
@@ -254,7 +264,11 @@ const HANDLERS: Handlers = {
     openExchange(builder, `model:${event.requestId}`, { event, at }, describeModelRequest(event));
   },
   model_response: (builder, event, at) => {
+    const action = builder.open.get(`model:${event.requestId}`);
     closeExchange(builder, `model:${event.requestId}`, { event, at }, describeModelResponse(event));
+    if (action !== undefined) {
+      action.phases = modelPhases(event);
+    }
   },
   model_error: (builder, event, at) => {
     closeExchange(
@@ -494,6 +508,20 @@ const HANDLERS: Handlers = {
   },
 };
 
+function modelPhases(event: EventOfType<'model_response'>): ModelPhases | null {
+  const timing = event.timing ?? null;
+  if (timing === null || timing.firstTokenMs === null) {
+    return null;
+  }
+  const answerAtMs = timing.firstAnswerTokenMs ?? timing.firstTokenMs;
+  return {
+    firstMs: timing.firstTokenMs,
+    answerAtMs,
+    lastMs: timing.lastTokenMs ?? answerAtMs,
+    toolCalls: event.reply.toolCalls.length > 0,
+  };
+}
+
 // delegate_task (этап 6c): тул выполняет целый субагент — его запросы к модели и тулы идут
 // своими действиями, подписанными его id.
 function delegates(toolName: string): boolean {
@@ -604,6 +632,7 @@ function addAction(
     busy: null,
     whatBack: null,
     detailBack: null,
+    phases: null,
   };
   builder.actions.push(action);
   return action;

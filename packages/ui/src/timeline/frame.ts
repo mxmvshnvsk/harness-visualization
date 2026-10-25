@@ -4,7 +4,7 @@
 
 import type { EventGroup } from '../events/eventGroups';
 import type { FlowNodeId } from '../features/flow/flowGraph';
-import type { FlowAction } from './actions';
+import type { FlowAction, ModelPhases } from './actions';
 import { realAt, type ScheduledAction, type Schedule } from './schedule';
 
 export type Lane = 'out' | 'back';
@@ -28,8 +28,12 @@ export interface WaitingNode {
   label: string;
   // Сколько ждём по времени записи.
   elapsedMs: number;
+  // Фаза запроса к модели (этап 8d.3); null — фаз нет.
+  phase: ModelPhase | null;
   action: FlowAction;
 }
+
+export type ModelPhase = 'wait' | 'reasoning' | 'answer' | 'done';
 
 export interface Frame {
   real: number;
@@ -110,15 +114,7 @@ function addActionToFrame(frame: Frame, item: ScheduledAction, time: number, rea
   if (time < backFrom) {
     frame.parked.push(action);
     frame.labels.push({ action, lane: 'out', opacity: 1 });
-    if (action.busy !== null) {
-      frame.waiting.push({
-        node: action.to,
-        group: action.group,
-        label: action.busy,
-        elapsedMs: Math.max(0, real - action.start),
-        action,
-      });
-    }
+    pushWaiting(frame, action, real);
     return;
   }
   const backTo = item.backTo ?? backFrom;
@@ -127,6 +123,48 @@ function addActionToFrame(frame: Frame, item: ScheduledAction, time: number, rea
     frame.dots.push({ action, lane: 'back', progress });
     frame.labels.push({ action, lane: 'back', opacity: Math.min(1, progress * 2.5) });
   }
+}
+
+// Адресат работает: что он делает и сколько ждём; у модели — фаза запроса (этап 8d.3).
+function pushWaiting(frame: Frame, action: FlowAction, real: number): void {
+  if (action.busy === null) {
+    return;
+  }
+  const elapsedMs = Math.max(0, real - action.start);
+  const phase = phaseAt(action.phases, elapsedMs);
+  frame.waiting.push({
+    node: action.to,
+    group: action.group,
+    label: phase === null ? action.busy : phaseLabel(phase, action.phases?.toolCalls ?? false),
+    elapsedMs,
+    phase,
+    action,
+  });
+}
+
+// Фаза запроса к модели по прошедшему времени: те же моменты, что в инспекторе.
+function phaseAt(phases: ModelPhases | null, elapsedMs: number): ModelPhase | null {
+  if (phases === null) {
+    return null;
+  }
+  if (elapsedMs < phases.firstMs) {
+    return 'wait';
+  }
+  if (elapsedMs < phases.answerAtMs) {
+    return 'reasoning';
+  }
+  return elapsedMs < phases.lastMs ? 'answer' : 'done';
+}
+
+const PHASE_LABELS: Record<ModelPhase, string> = {
+  wait: 'ждёт 1-й токен',
+  reasoning: 'рассуждает',
+  answer: 'пишет ответ',
+  done: 'дописала',
+};
+
+function phaseLabel(phase: ModelPhase, toolCalls: boolean): string {
+  return phase === 'answer' && toolCalls ? 'зовёт тулы' : PHASE_LABELS[phase];
 }
 
 // Подпись над узлом: проявляется и гаснет.

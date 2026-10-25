@@ -304,3 +304,16 @@
     animation: none;
   }
 }
+
+/* Фаза запроса к модели (этап 8d.3): подпись узла «Модель» цветом фазы, как в инспекторе. */
+.node[data-phase='wait'] .sub {
+  fill: var(--phase-wait);
+}
+
+.node[data-phase='reasoning'] .sub {
+  fill: var(--phase-reasoning);
+}
+
+.node[data-phase='answer'] .sub {
+  fill: var(--phase-answer);
+}
