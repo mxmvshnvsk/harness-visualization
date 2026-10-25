@@ -3,7 +3,7 @@
 // grounding_check_started, по каждому claim пара model_request/model_response
 // (purpose: groundingJudge) и claim_judged, в конце session_finished с токеномикой судьи.
 
-import { startSessionRecording } from '../cli/sessionRecording.js';
+import { startSessionRecording } from '../session/sessionRecording.js';
 import type { HarnessEvent, SessionFinishedPayload } from '../events/harnessEvents.js';
 import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
 import { NetworkRouter } from '../network/NetworkRouter.js';
@@ -33,8 +33,7 @@ export async function runGroundingJudge(
   const recording = await startSessionRecording({
     projectRoot: input.projectRoot,
     tracesDirectory: settings.traces.directory,
-    verbose: false,
-    quiet: true,
+    listeners: [],
   });
   const { events } = recording;
   let totals: SessionFinishedPayload | null = null;

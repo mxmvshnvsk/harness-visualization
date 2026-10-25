@@ -1,19 +1,17 @@
-// Запись сессии: поток событий и его подписчики — трейс, токеномика и консоль.
-// Вынесена из runCliSession, чтобы другие команды могли записывать сессии так же.
+// Запись сессии: поток событий и его подписчики — трейс, токеномика и те, кого передали
+// снаружи (консоль у CLI, поток в браузер у сервера). Запись сама ничего не печатает.
 
 import { randomUUID } from 'node:crypto';
 import { join, relative } from 'node:path';
-import { createConsolePrinter } from '../events/createConsolePrinter.js';
-import { EventStream } from '../events/EventStream.js';
+import { EventStream, type EventListener } from '../events/EventStream.js';
 import { JsonlTraceWriter } from '../events/JsonlTraceWriter.js';
 import { SessionTokenomics } from '../tokenomics/SessionTokenomics.js';
 
 export interface SessionRecordingOptions {
   projectRoot: string;
   tracesDirectory: string;
-  verbose: boolean;
-  // true — ничего не печатать в консоль: сессию запускает другая команда, у неё свой вывод.
-  quiet: boolean;
+  // Подписчики, которые получат все события сессии с первого — после трейса и токеномики.
+  listeners: EventListener[];
 }
 
 export interface SessionRecording {
@@ -36,8 +34,8 @@ export async function startSessionRecording(
   // чем придёт событие об окончании сессии.
   events.subscribe((event) => traceWriter.write(event));
   events.subscribe((event) => tokenomics.handleEvent(event));
-  if (!options.quiet) {
-    events.subscribe(createConsolePrinter({ verbose: options.verbose }));
+  for (const listener of options.listeners) {
+    events.subscribe(listener);
   }
 
   const startedAt = performance.now();
@@ -50,11 +48,7 @@ export async function startSessionRecording(
         ...tokenomics.summary(),
       });
       await traceWriter.close();
-      const tracePath = relative(options.projectRoot, traceWriter.filePath);
-      if (!options.quiet) {
-        console.log(`Трейс сессии: ${tracePath}`);
-      }
-      return tracePath;
+      return relative(options.projectRoot, traceWriter.filePath);
     },
   };
 }

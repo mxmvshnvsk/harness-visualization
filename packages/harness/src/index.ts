@@ -50,3 +50,13 @@ export { prepareWorkspace } from './workspace/prepareWorkspace.js';
 export { Workspace, type WorkspaceEntry } from './workspace/Workspace.js';
 export type * from './tokenomics/costTypes.js';
 export { SessionTokenomics, type TokenomicsSummary } from './tokenomics/SessionTokenomics.js';
+export {
+  startSession,
+  type SessionHooks,
+  type SessionInput,
+  type SessionResult,
+  type StartedSession,
+} from './session/startSession.js';
+export { readConfigFile } from './settings/loadSettings.js';
+export { createConsolePrinter } from './events/createConsolePrinter.js';
+export { describeEventForConsole } from './events/describeEventForConsole.js';
