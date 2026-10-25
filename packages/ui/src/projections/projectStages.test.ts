@@ -63,6 +63,25 @@ describe('projectStages', () => {
     ]);
   });
 
+  it('обрезанный харнессом результат — своя строка шага с размерами', () => {
+    const log = session().add({
+      type: 'tool_result_truncated',
+      toolCallId: 'call-1',
+      toolName: 'kedr__search',
+      originalChars: 6500,
+      keptChars: 4860,
+      originalTokens: 2006,
+      keptTokens: 1500,
+      limitTokens: 1500,
+      preset: 'demo',
+    });
+    const rows = projectStages(log.events).flatMap((stage) => stage.rows);
+
+    // toLocaleString('ru-RU') разделяет тысячи неразрывным пробелом.
+    expect(rows.at(-1)?.code).toBe('kedr__search');
+    expect(rows.at(-1)?.text).toMatch(/^обрезан харнессом: ≈2\s006 → ≈1\s500 токенов/);
+  });
+
   it('активный этап — тот, где последнее показанное событие', () => {
     const stages = projectStages(session().events);
 

@@ -71,6 +71,11 @@ const HANDLERS: Handlers = {
     });
   },
   tool_result: addToolResult,
+  tool_result_truncated: (builder, event) => {
+    withTool(builder, event.toolCallId, (tool) => {
+      tool.truncation = event;
+    });
+  },
   assistant_message: (builder, event) => {
     builder.view.answer = event.text;
   },
@@ -207,6 +212,7 @@ function addToolCall(builder: Builder, event: EventOfType<'tool_call'>): void {
     question: null,
     answer: null,
     result: null,
+    truncation: null,
     status: 'pending',
   };
   builder.tools.set(tool.toolCallId, tool);

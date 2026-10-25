@@ -5,6 +5,7 @@
 
 import type { ToolCall, ToolResultMessage } from '../model/chatTypes.js';
 import type { ToolResultStatus } from '../events/harnessEvents.js';
+import { truncateToolResult } from '../context/truncateToolResult.js';
 import { evaluatePermission } from '../permissions/evaluatePermission.js';
 import type { PermissionAnswerSource } from '../permissions/permissionTypes.js';
 import type { ToolCallCost } from '../tokenomics/costTypes.js';
@@ -47,7 +48,36 @@ export async function executeToolCall(
     durationMs: outcome.durationMs,
   });
 
-  return { role: 'tool', toolCallId: toolCall.id, content: outcome.content };
+  return {
+    role: 'tool',
+    toolCallId: toolCall.id,
+    content: fitIntoBudget(toolCall, outcome, dependencies),
+  };
+}
+
+// Большой результат — в историю только начало и пометка харнесса (этап 6.3).
+function fitIntoBudget(
+  toolCall: ToolCall,
+  outcome: ToolOutcome,
+  { budget, events }: AgentDependencies,
+): string {
+  const truncation = truncateToolResult(
+    outcome.content,
+    budget.toolResultMaxTokens,
+    budget.charsPerToken,
+  );
+  if (truncation === null) {
+    return outcome.content;
+  }
+  const { content, ...sizes } = truncation;
+  events.emit({
+    type: 'tool_result_truncated',
+    toolCallId: toolCall.id,
+    toolName: toolCall.name,
+    ...sizes,
+    preset: budget.preset,
+  });
+  return content;
 }
 
 function parseArgumentsText(argumentsText: string): ParsedArguments {

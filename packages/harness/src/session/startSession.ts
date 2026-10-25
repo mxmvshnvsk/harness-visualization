@@ -259,6 +259,7 @@ function budgetSettings(context: ContextSettings): BudgetSettings {
   return {
     preset: context.preset,
     limitTokens: context.limits[context.preset],
+    toolResultMaxTokens: context.toolResultLimits[context.preset],
     thresholdPercent: context.thresholdPercent,
     charsPerToken: context.charsPerToken,
   };

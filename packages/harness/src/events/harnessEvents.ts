@@ -298,6 +298,22 @@ export interface PermissionResolvedPayload {
 
 // Ответ отдан, сессия ждёт следующего вопроса того же диалога (этап 6.1). История остаётся:
 // следующий ход отправит модели и её. Не пришёл вопрос — сессия заканчивается.
+// Харнесс обрезал результат тула, прежде чем положить его в историю (этап 6.3). В tool_result —
+// всё, что вернул тул; модель получит начало и пометку — это видно в следующем model_request.
+export interface ToolResultTruncatedPayload {
+  type: 'tool_result_truncated';
+  toolCallId: string;
+  toolName: string;
+  originalChars: number;
+  keptChars: number;
+  // Оценка: символы ÷ context.charsPerToken.
+  originalTokens: number;
+  keptTokens: number;
+  // Лимит на один результат у выбранного пресета.
+  limitTokens: number;
+  preset: string;
+}
+
 export interface AwaitingQuestionPayload {
   type: 'awaiting_question';
   // Сколько ходов диалога уже было.
@@ -351,6 +367,7 @@ export type HarnessEventPayload =
   | ToolResultPayload
   | AssistantMessagePayload
   | AwaitingQuestionPayload
+  | ToolResultTruncatedPayload
   | SessionFinishedPayload
   | ErrorPayload;
 

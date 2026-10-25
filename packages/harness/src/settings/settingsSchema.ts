@@ -86,6 +86,16 @@ const contextSettingsSchema = z.object({
       real: z.number().int().positive(),
     })
     .default({ demo: 12000, stress: 6000, real: 1000000 }),
+  // Сколько токенов может занять один результат тула (этап 6.3); больше — харнесс обрезает.
+  // demo: поиск hybrid_search отдаёт до ~2 000 токенов — его и обрежет; stress — почти любой
+  // поиск; real — только огромные страницы.
+  toolResultLimits: z
+    .object({
+      demo: z.number().int().positive(),
+      stress: z.number().int().positive(),
+      real: z.number().int().positive(),
+    })
+    .default({ demo: 1500, stress: 800, real: 25000 }),
   // Порог — доля лимита, с которой харнесс начнёт освобождать место (этапы 6.4–6.5).
   thresholdPercent: z.number().min(10).max(100).default(80),
   // Символов на токен в оценке разбивки (context/promptBudget.ts): подобрано по трейсам.
@@ -274,6 +284,7 @@ export const harnessSettingsSchema = z.object({
   context: contextSettingsSchema.default({
     preset: 'demo',
     limits: { demo: 12000, stress: 6000, real: 1000000 },
+    toolResultLimits: { demo: 1500, stress: 800, real: 25000 },
     thresholdPercent: 80,
     charsPerToken: 3.24,
   }),

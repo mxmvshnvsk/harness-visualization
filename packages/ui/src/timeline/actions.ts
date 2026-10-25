@@ -321,6 +321,20 @@ const HANDLERS: Handlers = {
   tool_result: (builder, event, at) => {
     closeTool(builder, event, at);
   },
+  tool_result_truncated: (builder, event, at) => {
+    // Результат кладётся в историю — тут харнесс и обрезает его: часть «Контекст и prompt».
+    addInside(
+      builder,
+      { event, at },
+      {
+        node: 'context',
+        group: 'model',
+        out: `обрезано: ≈${String(event.originalTokens)} → ≈${String(event.keptTokens)}`,
+        what: 'Харнесс обрезал результат тула',
+        detail: `${event.toolName}: в историю — начало и пометка; лимит на результат ${String(event.limitTokens)} токенов (${event.preset})`,
+      },
+    );
+  },
   network_request: (builder, event, at) => {
     if (event.host === builder.context.modelHost) {
       return;

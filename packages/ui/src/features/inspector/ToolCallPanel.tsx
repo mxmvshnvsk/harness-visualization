@@ -82,8 +82,7 @@ function ToolResult({ tool }: { tool: ToolCallView }): ReactElement {
       <h3 className={styles.blockTitle}>
         результат · {result.status} · {result.durationMs.toLocaleString('ru-RU')} мс{cost}
       </h3>
-      <div className={styles.caption}>модель увидит ровно это:</div>
-      <pre className={styles.code}>{result.content}</pre>
+      <ResultContent content={result.content} truncation={tool.truncation} />
       {result.details !== null && (
         <>
           <div className={styles.caption}>подробности для харнесса (модель их не видит):</div>
@@ -91,6 +90,44 @@ function ToolResult({ tool }: { tool: ToolCallView }): ReactElement {
         </>
       )}
     </section>
+  );
+}
+
+// Что увидит модель. Обрезанный харнессом результат — с линией отреза: выше — что ушло в
+// историю, ниже — что модель не увидит.
+function ResultContent({
+  content,
+  truncation,
+}: {
+  content: string;
+  truncation: ToolCallView['truncation'];
+}): ReactElement {
+  if (truncation === null) {
+    return (
+      <>
+        <div className={styles.caption}>модель увидит ровно это:</div>
+        <pre className={styles.code}>{content}</pre>
+      </>
+    );
+  }
+  const format = (value: number): string => value.toLocaleString('ru-RU');
+  return (
+    <>
+      <div className={styles.caption}>
+        тул вернул ≈{format(truncation.originalTokens)} токенов; модель увидит начало и пометку
+        харнесса:
+      </div>
+      <pre className={styles.code}>{content.slice(0, truncation.keptChars)}</pre>
+      <div className={styles.cut}>
+        ✂ <Term topic="context-budget">обрезано харнессом</Term>: ≈
+        {format(truncation.originalTokens)} → ≈{format(truncation.keptTokens)} токенов (лимит на
+        результат {format(truncation.limitTokens)}, пресет {truncation.preset}). Ниже — то, чего
+        модель не увидит:
+      </div>
+      <pre className={`${styles.code} ${styles.dropped}`}>
+        {content.slice(truncation.keptChars)}
+      </pre>
+    </>
   );
 }
 

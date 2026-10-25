@@ -78,6 +78,8 @@ export interface ToolCallView {
   question: EventOfType<'permission_requested'> | null;
   answer: EventOfType<'permission_resolved'> | null;
   result: EventOfType<'tool_result'> | null;
+  // Харнесс обрезал результат, прежде чем отдать модели (этап 6.3); null — не обрезал.
+  truncation: EventOfType<'tool_result_truncated'> | null;
   // pending — решение ещё не принято или тул выполняется; waitingForUser — ждёт ответа на вопрос.
   status: 'pending' | 'waitingForUser' | ToolResultStatus;
 }

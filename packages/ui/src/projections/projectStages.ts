@@ -85,6 +85,10 @@ const DESCRIBE: Describers = {
     code: event.toolName,
     text: `${event.status}, ${String(event.durationMs)} мс`,
   }),
+  tool_result_truncated: (event) => ({
+    code: event.toolName,
+    text: `обрезан харнессом: ≈${format(event.originalTokens)} → ≈${format(event.keptTokens)} токенов (лимит на результат ${format(event.limitTokens)})`,
+  }),
   assistant_message: (event) => ({ code: null, text: shorten(event.text) }),
   awaiting_question: (event) => ({
     code: null,
@@ -225,6 +229,10 @@ function describeAnswer(event: EventOfType<'permission_resolved'>): string {
   return event.answeredBy === 'timeout'
     ? 'не ответили вовремя — запрещено'
     : 'спросить некого — запрещено';
+}
+
+function format(value: number): string {
+  return value.toLocaleString('ru-RU');
 }
 
 function shorten(text: string, limit = 220): string {

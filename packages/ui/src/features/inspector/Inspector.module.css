@@ -195,3 +195,15 @@
   color: var(--muted);
   font-size: 14px;
 }
+
+/* Отрез харнесса в результате тула: ниже линии — то, чего модель не увидит. */
+.cut {
+  padding: 8px 12px;
+  border-top: 2px dashed var(--accent);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dropped {
+  opacity: 0.45;
+}

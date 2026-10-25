@@ -54,6 +54,8 @@ const DESCRIBERS: Describers = {
     `${event.approved ? 'разрешено' : 'запрещено'}, answeredBy ${event.answeredBy}, ждали ${String(event.waitedForUserMs)} мс`,
   tool_result: (event) => `${event.status}, ${String(event.durationMs)} мс: ${event.content}`,
   assistant_message: (event) => event.text,
+  tool_result_truncated: (event) =>
+    `${event.toolName}: обрезан харнессом ≈${String(event.originalTokens)} → ≈${String(event.keptTokens)} токенов`,
   awaiting_question: (event) => `ход ${String(event.turn)} закончен, ждём следующий вопрос`,
   session_finished: (event) =>
     [

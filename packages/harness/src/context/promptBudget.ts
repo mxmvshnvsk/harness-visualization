@@ -38,6 +38,8 @@ export interface PromptBudget {
 export interface BudgetSettings {
   preset: string;
   limitTokens: number;
+  // Сколько токенов может занять один результат тула; больше — обрезка (этап 6.3).
+  toolResultMaxTokens: number;
   thresholdPercent: number;
   charsPerToken: number;
 }

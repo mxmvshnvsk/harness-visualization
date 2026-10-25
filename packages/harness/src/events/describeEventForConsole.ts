@@ -104,6 +104,12 @@ const EVENT_DESCRIBERS: EventDescribers = {
   ],
   tool_result: describeToolResult,
   assistant_message: (event) => [styleText('green', 'Харнесс → пользователь:'), event.text],
+  tool_result_truncated: (event) => [
+    styleText(
+      'yellow',
+      `    Харнесс обрезал результат ${event.toolName}: ≈${formatNumber(event.originalTokens)} → ≈${formatNumber(event.keptTokens)} токенов (лимит на результат ${formatNumber(event.limitTokens)}, пресет ${event.preset})`,
+    ),
+  ],
   awaiting_question: (event) => [
     styleText(
       'dim',
