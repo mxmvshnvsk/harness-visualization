@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { promptContents } from './promptContents';
+import { promptContents } from './promptItems';
 
 const tools = [{ type: 'function', function: { name: 'search_docs', parameters: {} } }];
 const system = { role: 'system', content: 'Ты агент.' };

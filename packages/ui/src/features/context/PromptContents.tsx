@@ -6,7 +6,7 @@ import { useState, type CSSProperties, type ReactElement } from 'react';
 import { requestLabel, type ContextRequest } from '../../projections/projectContext';
 import styles from './Context.module.css';
 import { formatTokens, PARTS } from './contextScale';
-import { promptContents, type PromptItem, type PromptMark } from './promptContents';
+import { promptContents, type PromptItem, type PromptMark } from './promptItems';
 
 interface PromptContentsProps {
   request: ContextRequest;
