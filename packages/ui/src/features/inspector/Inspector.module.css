@@ -226,3 +226,66 @@
   background: var(--raised);
   color: var(--text);
 }
+
+/* Фазы инференса (этап 8d.1). Цвета — проверенная палитра частей prompt и агентов. */
+.phases {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.phase {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--raised);
+  font-size: 13px;
+}
+
+.phase b {
+  font-size: 13.5px;
+  font-weight: var(--weight-medium);
+}
+
+.phase span:last-child {
+  color: var(--muted);
+}
+
+.split {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.split span {
+  min-width: 2px;
+  border-radius: 2px;
+}
+
+.split [data-kind='cache'] {
+  background: var(--part-system);
+}
+
+.split [data-kind='fresh'] {
+  background: var(--part-results);
+}
+
+.split [data-kind='reasoning'] {
+  background: var(--agent-main);
+}
+
+.split [data-kind='answer'] {
+  background: var(--agent-one);
+}
+
+@media (width <= 860px) {
+  .phases {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -4,7 +4,7 @@
 // Кадр считает computeFrame по часам повтора, а рисуется он прямо в SVG — без перерисовки React.
 
 import { useEffect, useMemo, useRef, useState, type ReactElement } from 'react';
-import { HelpButton } from '../../help/HelpLinks';
+import { HelpButton, Term } from '../../help/HelpLinks';
 import { computeFrame } from '../../timeline/frame';
 import type { Schedule } from '../../timeline/schedule';
 import type { TimelineClock } from '../../timeline/TimelineClock';
@@ -56,6 +56,7 @@ export function FlowView({ clock, schedule, liveStartedAt }: FlowViewProps): Rea
             подсказка у самого узла на плотной схеме закрывала соседей. */}
         <div className={styles.toolbar}>
           <HelpButton topic="flow" />
+          <Term topic="inference">что происходит внутри модели</Term>
           {focus !== null && <NodeTip node={FLOW_NODES[focus]} />}
         </div>
         <svg

@@ -5,6 +5,7 @@ import { Badge } from '../../components/Badge';
 import { StatCard } from '../../components/StatCard';
 import type { ModelCall } from '../../projections/sessionView';
 import { BudgetBlock } from './BudgetBlock';
+import { InferencePhases } from './InferencePhases';
 import { explainCache, type CacheExplanation } from './explainCache';
 import type { Focus } from './focus';
 import styles from './Inspector.module.css';
@@ -33,6 +34,7 @@ export function ModelCallPanel({ call, onFocus }: ModelCallPanelProps): ReactEle
       {call.response !== null && (
         <CallStats response={call.response} share={call.cache?.share ?? 0} />
       )}
+      <InferencePhases call={call} />
       <CallBudget call={call} />
       <CallNotes call={call} cacheText={cache?.text ?? null} />
       <div className={styles.columns}>

@@ -19,6 +19,7 @@ export const HELP_TOPICS = [
   'context-budget',
   'skills-memory',
   'subagents',
+  'inference',
 ] as const;
 
 export type HelpTopic = (typeof HELP_TOPICS)[number];
