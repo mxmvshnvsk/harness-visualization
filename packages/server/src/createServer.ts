@@ -39,6 +39,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
   registerTraceRoutes(app, catalog);
   registerRagRoutes(app, {
     catalog,
+    courseCatalog: new TraceCatalog(join(options.projectRoot, 'examples', 'traces')),
     similarityThreshold: options.loadedSettings.settings.grounding.similarityThreshold,
   });
   registerUiPages(app);

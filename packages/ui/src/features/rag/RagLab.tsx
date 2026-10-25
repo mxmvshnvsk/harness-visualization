@@ -7,14 +7,14 @@ import { useState, type ReactElement } from 'react';
 import { ThemeSwitch } from '../../app/ThemeSwitch';
 import { Button } from '../../components/Button';
 import { COURSE_STEPS } from './course/courseContent';
+import { StepCheck } from './course/StepCheck';
 import { StepChunks } from './course/StepChunks';
+import { StepClose } from './course/StepClose';
+import { StepMethods } from './course/StepMethods';
 import { StepVectors } from './course/StepVectors';
 import { StepWhy } from './course/StepWhy';
 import styles from './RagLab.module.css';
 import { useRagBase } from './useRagData';
-
-// Сколько шагов уже перенесено из прототипа; остальные — в следующих подэтапах.
-const READY_STEPS = 3;
 
 export function RagLab({ onBack }: { onBack: () => void }): ReactElement {
   const base = useRagBase();
@@ -66,7 +66,6 @@ function StepNav({
           <button
             type="button"
             aria-current={index === current ? 'step' : undefined}
-            disabled={index >= READY_STEPS}
             onClick={() => {
               onStep(index);
             }}
@@ -87,15 +86,18 @@ interface CourseStepProps {
 }
 
 function CourseStep({ index, base, onStep }: CourseStepProps): ReactElement {
-  // Последний готовый шаг ведёт на следующий — пока его нет, остаёмся на месте.
-  const step = (next: number): void => {
-    onStep(Math.min(next, READY_STEPS - 1));
-  };
-  if (index === 1) {
-    return <StepChunks base={base} onStep={step} />;
+  switch (COURSE_STEPS[index]?.id) {
+    case 'chunks':
+      return <StepChunks base={base} onStep={onStep} />;
+    case 'vectors':
+      return <StepVectors onStep={onStep} />;
+    case 'methods':
+      return <StepMethods base={base} onStep={onStep} />;
+    case 'close':
+      return <StepClose onStep={onStep} />;
+    case 'check':
+      return <StepCheck onStep={onStep} />;
+    default:
+      return <StepWhy base={base} onStep={onStep} />;
   }
-  if (index === 2) {
-    return <StepVectors onStep={step} />;
-  }
-  return <StepWhy base={base} onStep={step} />;
 }

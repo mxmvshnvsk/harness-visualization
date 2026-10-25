@@ -495,6 +495,165 @@
   background: var(--swatch);
 }
 
+/* Шаги 4–6: выдачи, пары, проверка */
+.good,
+.bad {
+  margin: 0;
+  font-weight: var(--weight-strong);
+}
+
+.good {
+  color: var(--dialog);
+}
+
+.reading {
+  margin: 0;
+  max-width: 72ch;
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.columnTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--weight-strong);
+}
+
+.rank {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rank li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: var(--radius-small);
+  font-size: 13px;
+}
+
+.rank li[data-hit='true'] {
+  background: var(--accent-soft);
+  font-weight: var(--weight-medium);
+}
+
+.rank .mono {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pairs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pairs li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 260px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.pairs li[data-picked='true'] {
+  font-weight: var(--weight-strong);
+}
+
+.scale {
+  position: relative;
+  display: block;
+  height: 40px;
+}
+
+.scale::before,
+.scaleFill {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 16px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.scale::before {
+  right: 0;
+  background: var(--line);
+}
+
+.scaleFill {
+  width: var(--value);
+  background: var(--accent);
+}
+
+.scaleThreshold {
+  position: absolute;
+  left: var(--threshold);
+  top: 10px;
+  width: 2px;
+  height: 20px;
+  background: var(--text);
+}
+
+.scaleValue,
+.scaleLabel {
+  position: absolute;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.scaleValue {
+  left: var(--value);
+  top: -4px;
+  font-size: 12px;
+}
+
+.scaleLabel {
+  left: var(--threshold);
+  top: 28px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.table th,
+.table td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.table th {
+  color: var(--muted);
+  font-weight: var(--weight-medium);
+}
+
 @media (width <= 860px) {
   .screen {
     padding-left: 16px;
@@ -506,7 +665,9 @@
   }
 
   .twoColumns,
-  .toy {
+  .toy,
+  .columns,
+  .pairs li {
     grid-template-columns: minmax(0, 1fr);
   }
 }

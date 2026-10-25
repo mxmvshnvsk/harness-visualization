@@ -1,9 +1,16 @@
 // Загрузка данных лаборатории: база (документы, фрагменты, векторы) и векторы учебных фраз.
 // Модели эмбеддингов на сервере нет — понятная ошибка с подсказкой, а не пустой экран.
 
-import type { LabBase } from '@harness-visualization/mcp-server/lab';
+import type { LabBase, LabSearch } from '@harness-visualization/mcp-server/lab';
+import type { GroundingReportResponse } from '@harness-visualization/server';
 import { useEffect, useState } from 'react';
-import { embedTexts, getRagBase, ServerError } from '../../api/serverApi';
+import {
+  embedTexts,
+  getCourseGrounding,
+  getRagBase,
+  searchRag,
+  ServerError,
+} from '../../api/serverApi';
 
 export type Loaded<Value> =
   { status: 'loading' } | { status: 'ready'; value: Value } | { status: 'error'; message: string };
@@ -16,6 +23,15 @@ export function useRagBase(): Loaded<LabBase> {
 export function useEmbeddings(texts: readonly string[]): Loaded<number[][]> {
   const key = texts.join('\n');
   return useLoaded(() => embedTexts(key.split('\n')), [key]);
+}
+
+// Три выдачи поиска по запросу; запрос сменился — ищем заново.
+export function useSearch(query: string): Loaded<LabSearch> {
+  return useLoaded(() => searchRag(query), [query]);
+}
+
+export function useCourseGrounding(): Loaded<GroundingReportResponse> {
+  return useLoaded(getCourseGrounding, []);
 }
 
 function useLoaded<Value>(load: () => Promise<Value>, deps: readonly unknown[]): Loaded<Value> {

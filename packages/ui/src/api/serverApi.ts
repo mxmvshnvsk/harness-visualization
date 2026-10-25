@@ -73,6 +73,11 @@ export async function getGrounding(file: string): Promise<GroundingReportRespons
   return getJson(`/api/rag/grounding/${encodeURIComponent(file)}`);
 }
 
+// Проверка опоры учебного ответа курса — трейс лежит в репозитории (examples/traces).
+export async function getCourseGrounding(): Promise<GroundingReportResponse> {
+  return getJson('/api/rag/course/grounding');
+}
+
 export class ServerError extends Error {
   constructor(
     readonly status: number,
