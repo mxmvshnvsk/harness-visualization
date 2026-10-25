@@ -1,14 +1,26 @@
 /* Колонка «Диалог»: на всю высоту окна справа, поле ввода приклеено к низу. */
 .panel {
-  position: sticky;
+  position: absolute;
   top: 0;
-  height: 100vh;
+  left: 0;
+  width: var(--dialog-open-width, 400px);
+  height: 100%;
   display: flex;
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
   background: var(--surface);
   border-left: 1px solid var(--line);
+  transition:
+    opacity 0.26s ease,
+    transform 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Свёрнута — панель уезжает вправо и гаснет; полоса проявляется на её месте. */
+.panel[data-open='false'] {
+  opacity: 0;
+  transform: translateX(32px);
+  pointer-events: none;
 }
 
 .head {
@@ -217,9 +229,11 @@
 
 /* Свёрнутый диалог — полоса у правого края. */
 .rail {
-  position: sticky;
+  position: absolute;
   top: 0;
-  height: 100vh;
+  left: 0;
+  width: 44px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -233,7 +247,13 @@
   cursor: pointer;
   transition:
     background 0.15s,
-    color 0.15s;
+    color 0.15s,
+    opacity 0.2s ease;
+}
+
+.rail[data-hidden='true'] {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .rail:hover {
@@ -295,8 +315,33 @@
 }
 
 /* Узкий экран: места на полосу нет — «Диалог» в меню «⋯» шапки. */
+/* Узкий экран: развёрнутая колонка — поверх содержимого, выезжает справа. */
+@media (width <= 1000px) {
+  .panel {
+    position: fixed;
+    z-index: 8;
+    left: auto;
+    right: 0;
+    width: min(420px, 100vw);
+    box-shadow: var(--shadow);
+  }
+
+  .panel[data-open='false'] {
+    opacity: 1;
+    transform: translateX(100%);
+    box-shadow: none;
+  }
+}
+
 @media (width <= 760px) {
   .rail {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .rail {
+    transition: none;
   }
 }

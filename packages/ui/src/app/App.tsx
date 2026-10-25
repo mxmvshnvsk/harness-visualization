@@ -387,19 +387,21 @@ function OpenStream(props: OpenStreamProps): ReactElement {
             traceFile={props.traceFile}
           />
         </div>
-        {dialogOpen ? (
+        {/* Колонка и полоса живут обе: колонка раздвигается и сдвигается плавно, а текст в ней
+            остаётся на месте и не прокручивается заново при каждом открытии. */}
+        <div className={styles.dialogSlot}>
           <DialogPanel
             {...dialog}
+            open={dialogOpen}
             clock={clock}
             schedule={schedule}
-            request={prompt}
+            request={dialogOpen ? prompt : null}
             onCollapse={() => {
               setDialogOpen(false);
             }}
           />
-        ) : (
-          <DialogRail {...dialog} onExpand={openDialog} />
-        )}
+          <DialogRail {...dialog} hidden={dialogOpen} onExpand={openDialog} />
+        </div>
         <PlayerDock
           view={view}
           clock={clock}

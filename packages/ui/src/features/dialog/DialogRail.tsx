@@ -14,11 +14,13 @@ interface DialogRailProps {
   shown: number;
   sessionId: string | null;
   live: boolean;
+  // Колонка открыта — полоса прячется под ней.
+  hidden: boolean;
   onExpand: () => void;
 }
 
 export function DialogRail(props: DialogRailProps): ReactElement {
-  const { events, shown, sessionId, live, onExpand } = props;
+  const { events, shown, sessionId, live, hidden, onExpand } = props;
   const turns = useMemo(() => projectDialog(events), [events]);
   const asked = turns.filter((turn) => turn.askedIndex < shown).length;
   const mode = modeOf(sessionId, live, events);
@@ -28,6 +30,8 @@ export function DialogRail(props: DialogRailProps): ReactElement {
     <button
       type="button"
       className={styles.rail}
+      data-hidden={hidden}
+      inert={hidden}
       onClick={onExpand}
       aria-label={label}
       title={label}

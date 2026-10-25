@@ -1,9 +1,19 @@
 /* Открытая сессия: слева шапка, виды и плеер, справа колонка «Диалог» на всю высоту.
    Плеер и поле ввода диалога — на одной нижней линии. */
+/* Ширина колонки диалога — зарегистрированное свойство: тогда браузер плавно меняет её между
+   открытой колонкой и полосой, а за ней — сетку и док плеера. */
+@property --dialog-width {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 400px;
+}
+
 .shell {
   --dialog-width: 400px;
+  --dialog-open-width: 400px;
 
   display: grid;
+  transition: --dialog-width 0.34s cubic-bezier(0.2, 0.8, 0.2, 1);
   grid-template-columns: minmax(0, 1fr) var(--dialog-width);
   min-height: 100vh;
 }
@@ -200,15 +210,6 @@
   .shell[data-dialog='open'] {
     --dialog-width: 0px;
   }
-
-  .shell > aside {
-    position: fixed;
-    inset: 0 0 0 auto;
-    z-index: 8;
-    width: min(420px, 100vw);
-    height: 100%;
-    box-shadow: var(--shadow);
-  }
 }
 
 @media (width <= 860px) {
@@ -249,5 +250,21 @@
 
   .narrowOnly {
     display: block;
+  }
+}
+
+/* Место колонки диалога в сетке: колонка шириной --dialog-width, внутри — открытая панель
+   полной ширины (лишнее обрезано, текст не переносится на каждом кадре) и полоса. */
+.dialogSlot {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  height: 100vh;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell {
+    transition: none;
   }
 }

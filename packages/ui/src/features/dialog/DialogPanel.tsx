@@ -23,11 +23,13 @@ interface DialogPanelProps {
   schedule: Schedule;
   // Чего агент ждёт от человека прямо сейчас — вопрос о разрешении; под текущим ходом.
   request: ReactNode;
+  // Свёрнута — панель остаётся в документе (так не теряется прокрутка), но скрыта и недоступна.
+  open: boolean;
   onCollapse: () => void;
 }
 
 export function DialogPanel(props: DialogPanelProps): ReactElement {
-  const { events, shown, sessionId, live, clock, schedule, request, onCollapse } = props;
+  const { events, shown, sessionId, live, clock, schedule, request, open, onCollapse } = props;
   const turns = useMemo(() => projectDialog(events), [events]);
   const visible = turns.filter((turn) => turn.askedIndex < shown);
   const mode = modeOf(sessionId, live, events);
@@ -37,7 +39,7 @@ export function DialogPanel(props: DialogPanelProps): ReactElement {
       (request === null ? 0 : 1),
   );
   return (
-    <aside className={styles.panel} aria-label="Диалог">
+    <aside className={styles.panel} aria-label="Диалог" data-open={open} inert={!open}>
       <div className={styles.head}>
         <h2 className={styles.title}>Диалог</h2>
         <span className={styles.state}>{STATE_LABELS[mode]}</span>
@@ -78,13 +80,16 @@ function isAnswered(turn: { answeredIndex: number | null }, shown: number): bool
   return turn.answeredIndex !== null && turn.answeredIndex < shown;
 }
 
-// Новая реплика — колонка доезжает до низа.
+// Новая реплика — колонка доезжает до низа. Первый раз — сразу, без анимации: открыли сессию —
+// текст уже на месте, а не проматывается на глазах.
 function useAutoScroll(count: number) {
   const ref = useRef<HTMLDivElement>(null);
+  const first = useRef(true);
   useEffect(() => {
     const body = ref.current;
     if (body !== null) {
-      body.scrollTo({ top: body.scrollHeight, behavior: 'smooth' });
+      body.scrollTo({ top: body.scrollHeight, behavior: first.current ? 'instant' : 'smooth' });
+      first.current = false;
     }
   }, [count]);
   return ref;
