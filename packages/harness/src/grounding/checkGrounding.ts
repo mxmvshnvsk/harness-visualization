@@ -1,7 +1,10 @@
-// Собирает отчёт об опоре ответа: для каждой ссылки из ответа — что модель видела по трейсу.
+// Собирает отчёт об опоре ответа (grounding): для каждой ссылки из ответа — что модель видела
+// по трейсу (уровень 1, этап 4c), для каждого claim — на что он опирается (этап 5b).
 
 import type { HarnessEvent } from '../events/harnessEvents.js';
+import { checkClaims } from './checkClaims.js';
 import { collectSeenSources, normalizeReference } from './collectSeenSources.js';
+import { collectSeenTexts } from './collectSeenTexts.js';
 import { extractReferences } from './extractReferences.js';
 import type { CheckedReference, GroundingReport } from './referenceTypes.js';
 
@@ -12,7 +15,7 @@ export function checkGrounding(events: HarnessEvent[]): GroundingReport {
     reference,
     seen: seen.get(normalizeReference(reference)) ?? { level: 'notSeen', eventSequence: null },
   }));
-  return { answer, references };
+  return { answer, references, claims: checkClaims(answer, collectSeenTexts(events)) };
 }
 
 // Ответ пользователю — последнее сообщение assistant_message в трейсе.

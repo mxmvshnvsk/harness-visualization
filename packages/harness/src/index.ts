@@ -37,6 +37,7 @@ export { checkGrounding } from './grounding/checkGrounding.js';
 export { collectSeenSources, normalizeReference } from './grounding/collectSeenSources.js';
 export { extractReferences } from './grounding/extractReferences.js';
 export { readTrace } from './grounding/readTrace.js';
+export type * from './grounding/claimTypes.js';
 export type * from './grounding/referenceTypes.js';
 export {
   NetworkRouter,

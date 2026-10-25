@@ -3,6 +3,7 @@
 
 import { styleText } from 'node:util';
 import { checkGrounding } from '../grounding/checkGrounding.js';
+import { describeClaimsReport } from '../grounding/describeClaimsReport.js';
 import { describeGroundingReport } from '../grounding/describeGroundingReport.js';
 import { readTrace } from '../grounding/readTrace.js';
 
@@ -17,6 +18,10 @@ async function main(): Promise<void> {
   const report = checkGrounding(events);
   console.log(styleText('bold', `Grounding check (проверка опоры ответа) по трейсу ${tracePath}`));
   for (const line of describeGroundingReport(report)) {
+    console.log(line);
+  }
+  console.log('');
+  for (const line of describeClaimsReport(report.claims)) {
     console.log(line);
   }
 }

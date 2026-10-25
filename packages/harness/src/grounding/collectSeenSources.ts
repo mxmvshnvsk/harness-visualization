@@ -14,8 +14,14 @@ import type { SeenSource, SourceLevel } from './referenceTypes.js';
 const LEVEL_RANK: Record<SourceLevel, number> = { full: 0, fragment: 1, catalog: 2, notSeen: 3 };
 
 // Действие тула (без префикса MCP-сервера) → уровень, который он даёт источнику.
-const FULL_READ_ACTIONS = ['read_document', 'read_file'];
-const FRAGMENT_ACTIONS = ['search', 'semantic_search', 'web_search', 'search_files'];
+const FULL_READ_ACTIONS = ['read_document', 'read_file', 'fetch_url'];
+const FRAGMENT_ACTIONS = [
+  'search',
+  'semantic_search',
+  'hybrid_search',
+  'web_search',
+  'search_files',
+];
 const CATALOG_ACTIONS = ['list_documents', 'list_files'];
 
 export type SeenSources = Map<string, SeenSource>;
@@ -39,6 +45,16 @@ export function collectSeenSources(events: HarnessEvent[]): SeenSources {
   return seen;
 }
 
+// Какой уровень даёт источнику результат тула: целиком, фрагментом в выдаче или строкой
+// каталога; null — тул источников не показывает (например, write_file).
+export function sourceLevelOfTool(toolName: string): SourceLevel | null {
+  const action = stripServerPrefix(toolName);
+  if (FULL_READ_ACTIONS.includes(action)) {
+    return 'full';
+  }
+  return listingLevelOf(action);
+}
+
 function recordToolResult(
   event: Extract<HarnessEvent, { type: 'tool_result' }>,
   toolArguments: unknown,
@@ -46,10 +62,6 @@ function recordToolResult(
 ): void {
   const action = stripServerPrefix(event.toolName);
   if (FULL_READ_ACTIONS.includes(action)) {
-    remember(seen, readTarget(toolArguments), 'full', event.sequence);
-    return;
-  }
-  if (action === 'fetch_url') {
     remember(seen, readTarget(toolArguments), 'full', event.sequence);
     return;
   }
