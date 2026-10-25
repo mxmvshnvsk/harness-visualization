@@ -10,7 +10,12 @@ import type { QuoteCheck, SeenText } from './claimTypes.js';
 // Короче — не цитата, а название: «Улей», «Доступы», «Ракета».
 const MIN_QUOTE_WORDS = 3;
 const QUOTE_PATTERNS = [/«([^«»]+)»/g, /“([^“”]+)”/g, /"([^"]+)"/g];
-const LEVEL_STRENGTH: Record<SeenText['level'], number> = { full: 0, fragment: 1, catalog: 2 };
+// Чем меньше, тем сильнее: прочитанное целиком надёжнее snippet в выдаче.
+export const LEVEL_STRENGTH: Record<SeenText['level'], number> = {
+  full: 0,
+  fragment: 1,
+  catalog: 2,
+};
 
 export function extractQuotes(text: string): string[] {
   const quotes: string[] = [];

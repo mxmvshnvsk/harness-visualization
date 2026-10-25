@@ -23,7 +23,8 @@ export async function loadSettings(projectRoot: string): Promise<LoadedSettings>
   return { settings, modelApiKey };
 }
 
-async function readConfigFile(projectRoot: string): Promise<HarnessSettings> {
+// Только harness.config.json, без .env и ключа модели: команде check-grounding ключ не нужен.
+export async function readConfigFile(projectRoot: string): Promise<HarnessSettings> {
   const configPath = join(projectRoot, CONFIG_FILE_NAME);
   const fileText = await readFile(configPath, 'utf8');
   const parsedJson: unknown = JSON.parse(fileText);

@@ -16,6 +16,7 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@harness-visualization/embeddings": "workspace:*",
     "@modelcontextprotocol/client": "2.4.0",
     "@mozilla/readability": "0.6.0",
     "linkedom": "0.18.14",

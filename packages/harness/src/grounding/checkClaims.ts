@@ -10,5 +10,6 @@ export function checkClaims(answer: string, seenTexts: SeenText[]): ClaimCheck[]
   return splitIntoClaims(answer).map((claim) => ({
     claim,
     quotes: extractQuotes(claim.text).map((quote) => locateQuote(quote, seenTexts)),
+    similarity: null,
   }));
 }

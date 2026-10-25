@@ -149,6 +149,9 @@
       }
     }
   },
+  "grounding": {
+    "similarityThreshold": 0.87
+  },
   "retrieval": {
     "mode": "tool",
     "toolName": "kedr__semantic_search",

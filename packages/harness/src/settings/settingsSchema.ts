@@ -227,6 +227,15 @@ const retrievalSettingsSchema = z.object({
   limit: z.number().int().min(1).max(20).default(5),
 });
 
+// Проверка опоры ответа (pnpm check-grounding, этап 5b).
+const groundingSettingsSchema = z.object({
+  // С какого сходства claim и строки увиденного подсвечивать пару как «про то же». Порог
+  // приблизительный: у модели e5 сходство сжато — выдуманные claims дают около 0.84–0.86,
+  // связанные с источником — 0.87–0.95, причём и верные, и противоречащие. Поэтому отчёт
+  // всегда показывает само число, а порог только подсвечивает.
+  similarityThreshold: z.number().min(0).max(1).default(0.87),
+});
+
 export const harnessSettingsSchema = z.object({
   model: modelSettingsSchema,
   agent: agentSettingsSchema,
@@ -245,6 +254,7 @@ export const harnessSettingsSchema = z.object({
     toolName: 'kedr__semantic_search',
     limit: 5,
   }),
+  grounding: groundingSettingsSchema.default({ similarityThreshold: 0.87 }),
   prices: z.record(z.string(), modelPricesSchema).default({}),
   traces: tracesSettingsSchema,
 });
@@ -267,5 +277,6 @@ export type McpServerSettings = z.infer<typeof mcpServerSettingsSchema>;
 export type NetworkSettings = z.infer<typeof networkSettingsSchema>;
 export type NetworkRule = z.infer<typeof networkRuleSchema>;
 export type NetworkRoute = z.infer<typeof networkRouteSchema>;
+export type GroundingSettings = z.infer<typeof groundingSettingsSchema>;
 export type RetrievalSettings = z.infer<typeof retrievalSettingsSchema>;
 export type RetrievalMode = RetrievalSettings['mode'];

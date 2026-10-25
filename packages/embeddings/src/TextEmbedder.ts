@@ -73,6 +73,11 @@ export class TextEmbedder {
     return vector;
   }
 
+  // Несколько запросов за раз — например, все claims ответа при проверке опоры (этап 5b).
+  async embedQueries(queries: string[]): Promise<number[][]> {
+    return this.embed(queries.map((query) => `query: ${query}`));
+  }
+
   async embedPassages(passages: string[]): Promise<number[][]> {
     return this.embed(passages.map((passage) => `passage: ${passage}`));
   }

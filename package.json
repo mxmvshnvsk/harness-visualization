@@ -11,7 +11,7 @@
   },
   "scripts": {
     "chat": "pnpm run build && node packages/harness/dist/cli/main.js",
-    "check-grounding": "pnpm --filter @harness-visualization/harness run build && node packages/harness/dist/cli/mainCheckGrounding.js",
+    "check-grounding": "pnpm --filter @harness-visualization/harness... run build && node packages/harness/dist/cli/mainCheckGrounding.js",
     "rag-index": "pnpm --filter @harness-visualization/mcp-server... run build && cross-env NODE_USE_ENV_PROXY=1 node packages/mcp-server/dist/mainRagIndex.js",
     "compare-runs": "pnpm run build && node packages/harness/dist/cli/mainCompareRuns.js",
     "compare-search": "pnpm --filter @harness-visualization/mcp-server... run build && node packages/mcp-server/dist/mainCompareSearch.js",

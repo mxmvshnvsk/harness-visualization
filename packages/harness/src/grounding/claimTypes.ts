@@ -31,7 +31,20 @@ export interface QuoteCheck {
   foundIn: SeenText | null;
 }
 
+// Ближайший к claim кусок того, что видела модель, по сходству эмбеддингов.
+export interface SimilarityMatch {
+  // Косинусное сходство векторов claim и passage, от 0 до 1.
+  score: number;
+  // Строка увиденного текста (passage), ближайшая к claim.
+  passage: string;
+  // Документ, из которого строка; null — не удалось понять (например, страница из интернета).
+  documentId: string | null;
+  seen: SeenText;
+}
+
 export interface ClaimCheck {
   claim: Claim;
   quotes: QuoteCheck[];
+  // null — сходство не считалось (например, модель эмбеддингов не скачана).
+  similarity: SimilarityMatch | null;
 }
