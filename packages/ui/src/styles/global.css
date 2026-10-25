@@ -8,7 +8,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 15px/1.5 var(--font-text);
+  font: 15px/1.55 var(--font-text);
 }
 
 button,
@@ -27,6 +27,14 @@ h3 {
 }
 
 :focus-visible {
-  outline: 2px solid var(--model);
-  outline-offset: 2px;
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+  }
 }

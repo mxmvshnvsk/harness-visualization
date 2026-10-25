@@ -1,7 +1,10 @@
 /*
-  Токены дизайна — из мокапа этапа 8.0 (docs/plan.md, «Этап 8: решения»).
-  Тема — по системной настройке. Толщина шрифта тоже токен: светлый текст на тёмном фоне
-  кажется жирнее, поэтому в тёмной теме начертания на ступень тоньше.
+  Токены дизайна. Светлая тема — «Индиго», тёмная — «Лайм» в монохроме: прототип v5,
+  выбран автором (docs/plan.md, «Этап 8c: решения»). Тема — по системной настройке.
+  Толщина шрифта тоже токен: светлый текст на тёмном фоне кажется жирнее, поэтому в тёмной
+  теме начертания на ступень тоньше.
+  Глубина — слоями: фон → холст с точечной сеткой → поверхности со светлой кромкой сверху
+  (--edge-hi) и мягкой тенью → свечение активного (--glow: 0 в светлой, 1 в тёмной).
 */
 
 :root {
@@ -10,83 +13,118 @@
   --font-text: 'Onest', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-  --radius-card: 24px;
-  --radius-inner: 16px;
+  --radius-card: 28px;
+  --radius-inner: 18px;
   --radius-small: 10px;
   --radius-pill: 999px;
 
-  --bg: #f4f1ea;
-  --surface: #fffdf9;
-  --raised: #ffffff;
-  --text: #1f1d1a;
-  --muted: #6b6556;
-  --line: #e5dfd3;
-  --accent: #c8461a;
-  --accent-text: #ffffff;
-  --accent-soft: #f0ece3;
-  --ink: #1f1d1a;
-  --ink-text: #fffdf9;
-  --selected: #1f1d1a;
-  --selected-text: #fffdf9;
-  --selected-line: #1f1d1a;
-  --track: #1f1d1a;
+  /* Отступы: страница, между блоками, внутри карточки. */
+  --space-page: 40px;
+  --space-block: 24px;
+  --space-card: 24px;
+
+  --bg: #f3f3f8;
+  --canvas: #fafafe;
+  --surface: #fff;
+  --raised: #fff;
+  --text: #14141c;
+  --muted: #61627a;
+  --line: #e2e3ee;
+  --grid: rgb(20 20 60 / 9%);
+  --edge-hi: #fff;
+  --shadow: 0 1px 2px rgb(20 20 60 / 6%), 0 10px 30px -12px rgb(20 20 60 / 18%);
+  --glow: 0;
+
+  /* Один акцент — для главного действия. В светлой — перелив от индиго к фиолетовому. */
+  --accent: #3647d2;
+  --accent-2: #7b5cff;
+  --accent-text: #fff;
+  --accent-soft: rgb(54 71 210 / 10%);
+  --ink: #14141c;
+  --ink-text: #fff;
+  --selected: #14141c;
+  --selected-text: #fff;
+  --selected-line: #14141c;
+  --track: #14141c;
+  --scrim: rgb(10 10 30 / 30%);
 
   /* Группы событий: у каждой свой цвет, контраст текста не ниже 4.5:1. */
-  --dialog: #2f6f55;
-  --model: #2f5bb7;
-  --tool: #94570c;
-  --permission: #a3367f;
-  --retrieval: #17727b;
+  --dialog: #1f7a5a;
+  --model: #3647d2;
+  --tool: #9a5a00;
+  --permission: #b0307f;
+  --retrieval: #0f7480;
   --judge: #6a4bb0;
   --error: #b42318;
-  --meta: #6b6556;
+  --meta: #6b6c80;
+
+  /*
+    Карточки шагов: сколько цвета группы в рамке и чем выделен текущий шаг.
+    initial — «цвет группы»: var(--card-active, var(--c)) берёт запасное значение.
+  */
+  --card-tint: 30%;
+  --card-active: initial;
+  --card-icon: initial;
 
   --weight-strong: 600;
   --weight-medium: 500;
 
-  /* Стекло и переливы — только для пустого состояния. */
-  --glass: rgb(255 253 249 / 55%);
-  --glass-line: rgb(255 255 255 / 80%);
+  /* Стекло: плеер и пустое состояние. */
+  --glass: rgb(250 250 254 / 66%);
+  --glass-line: rgb(255 255 255 / 90%);
   --blob-a: #b9a7f5;
   --blob-b: #9cc8f2;
-  --blob-c: #f6c3d9;
+  --blob-c: #c9c3ff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #171614;
-    --surface: #1f1e1b;
-    --raised: #282623;
-    --text: #e6e1d8;
-    --muted: #a39d92;
-    --line: #38352f;
-    --accent: #ff8a4c;
-    --accent-text: #1a0f07;
-    --accent-soft: #2b2925;
-    --ink: #e6e1d8;
-    --ink-text: #171614;
-    --selected: #3a3732;
-    --selected-text: #f0ece4;
-    --selected-line: #6a645a;
-    --track: #a39d92;
+    --bg: #050605;
+    --canvas: #0a0b09;
+    --surface: #121411;
+    --raised: #1a1c18;
+    --text: #eef0e6;
+    --muted: #9a9e90;
+    --line: #262a22;
+    --grid: rgb(230 255 77 / 8%);
+    --edge-hi: rgb(230 255 77 / 8%);
+    --shadow: 0 1px 0 rgb(255 255 255 / 3%), 0 18px 40px -18px rgb(0 0 0 / 90%);
+    --glow: 1;
 
-    --dialog: #7cc4a1;
-    --model: #8fb0f2;
-    --tool: #d4b57e;
-    --permission: #e58fcb;
-    --retrieval: #6cc7cf;
-    --judge: #b7a3f0;
+    --accent: #e6ff4d;
+    --accent-2: #e6ff4d;
+    --accent-text: #0b0c06;
+    --accent-soft: rgb(230 255 77 / 10%);
+    --ink: #eef0e6;
+    --ink-text: #050605;
+    --selected: #e6ff4d;
+    --selected-text: #0b0c06;
+    --selected-line: #e6ff4d;
+    --track: #9a9e90;
+    --scrim: rgb(0 0 0 / 60%);
+
+    /* Монохром: цвета групп приглушены, яркий только лайм у текущего. Ошибка остаётся заметной. */
+    --dialog: #8fd9ad;
+    --model: #c9cdbd;
+    --tool: #e3c27f;
+    --permission: #e7a3cf;
+    --retrieval: #85cfd1;
+    --judge: #c4bce0;
     --error: #f28b7d;
-    --meta: #a39d92;
+    --meta: #9a9e90;
+
+    --card-tint: 0%;
+    --card-active: var(--accent);
+    --card-icon: var(--muted);
 
     --weight-strong: 500;
     --weight-medium: 400;
 
-    --glass: rgb(36 36 40 / 50%);
-    --glass-line: rgb(255 255 255 / 12%);
-    --blob-a: #5b46b8;
-    --blob-b: #2c6fa8;
-    --blob-c: #8e3c6e;
+    --glass: rgb(10 11 9 / 60%);
+    --glass-line: rgb(230 255 77 / 10%);
+    --blob-a: #3d4a12;
+    --blob-b: #1f2a1a;
+    --blob-c: #2a3320;
 
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
