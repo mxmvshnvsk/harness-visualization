@@ -4,7 +4,9 @@
 // запрещаются — спросить некого.
 
 import type { PermissionAnswer } from '../agent/agentDependencies.js';
+import { stdin } from 'node:process';
 import { askConfirmation } from './askConfirmation.js';
+import { askQuestion } from './askQuestion.js';
 import { createConsolePrinter } from '../events/createConsolePrinter.js';
 import { startSession, type SessionInput, type SessionResult } from '../session/startSession.js';
 
@@ -20,12 +22,20 @@ export async function runCliSession(input: CliSessionInput): Promise<CliSessionR
     confirmAction: input.quiet ? denyWithoutAsking : askConfirmation,
     listeners: input.quiet ? [] : [createConsolePrinter({ verbose: input.verbose })],
     log: input.quiet ? ignoreMessage : printMessage,
+    // Диалог — только когда есть кого спросить: тихий режим и запуск без терминала — один вопрос.
+    ...(input.quiet || !stdin.isTTY ? {} : { nextQuestion: askNextQuestion }),
   });
   const result = await session.completion;
   if (!input.quiet) {
     console.log(`Трейс сессии: ${result.tracePath}`);
   }
   return result;
+}
+
+// Пустая строка — закончить диалог.
+async function askNextQuestion(): Promise<string | null> {
+  const answer = await askQuestion('\nСледующий вопрос (Enter — закончить): ');
+  return answer === '' ? null : answer;
 }
 
 // В тихой сессии спросить некого, а молчание — не согласие.

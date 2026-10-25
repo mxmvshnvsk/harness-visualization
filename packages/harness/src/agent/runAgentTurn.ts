@@ -3,6 +3,9 @@
 //   2. если модель просит тулы — выполнить их и добавить результаты в контекст;
 //   3. повторять, пока модель не ответит текстом (или не кончится лимит шагов).
 // Модель сама ничего не выполняет: она только просит, а делает всё харнесс.
+//
+// История диалога (conversation) живёт дольше хода: следующий вопрос той же сессии
+// дописывается в неё, и модель снова получает всё с начала — сама она ничего не помнит.
 
 import type {
   AssistantMessage,
@@ -34,12 +37,17 @@ export async function runAgentTurn(
   userText: string,
   dependencies: AgentDependencies,
   options: TurnOptions,
+  // История диалога: пустая — первый ход; ход дописывает в неё вопрос, ответы и результаты тулов.
+  messages: ChatMessage[],
 ): Promise<string> {
   const { events, tools } = dependencies;
   events.emit({ type: 'user_message', text: userText });
 
   const userContent = await prepareUserContent(userText, dependencies, options.retrieval);
-  const messages = assembleInitialContext(userContent, dependencies.mcpServerInstructions);
+  if (messages.length === 0) {
+    messages.push(systemMessage(dependencies.mcpServerInstructions));
+  }
+  messages.push({ role: 'user', content: userContent });
   events.emit({ type: 'prompt_assembled', messages: [...messages], toolNames: tools.names() });
 
   for (let iteration = 1; iteration <= options.maxIterations; iteration += 1) {
@@ -94,15 +102,9 @@ async function prepareRetrievalQuery(
   return { userQuestion: userText, query, queryAuthor: 'model' };
 }
 
-// Модель не помнит прошлых запросов: всё, что она должна знать, харнесс кладёт сюда.
-function assembleInitialContext(
-  userContent: string,
-  mcpInstructions: McpServerInstructions[],
-): ChatMessage[] {
-  return [
-    { role: 'system', content: buildSystemPrompt(new Date(), mcpInstructions) },
-    { role: 'user', content: userContent },
-  ];
+// Модель не помнит прошлых запросов: всё, что она должна знать, харнесс кладёт в начало истории.
+function systemMessage(mcpInstructions: McpServerInstructions[]): ChatMessage {
+  return { role: 'system', content: buildSystemPrompt(new Date(), mcpInstructions) };
 }
 
 // Ответ модели становится частью истории — вместе с рассуждениями и просьбами вызвать тулы.

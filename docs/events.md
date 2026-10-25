@@ -41,6 +41,7 @@
 | `permission_resolved`     | на вопрос ответили — или ответа не дождались                              | `toolCallId`, `toolName`, `approved`, `answeredBy`, `waitedForUserMs`                                                            |
 | `tool_result`             | тул выполнен, не смог, пользователь отказал или политика запретила        | `toolCallId`, `toolName`, `status`, `content`, `details`, `cost`, `durationMs`                                                   |
 | `assistant_message`       | харнесс отдал ответ пользователю                                          | `text`                                                                                                                           |
+| `awaiting_question`       | ответ отдан, сессия ждёт следующего вопроса того же диалога (этап 6.1)    | `turn` — сколько ходов уже было                                                                                                  |
 | `session_finished`        | сессия закончилась                                                        | `durationMs`, `modelRequests`, `usage`, `modelCost`, `toolCosts`                                                                 |
 | `error`                   | ошибка, прервавшая сессию                                                 | `message`                                                                                                                        |
 

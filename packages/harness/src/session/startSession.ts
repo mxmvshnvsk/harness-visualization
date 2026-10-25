@@ -15,7 +15,7 @@ import {
   connectMcpServers,
   type ConnectedMcpServers,
 } from '../mcp/connectMcpServers.js';
-import type { ReasoningEffort } from '../model/chatTypes.js';
+import type { ChatMessage, ReasoningEffort } from '../model/chatTypes.js';
 import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
 import { NetworkRouter, type RoutedFetch } from '../network/NetworkRouter.js';
 import { readProxyUrl } from '../network/proxyFromEnvironment.js';
@@ -62,6 +62,9 @@ export interface SessionHooks {
   listeners: EventListener[];
   // Служебные сообщения, которых нет в событиях (например, почему выключен веб-поиск).
   log: (message: string) => void;
+  // Следующий вопрос того же диалога; null — закончить сессию. Нет функции — сессия из одного
+  // вопроса (pnpm compare-runs, запуск без терминала): спросить некого.
+  nextQuestion?: (turn: number) => Promise<string | null>;
 }
 
 export interface SessionResult {
@@ -112,11 +115,7 @@ async function runRecordedSession(
   try {
     const prepared = await prepareSession(input, hooks, events, network.fetch);
     mcpServers = prepared.mcpServers;
-    await runAgentTurn(input.question, prepared.dependencies, {
-      reasoningEffort: input.reasoningEffort,
-      maxIterations: settings.agent.maxIterations,
-      retrieval: createRetrievalOptions(input),
-    });
+    await runDialog(input, hooks, prepared.dependencies);
   } catch (error) {
     events.emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
     failed = true;
@@ -127,6 +126,29 @@ async function runRecordedSession(
     await network.close();
   }
   return { tracePath: await recording.finish(), failed };
+}
+
+// Диалог: ход за ходом, пока есть следующий вопрос. История общая для всех ходов.
+async function runDialog(
+  input: SessionInput,
+  hooks: SessionHooks,
+  dependencies: AgentDependencies,
+): Promise<void> {
+  const options = {
+    reasoningEffort: input.reasoningEffort,
+    maxIterations: input.loadedSettings.settings.agent.maxIterations,
+    retrieval: createRetrievalOptions(input),
+  };
+  const conversation: ChatMessage[] = [];
+  let question: string | null = input.question;
+  for (let turn = 1; question !== null; turn += 1) {
+    await runAgentTurn(question, dependencies, options, conversation);
+    if (hooks.nextQuestion === undefined) {
+      return;
+    }
+    dependencies.events.emit({ type: 'awaiting_question', turn });
+    question = await hooks.nextQuestion(turn);
+  }
 }
 
 interface PreparedSession {

@@ -31,6 +31,7 @@ const EVENT_GROUPS: Record<HarnessEventType, EventGroup> = {
   permission_requested: 'permission',
   permission_resolved: 'permission',
   assistant_message: 'dialog',
+  awaiting_question: 'dialog',
   session_finished: 'meta',
   error: 'error',
 };

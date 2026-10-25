@@ -104,6 +104,12 @@ const EVENT_DESCRIBERS: EventDescribers = {
   ],
   tool_result: describeToolResult,
   assistant_message: (event) => [styleText('green', 'Харнесс → пользователь:'), event.text],
+  awaiting_question: (event) => [
+    styleText(
+      'dim',
+      `Ход ${String(event.turn)} закончен — история диалога остаётся для следующего вопроса.`,
+    ),
+  ],
   session_finished: describeSessionFinished,
   error: (event) => [styleText('red', `Ошибка: ${event.message}`)],
 };

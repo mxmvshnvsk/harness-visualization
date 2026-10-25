@@ -292,6 +292,14 @@ export interface PermissionResolvedPayload {
   waitedForUserMs: number;
 }
 
+// Ответ отдан, сессия ждёт следующего вопроса того же диалога (этап 6.1). История остаётся:
+// следующий ход отправит модели и её. Не пришёл вопрос — сессия заканчивается.
+export interface AwaitingQuestionPayload {
+  type: 'awaiting_question';
+  // Сколько ходов диалога уже было.
+  turn: number;
+}
+
 export interface AssistantMessagePayload {
   type: 'assistant_message';
   text: string;
@@ -338,6 +346,7 @@ export type HarnessEventPayload =
   | PermissionResolvedPayload
   | ToolResultPayload
   | AssistantMessagePayload
+  | AwaitingQuestionPayload
   | SessionFinishedPayload
   | ErrorPayload;
 

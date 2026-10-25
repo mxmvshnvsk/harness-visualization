@@ -54,6 +54,7 @@ const DESCRIBERS: Describers = {
     `${event.approved ? 'разрешено' : 'запрещено'}, answeredBy ${event.answeredBy}, ждали ${String(event.waitedForUserMs)} мс`,
   tool_result: (event) => `${event.status}, ${String(event.durationMs)} мс: ${event.content}`,
   assistant_message: (event) => event.text,
+  awaiting_question: (event) => `ход ${String(event.turn)} закончен, ждём следующий вопрос`,
   session_finished: (event) =>
     [
       `${plural(event.modelRequests, MODEL_REQUESTS)} к модели`,
