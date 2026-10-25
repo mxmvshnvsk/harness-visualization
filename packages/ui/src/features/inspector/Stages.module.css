@@ -284,3 +284,8 @@
   background: var(--agent);
   vertical-align: 1px;
 }
+
+/* Фазы запроса шага (этап 8d.3) — под заголовком, на отступе строк. */
+.phases {
+  margin: 6px 0 0 54px;
+}

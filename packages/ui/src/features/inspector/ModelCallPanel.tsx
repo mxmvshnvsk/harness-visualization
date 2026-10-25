@@ -6,6 +6,7 @@ import { StatCard } from '../../components/StatCard';
 import type { ModelCall } from '../../projections/sessionView';
 import { BudgetBlock } from './BudgetBlock';
 import { InferencePhases } from './InferencePhases';
+import { TimingBlock } from './TimingBlock';
 import { explainCache, type CacheExplanation } from './explainCache';
 import type { Focus } from './focus';
 import styles from './Inspector.module.css';
@@ -14,10 +15,12 @@ import { HelpButton, Term } from '../../help/HelpLinks';
 
 interface ModelCallPanelProps {
   call: ModelCall;
+  // Все запросы сессии — для сравнения фаз (этап 8d.3).
+  calls: ModelCall[];
   onFocus: (focus: Focus) => void;
 }
 
-export function ModelCallPanel({ call, onFocus }: ModelCallPanelProps): ReactElement {
+export function ModelCallPanel({ call, calls, onFocus }: ModelCallPanelProps): ReactElement {
   const cache = explainCallCache(call);
   return (
     <article className={styles.panel}>
@@ -35,6 +38,7 @@ export function ModelCallPanel({ call, onFocus }: ModelCallPanelProps): ReactEle
         <CallStats response={call.response} share={call.cache?.share ?? 0} />
       )}
       <InferencePhases call={call} />
+      <TimingBlock call={call} calls={calls} />
       <CallBudget call={call} />
       <CallNotes call={call} cacheText={cache?.text ?? null} />
       <div className={styles.columns}>
@@ -118,7 +122,7 @@ function CallNotes({
   );
 }
 
-function Reply({ call, onFocus }: ModelCallPanelProps): ReactElement | null {
+function Reply({ call, onFocus }: Omit<ModelCallPanelProps, 'calls'>): ReactElement | null {
   const reply = call.response?.reply;
   if (reply === undefined) {
     return null;

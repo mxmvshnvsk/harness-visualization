@@ -18,7 +18,7 @@ export function FocusedPanel({ view, focus, onFocus }: FocusedPanelProps): React
   if (focus?.kind === 'model') {
     const call = view.modelCalls.find((item) => item.requestId === focus.requestId);
     if (call !== undefined) {
-      return <ModelCallPanel call={call} onFocus={onFocus} />;
+      return <ModelCallPanel call={call} calls={view.modelCalls} onFocus={onFocus} />;
     }
   }
   if (focus?.kind === 'tool') {

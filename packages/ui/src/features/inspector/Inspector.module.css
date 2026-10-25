@@ -277,11 +277,11 @@
 }
 
 .split [data-kind='reasoning'] {
-  background: var(--agent-main);
+  background: var(--phase-reasoning);
 }
 
 .split [data-kind='answer'] {
-  background: var(--agent-one);
+  background: var(--phase-answer);
 }
 
 @media (width <= 860px) {

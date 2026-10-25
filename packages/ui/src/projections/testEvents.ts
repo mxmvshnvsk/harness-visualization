@@ -4,6 +4,7 @@
 import type {
   HarnessEvent,
   HarnessEventPayload,
+  ResponseTiming,
   TokenUsage,
   ToolCall,
 } from '@harness-visualization/harness';
@@ -89,6 +90,9 @@ interface ResponseOptions {
   text?: string | null;
   // null — цена модели неизвестна.
   costUsd?: number | null;
+  durationMs?: number;
+  // Моменты потокового ответа (этап 8d.2); не задано — трейс до 8d.2.
+  timing?: ResponseTiming | null;
 }
 
 export function modelResponse(requestId: string, options: ResponseOptions): HarnessEventPayload {
@@ -98,7 +102,8 @@ export function modelResponse(requestId: string, options: ResponseOptions): Harn
     type: 'model_response',
     requestId,
     status: 200,
-    durationMs: 1500,
+    durationMs: options.durationMs ?? 1500,
+    ...(options.timing === undefined ? {} : { timing: options.timing }),
     body: {},
     reply: {
       responseId: `response-${requestId}`,

@@ -1,0 +1,74 @@
+/* Полоса и строка фаз запроса к модели (этап 8d.3). */
+.bar {
+  display: flex;
+  height: 28px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--canvas);
+}
+
+.bar[data-mini='true'] {
+  height: 10px;
+  border-radius: 4px;
+}
+
+.bar > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0 4px;
+  overflow: hidden;
+  color: var(--phase-ink);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.bar[data-mini='true'] > span {
+  padding: 0;
+}
+
+[data-kind='wait'] {
+  --phase: var(--phase-wait);
+}
+
+[data-kind='reasoning'] {
+  --phase: var(--phase-reasoning);
+}
+
+[data-kind='answer'] {
+  --phase: var(--phase-answer);
+}
+
+.bar > span[data-kind] {
+  background: var(--phase);
+}
+
+.line,
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.line {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.line > span::before,
+.legend > span::before {
+  content: '';
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 2px;
+  background: var(--phase);
+  vertical-align: -1px;
+}

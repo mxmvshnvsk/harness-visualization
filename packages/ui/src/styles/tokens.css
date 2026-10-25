@@ -59,6 +59,13 @@
   --agent-two: #eb6834;
   --agent-other: #8a8ba3;
 
+  /* Фазы запроса к модели (этап 8d.3): до первого токена, рассуждение, ответ. Те же проверенные
+     validate_palette.js цвета, что у агентов: нейтральный, фиолетовый, зелёный. */
+  --phase-wait: #8a8ba3;
+  --phase-reasoning: #6250d6;
+  --phase-answer: #1baf7a;
+  --phase-ink: #fff;
+
   /* Один акцент — для главного действия. В светлой — перелив от индиго к фиолетовому. */
   --accent: #3647d2;
   --accent-2: #7b5cff;
@@ -130,6 +137,11 @@
   --agent-one: #199e70;
   --agent-two: #d95926;
   --agent-other: #6f7366;
+
+  --phase-wait: #6f7366;
+  --phase-reasoning: #9085e9;
+  --phase-answer: #199e70;
+  --phase-ink: #0b0c06;
 
   --accent: #e6ff4d;
   --accent-2: #e6ff4d;

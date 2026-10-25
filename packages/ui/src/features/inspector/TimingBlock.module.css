@@ -1,0 +1,133 @@
+/* Время запроса по фазам (этап 8d.3). */
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.title {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+}
+
+.ticks {
+  position: relative;
+  height: 14px;
+  margin-top: -4px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.ticks span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.ticks span:first-child {
+  transform: none;
+}
+
+.ticks span:last-child {
+  transform: translateX(-100%);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (width <= 860px) {
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--raised);
+}
+
+.stat small,
+.stat span {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.stat b {
+  font-size: 18px;
+  font-weight: var(--weight-medium);
+}
+
+.hint,
+.empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.empty {
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-small);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table caption {
+  padding-bottom: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table thead th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.table td {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.table tbody th {
+  font-weight: 400;
+}
+
+.table tr[data-current='true'] > * {
+  background: var(--accent-soft);
+}
+
+.barCell {
+  width: 40%;
+  min-width: 160px;
+}

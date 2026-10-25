@@ -7,6 +7,8 @@ import type { SessionView } from '../../projections/sessionView';
 import { hasRetrieval, type Focus } from './focus';
 import { FocusedPanel } from './FocusedPanel';
 import { SubagentBlock } from './SubagentBlock';
+import { PhaseLine } from './PhaseBar';
+import { inferenceTiming } from '../../projections/inferenceTiming';
 import { AgentChip } from '../agents/AgentChip';
 import { useSubagentSteps } from './subagentSteps';
 import styles from './Stages.module.css';
@@ -56,6 +58,7 @@ export function StageCard({
         {showBadge(stage, started, reached) && <span className={styles.badge}>{stage.badge}</span>}
         <span className={styles.when}>{statusOf(stage, started, active, reached)}</span>
       </header>
+      {showBadge(stage, started, reached) && <StagePhases stage={stage} view={view} />}
       <ul className={styles.rows}>
         {stage.rows.map((row) => (
           <Row
@@ -71,6 +74,20 @@ export function StageCard({
       </ul>
       {started && <Details stage={stage} view={view} target={focus ?? null} />}
     </article>
+  );
+}
+
+// Фазы запроса шага (этап 8d.3) — одной строкой, когда ответ уже пришёл.
+function StagePhases({ stage, view }: { stage: Stage; view: SessionView }): ReactElement | null {
+  if (stage.kind !== 'agent' || stage.requestId === null) {
+    return null;
+  }
+  const call = view.modelCalls.find((item) => item.requestId === stage.requestId);
+  const timing = inferenceTiming(call?.response ?? null);
+  return timing === null ? null : (
+    <div className={styles.phases}>
+      <PhaseLine timing={timing} />
+    </div>
   );
 }
 
