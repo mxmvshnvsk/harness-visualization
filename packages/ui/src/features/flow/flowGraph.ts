@@ -103,12 +103,81 @@ export function boundaryPoint(node: FlowNode, toward: FlowNode): Point {
   return { x: node.x + dx * scale, y: node.y + dy * scale };
 }
 
-// Где стоит подпись пакета: посередине между краями узлов; у события внутри узла — над ним.
-export function labelAnchor(from: FlowNode, to: FlowNode): Point {
-  if (from.id === to.id) {
-    return { x: from.x, y: from.y - from.height / 2 - 22 };
-  }
+// Полоса — кривая Безье от края одного узла к краю другого (как ребро в React Flow), сдвинутая
+// вбок: у каждой связи две полосы, «туда» и «обратно», и точка идёт ровно по нарисованной.
+export interface Lane {
+  // Путь для атрибута d у <path>.
+  path: string;
+  at: (progress: number) => Point;
+  // Где стоит подпись полосы: посередине, сбоку от неё — со своей стороны у каждой полосы.
+  label: Point;
+}
+
+export const LANE_OFFSET = 6;
+const LABEL_OFFSET = 22;
+const CURVE = 0.45;
+
+export function laneOf(fromId: FlowNodeId, toId: FlowNodeId): Lane {
+  const from = FLOW_NODES[fromId];
+  const to = FLOW_NODES[toId];
   const start = boundaryPoint(from, to);
   const end = boundaryPoint(to, from);
-  return { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const length = Math.hypot(dx, dy) || 1;
+  // Сдвиг вбок — по нормали к хорде; у встречной полосы нормаль смотрит в другую сторону.
+  const normal = { x: -dy / length, y: dx / length };
+  const shift = (point: Point, distance: number): Point => ({
+    x: point.x - normal.x * distance,
+    y: point.y - normal.y * distance,
+  });
+  const vertical = Math.abs(dy) > Math.abs(dx);
+  const control1 = vertical
+    ? { x: start.x, y: start.y + dy * CURVE }
+    : { x: start.x + dx * CURVE, y: start.y };
+  const control2 = vertical
+    ? { x: end.x, y: end.y - dy * CURVE }
+    : { x: end.x - dx * CURVE, y: end.y };
+  const points = [start, control1, control2, end].map((point) =>
+    shift(point, LANE_OFFSET),
+  ) as Bezier;
+  const at = (progress: number): Point => cubic(points, progress);
+  const [p0, p1, p2, p3] = points;
+  return {
+    path: `M ${format(p0)} C ${format(p1)}, ${format(p2)}, ${format(p3)}`,
+    at,
+    label: shift(at(0.5), LABEL_OFFSET),
+  };
 }
+
+type Bezier = [Point, Point, Point, Point];
+
+// Точка кубической кривой Безье: веса — многочлены Бернштейна.
+function cubic(points: Bezier, progress: number): Point {
+  const rest = 1 - progress;
+  const weights = [
+    rest ** 3,
+    3 * rest * rest * progress,
+    3 * rest * progress * progress,
+    progress ** 3,
+  ];
+  return points.reduce(
+    (sum, point, index) => ({
+      x: sum.x + (weights[index] ?? 0) * point.x,
+      y: sum.y + (weights[index] ?? 0) * point.y,
+    }),
+    { x: 0, y: 0 },
+  );
+}
+
+function format(point: Point): string {
+  return `${point.x.toFixed(1)} ${point.y.toFixed(1)}`;
+}
+
+// Все полосы схемы, «откуда>куда», — посчитаны один раз.
+export const LANES: Record<string, Lane | undefined> = Object.fromEntries(
+  FLOW_EDGES.flatMap(([fromId, toId]) => [
+    [`${fromId}>${toId}`, laneOf(fromId, toId)],
+    [`${toId}>${fromId}`, laneOf(toId, fromId)],
+  ]),
+);

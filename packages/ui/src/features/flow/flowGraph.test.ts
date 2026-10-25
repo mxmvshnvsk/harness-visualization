@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boundaryPoint, FLOW_NODES, labelAnchor } from './flowGraph';
+import { boundaryPoint, FLOW_NODES, LANE_OFFSET, laneOf } from './flowGraph';
 
 describe('boundaryPoint', () => {
   it('точка — на краю узла в сторону другого', () => {
@@ -15,17 +15,26 @@ describe('boundaryPoint', () => {
   });
 });
 
-describe('labelAnchor', () => {
-  it('подпись — между краями узлов и не заходит ни в один', () => {
+describe('laneOf', () => {
+  it('полоса начинается у края отправителя и кончается у края адресата', () => {
     const { harness, model } = FLOW_NODES;
-    const anchor = labelAnchor(harness, model);
+    const lane = laneOf('harness', 'model');
+    const start = lane.at(0);
+    const end = lane.at(1);
 
-    expect(anchor.x).toBeGreaterThan(harness.x + harness.width / 2);
-    expect(anchor.x).toBeLessThan(model.x - model.width / 2);
+    expect(Math.abs(start.x - (harness.x + harness.width / 2))).toBeLessThan(LANE_OFFSET + 1);
+    expect(Math.abs(end.x - (model.x - model.width / 2))).toBeLessThan(LANE_OFFSET + 1);
   });
 
-  it('у события внутри узла — над узлом', () => {
-    const { harness } = FLOW_NODES;
-    expect(labelAnchor(harness, harness).y).toBeLessThan(harness.y - harness.height / 2);
+  it('полосы «туда» и «обратно» — по разные стороны и с подписями по разные стороны', () => {
+    const out = laneOf('user', 'harness');
+    const back = laneOf('harness', 'user');
+
+    expect(Math.sign(out.at(0.5).y - FLOW_NODES.user.y)).toBe(
+      -Math.sign(back.at(0.5).y - FLOW_NODES.user.y),
+    );
+    expect(Math.sign(out.label.y - FLOW_NODES.user.y)).toBe(
+      -Math.sign(back.label.y - FLOW_NODES.user.y),
+    );
   });
 });

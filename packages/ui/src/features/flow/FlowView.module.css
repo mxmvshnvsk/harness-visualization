@@ -1,14 +1,14 @@
 .flow {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .stage {
   position: relative;
 }
 
-/* «Что это?» — в левом верхнем углу схемы: там нет узлов, а отдельная строка над схемой не нужна. */
+/* «Что это?» — в левом верхнем углу схемы: там нет узлов. */
 .toolbar {
   position: absolute;
   top: 12px;
@@ -18,115 +18,148 @@
 .diagram {
   width: 100%;
   height: auto;
+  display: block;
   border-radius: var(--radius-card);
   background: var(--bg);
   border: 1px solid var(--line);
   font-family: var(--font-text);
 }
 
-.edge {
+/* Цвет группы — в переменной --c у всего, что красится по действию. */
+.diagram [data-group='dialog'] {
+  --c: var(--dialog);
+}
+
+.diagram [data-group='model'] {
+  --c: var(--model);
+}
+
+.diagram [data-group='tool'] {
+  --c: var(--tool);
+}
+
+.diagram [data-group='permission'] {
+  --c: var(--permission);
+}
+
+.diagram [data-group='retrieval'] {
+  --c: var(--retrieval);
+}
+
+.diagram [data-group='judge'] {
+  --c: var(--judge);
+}
+
+.diagram [data-group='error'] {
+  --c: var(--error);
+}
+
+.diagram [data-group='meta'] {
+  --c: var(--meta);
+}
+
+/* Две дорожки у каждой связи: «туда» и «обратно». По активной идёт точка. */
+.lane {
+  fill: none;
   stroke: var(--line);
-  stroke-width: 2;
-  stroke-dasharray: 6 6;
+  stroke-width: 1.5;
+  stroke-dasharray: 5 6;
+  transition: stroke 0.3s;
 }
 
-.edge[data-active='true'] {
-  stroke: var(--muted);
+.lane[data-active='true'] {
+  stroke: var(--c, var(--muted));
   stroke-dasharray: none;
+  opacity: 0.8;
 }
 
-.node rect {
+.box {
   fill: var(--surface);
   stroke: var(--line);
   stroke-width: 1.5;
   transition:
-    stroke 0.2s,
-    fill 0.2s;
+    stroke 0.4s,
+    fill 0.4s;
 }
 
-.node[data-active='true'] rect {
+.node[data-group]:not([data-group='']) .box {
+  stroke: var(--c);
+  stroke-width: 2;
+}
+
+.node[data-busy='true'] .box {
   fill: var(--raised);
-  stroke-width: 2.5;
 }
 
-.nodeTitle {
+.ring {
+  fill: none;
+  stroke: var(--c, var(--muted));
+  stroke-width: 1.5;
+  stroke-dasharray: 8 6;
+  opacity: 0;
+  animation: march 1.4s linear infinite;
+}
+
+.node[data-busy='true'] .ring {
+  opacity: 1;
+}
+
+.title {
   fill: var(--text);
   font-size: 16px;
   font-weight: var(--weight-strong);
 }
 
-.nodeRole,
-.nodeCounter {
+.sub {
   fill: var(--muted);
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 
-.nodeCounter {
-  font-family: var(--font-mono);
+.node[data-busy='true'] .sub {
+  fill: var(--text);
 }
 
-.packetLabel rect {
+.heatTrack,
+.heat {
+  opacity: 0;
+}
+
+.heatTrack {
+  fill: var(--line);
+}
+
+.heat {
+  fill: var(--muted);
+}
+
+.node[data-heat='true'] .heatTrack,
+.node[data-heat='true'] .heat {
+  opacity: 1;
+}
+
+.label rect {
   fill: var(--raised);
-  stroke-width: 1.5;
+  stroke: var(--c, var(--line));
+  stroke-width: 1.2;
 }
 
-.packetLabel text {
+.label text {
+  fill: var(--c, var(--text));
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: var(--weight-medium);
 }
 
-/* Подпись проявляется, пока летит точка, — читать неподвижный текст легче. */
-.packetLabel {
-  animation: appear var(--travel) ease-out both;
-}
-
+/* Прозрачность точек и подписей кадр ставит атрибутом opacity: CSS-свойство его бы перебило. */
 .dot {
+  fill: var(--c, var(--text));
   stroke: var(--surface);
   stroke-width: 2;
 }
 
-/* Адресат вспыхивает, когда точка долетела. */
-.pulse {
-  fill: none;
-  stroke-width: 3;
-  opacity: 0;
-  animation: pulse 700ms ease-out var(--travel) both;
-}
-
-/* Ожидание: бегущая рамка — модель думает, tool выполняется, ждём пользователя. */
-.waiting {
-  fill: none;
-  stroke: var(--muted);
-  stroke-width: 1.5;
-  stroke-dasharray: 8 6;
-  animation: march 1.2s linear infinite;
-}
-
-.nodeWaiting {
-  fill: var(--text);
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-
-@keyframes appear {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes pulse {
-  0% {
-    opacity: 0.9;
-  }
-
-  100% {
-    opacity: 0;
-  }
+.trail {
+  fill: var(--c, var(--text));
 }
 
 @keyframes march {
@@ -135,148 +168,28 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .packetLabel,
-  .pulse,
-  .waiting {
-    animation: none;
-  }
-}
-
-/* Цвет группы события: рамка активного узла, подпись и точка пакета — как во всём интерфейсе. */
-.node[data-group='dialog'] rect,
-.packet[data-group='dialog'] .packetLabel rect {
-  stroke: var(--dialog);
-}
-
-.packet[data-group='dialog'] .packetLabel text,
-.packet[data-group='dialog'] .dot {
-  fill: var(--dialog);
-}
-
-.node[data-group='model'] rect,
-.packet[data-group='model'] .packetLabel rect {
-  stroke: var(--model);
-}
-
-.packet[data-group='model'] .packetLabel text,
-.packet[data-group='model'] .dot {
-  fill: var(--model);
-}
-
-.node[data-group='tool'] rect,
-.packet[data-group='tool'] .packetLabel rect {
-  stroke: var(--tool);
-}
-
-.packet[data-group='tool'] .packetLabel text,
-.packet[data-group='tool'] .dot {
-  fill: var(--tool);
-}
-
-.node[data-group='permission'] rect,
-.packet[data-group='permission'] .packetLabel rect {
-  stroke: var(--permission);
-}
-
-.packet[data-group='permission'] .packetLabel text,
-.packet[data-group='permission'] .dot {
-  fill: var(--permission);
-}
-
-.node[data-group='retrieval'] rect,
-.packet[data-group='retrieval'] .packetLabel rect {
-  stroke: var(--retrieval);
-}
-
-.packet[data-group='retrieval'] .packetLabel text,
-.packet[data-group='retrieval'] .dot {
-  fill: var(--retrieval);
-}
-
-.node[data-group='judge'] rect,
-.packet[data-group='judge'] .packetLabel rect {
-  stroke: var(--judge);
-}
-
-.packet[data-group='judge'] .packetLabel text,
-.packet[data-group='judge'] .dot {
-  fill: var(--judge);
-}
-
-.node[data-group='error'] rect,
-.packet[data-group='error'] .packetLabel rect {
-  stroke: var(--error);
-}
-
-.packet[data-group='error'] .packetLabel text,
-.packet[data-group='error'] .dot {
-  fill: var(--error);
-}
-
-.node[data-group='meta'] rect,
-.packet[data-group='meta'] .packetLabel rect {
-  stroke: var(--meta);
-}
-
-.packet[data-group='meta'] .packetLabel text,
-.packet[data-group='meta'] .dot {
-  fill: var(--meta);
-}
-
-.current {
+.caption {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: 4px 12px;
   align-items: baseline;
-  min-height: 24px;
-  font-size: 14px;
+  min-height: 48px;
+  padding: 0 4px;
 }
 
-.mono {
-  font-family: var(--font-mono);
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.type {
-  font-family: var(--font-mono);
-  font-size: 13px;
+.what {
+  font-size: 17px;
   font-weight: var(--weight-medium);
 }
 
-.type[data-group='dialog'] {
-  color: var(--dialog);
-}
-
-.type[data-group='model'] {
-  color: var(--model);
-}
-
-.type[data-group='tool'] {
-  color: var(--tool);
-}
-
-.type[data-group='permission'] {
-  color: var(--permission);
-}
-
-.type[data-group='retrieval'] {
-  color: var(--retrieval);
-}
-
-.type[data-group='judge'] {
-  color: var(--judge);
-}
-
-.type[data-group='error'] {
-  color: var(--error);
-}
-
-.type[data-group='meta'] {
-  color: var(--meta);
-}
-
-.text {
+.detail {
+  color: var(--muted);
+  font-size: 14px;
   overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring {
+    animation: none;
+  }
 }

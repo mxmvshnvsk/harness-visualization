@@ -5,7 +5,7 @@ import type { ReactElement } from 'react';
 import { Badge, type BadgeTone } from '../../components/Badge';
 import type { ToolCallView } from '../../projections/sessionView';
 import styles from './Inspector.module.css';
-import { isMcpTool } from '../flow/eventToPacket';
+import { isMcpTool } from '../../timeline/actions';
 import { HelpButton, Term } from '../../help/HelpLinks';
 
 export function ToolCallPanel({ tool }: { tool: ToolCallView }): ReactElement {
