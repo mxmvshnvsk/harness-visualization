@@ -46,7 +46,9 @@ export function usage(
   };
 }
 
-export function sessionStarted(): HarnessEventPayload {
+export function sessionStarted(
+  retrievalMode: 'tool' | 'auto' | 'rewrite' = 'tool',
+): HarnessEventPayload {
   return {
     type: 'session_started',
     providerName: 'deepseek',
@@ -55,7 +57,7 @@ export function sessionStarted(): HarnessEventPayload {
     reasoningEffort: 'high',
     networkProxy: null,
     searchProvider: null,
-    retrievalMode: 'tool',
+    retrievalMode,
   };
 }
 

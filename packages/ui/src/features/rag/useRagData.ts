@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 import {
   embedTexts,
   getCourseGrounding,
+  getGrounding,
   getRagBase,
   searchRag,
   ServerError,
@@ -28,6 +29,11 @@ export function useEmbeddings(texts: readonly string[]): Loaded<number[][]> {
 // Три выдачи поиска по запросу; запрос сменился — ищем заново.
 export function useSearch(query: string): Loaded<LabSearch> {
   return useLoaded(() => searchRag(query), [query]);
+}
+
+// Опора ответа записанной сессии: код и сходство, мнения судьи — если трейс проверяли.
+export function useGrounding(file: string): Loaded<GroundingReportResponse> {
+  return useLoaded(() => getGrounding(file), [file]);
 }
 
 export function useCourseGrounding(): Loaded<GroundingReportResponse> {

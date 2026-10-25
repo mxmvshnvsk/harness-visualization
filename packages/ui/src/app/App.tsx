@@ -30,6 +30,7 @@ import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
 import { RagLab } from '../features/rag/RagLab';
+import { RetrievalView } from '../features/rag/session/RetrievalView';
 import { PlayerBar } from '../player/PlayerBar';
 import { projectSession } from '../projections/projectSession';
 import { buildActions, modelHostOf } from '../timeline/actions';
@@ -69,6 +70,7 @@ export function App(): ReactElement {
         key={streamUrl(selection)}
         events={stream.events}
         sessionId={sessionId}
+        traceFile={selection.kind === 'trace' ? selection.file : null}
         live={selection.kind === 'session' && stream.state !== 'ended'}
         header={
           <Topbar
@@ -203,6 +205,7 @@ const VIEWS = [
   { value: 'flow', label: 'Поток' },
   { value: 'inspector', label: 'Инспектор' },
   { value: 'context', label: 'Контекст' },
+  { value: 'rag', label: 'RAG' },
   { value: 'skills', label: 'Скиллы и память' },
   { value: 'events', label: 'Сырые события' },
 ] as const;
@@ -213,6 +216,8 @@ interface OpenStreamProps {
   events: HarnessEvent[];
   // Сессия сервера — у неё есть диалог; null — трейс.
   sessionId: string | null;
+  // Записанный трейс — для разбора опоры ответа в виде «RAG»; null — живая сессия.
+  traceFile: string | null;
   live: boolean;
   header: ReactNode;
   // Чего сессия ждёт от человека прямо сейчас: разрешения на действие.
@@ -221,7 +226,8 @@ interface OpenStreamProps {
 
 // Открытая сессия или трейс: слева шапка, виды и плеер, справа колонка «Диалог».
 // Все виды показывают события до курсора повтора — повтор и перемотка работают в каждом.
-function OpenStream({ events, sessionId, live, header, prompt }: OpenStreamProps): ReactElement {
+function OpenStream(props: OpenStreamProps): ReactElement {
+  const { events, sessionId, live, header, prompt } = props;
   // На узком экране колонка диалога ложится поверх — там она по умолчанию свёрнута.
   const [dialogOpen, setDialogOpen] = useState(() => window.innerWidth > 1000);
   const replay = useReplay(events, live);
@@ -238,7 +244,12 @@ function OpenStream({ events, sessionId, live, header, prompt }: OpenStreamProps
         {header}
         {/* Колонка свёрнута — вопрос о разрешении над видами, чтобы его не пропустить. */}
         {!dialogOpen && prompt}
-        <ViewSwitch events={events} replay={replay} liveStartedAt={liveStartedAt} />
+        <ViewSwitch
+          events={events}
+          replay={replay}
+          liveStartedAt={liveStartedAt}
+          traceFile={props.traceFile}
+        />
       </div>
       {dialogOpen ? (
         <DialogPanel
@@ -280,10 +291,11 @@ interface ViewSwitchProps {
   events: HarnessEvent[];
   replay: ReturnType<typeof useReplay>;
   liveStartedAt: number | null;
+  traceFile: string | null;
 }
 
 // Переключатель видов и сам выбранный вид.
-function ViewSwitch({ events, replay, liveStartedAt }: ViewSwitchProps): ReactElement {
+function ViewSwitch({ events, replay, liveStartedAt, traceFile }: ViewSwitchProps): ReactElement {
   const [viewName, setViewName] = useState<ViewName>('flow');
   const { clock, cursor, schedule, shown, view } = replay;
   return (
@@ -304,6 +316,7 @@ function ViewSwitch({ events, replay, liveStartedAt }: ViewSwitchProps): ReactEl
       {viewName === 'context' && (
         <ContextView events={events} shown={cursor} clock={clock} schedule={schedule} />
       )}
+      {viewName === 'rag' && <RetrievalView events={events} shown={cursor} traceFile={traceFile} />}
       {viewName === 'skills' && (
         <SkillsMemoryView events={events} shown={cursor} clock={clock} schedule={schedule} />
       )}
