@@ -61,6 +61,8 @@ export interface SessionInput {
   retrievalToolName: string | null;
   // true — пересоздать рабочую папку из примеров (флаг --fresh).
   freshWorkspace: boolean;
+  // Дать ли модели субагентов (этап 6c); null — как в harness.config.json (subagents.enabled).
+  subagents: boolean | null;
   // null — рабочая папка из harness.config.json; иначе своя папка сессии
   // (у pnpm compare-runs — временная, чтобы заметки одного прогона не влияли на другие).
   workspaceDirectory: string | null;
@@ -191,6 +193,7 @@ async function prepareSession(
     preparedWorkspace,
     searchProviderName: searchProvider?.name ?? null,
     retrievalMode: input.retrievalMode,
+    subagents: subagentsOf(input),
   });
   const workspace = new Workspace(workspaceDirectory);
   const skills = await prepareSkills(input, events);
@@ -334,12 +337,28 @@ function createAgentDependencies(
     budget: budgetSettings(settings.context),
     parallelDelegation: settings.subagents.parallel,
   };
-  // Субагентам — тулы сессии, поэтому delegate_task регистрируется последним.
-  const delegateTool = createDelegateTool(settings.subagents, () => dependencies);
-  if (delegateTool !== null) {
-    tools.register(delegateTool);
-  }
+  registerDelegateTool(input, dependencies);
   return dependencies;
+}
+
+// Субагентам — тулы сессии, поэтому delegate_task регистрируется последним, и только если
+// субагенты включены в этой сессии.
+function registerDelegateTool(input: SessionInput, dependencies: AgentDependencies): void {
+  if (subagentsOf(input) === null) {
+    return;
+  }
+  const tool = createDelegateTool(input.loadedSettings.settings.subagents, () => dependencies);
+  if (tool !== null) {
+    dependencies.tools.register(tool);
+  }
+}
+
+// Субагенты этой сессии: включены флагом или галочкой, иначе — как в настройках.
+function subagentsOf(input: SessionInput): { agents: string[]; parallel: boolean } | null {
+  const settings = input.loadedSettings.settings.subagents;
+  const agents = Object.keys(settings.agents);
+  const enabled = input.subagents ?? settings.enabled;
+  return enabled && agents.length > 0 ? { agents, parallel: settings.parallel } : null;
 }
 
 function budgetSettings(context: ContextSettings): BudgetSettings {

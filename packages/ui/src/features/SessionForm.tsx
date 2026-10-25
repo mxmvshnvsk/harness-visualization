@@ -1,19 +1,38 @@
-// Запуск новой сессии. Всё, кроме вопроса, необязательно: пусто — значит «из harness.config.json».
+// Запуск новой сессии — по мокапу, одобренному автором: вопрос, что включить (галочками), кто ищет
+// в базе знаний, effort. Значения — из harness.config.json, последний выбор запоминается в браузере.
 
-import type { StartSessionRequest } from '@harness-visualization/server';
 import { useState, type FormEvent, type ReactElement } from 'react';
 import { startSession } from '../api/serverApi';
 import { Button } from '../components/Button';
+import { Menu } from '../components/Menu';
+import { Segmented } from '../components/Segmented';
+import { TogglePill } from '../components/TogglePill';
+import {
+  toStartRequest,
+  useSessionChoices,
+  type ChoicesState,
+  type EffortChoice,
+  type RetrievalChoice,
+} from './session/sessionChoices';
 import styles from './SessionForm.module.css';
 
-const RETRIEVAL_MODES = [
-  { value: '', label: 'из настроек' },
-  { value: 'tool', label: 'tool — ищет модель' },
-  { value: 'auto', label: 'auto — ищет харнесс' },
-  { value: 'rewrite', label: 'rewrite — харнесс по query от модели' },
-] as const;
+const RETRIEVAL: Record<RetrievalChoice, { label: string; hint: string }> = {
+  tool: { label: 'ищет модель', hint: 'сама решает, искать ли и сколько раз' },
+  auto: { label: 'ищет харнесс', hint: 'всегда один раз до ответа, по словам вопроса' },
+  rewrite: {
+    label: 'ищет харнесс, запрос пишет модель',
+    hint: 'всегда один раз до ответа, по запросу, который модель составила из вопроса',
+  },
+};
 
-const REASONING_EFFORTS = ['', 'off', 'low', 'high', 'max'] as const;
+const RETRIEVAL_ORDER: readonly RetrievalChoice[] = ['tool', 'auto', 'rewrite'];
+
+const EFFORTS: readonly { value: EffortChoice; label: string }[] = [
+  { value: 'off', label: 'off' },
+  { value: 'low', label: 'low' },
+  { value: 'high', label: 'high' },
+  { value: 'max', label: 'max' },
+];
 
 interface SessionFormProps {
   onStarted: (sessionId: string) => void;
@@ -21,19 +40,17 @@ interface SessionFormProps {
 
 export function SessionForm({ onStarted }: SessionFormProps): ReactElement {
   const [question, setQuestion] = useState('');
-  const [retrievalMode, setRetrievalMode] = useState('');
-  const [reasoningEffort, setReasoningEffort] = useState('');
-  const [freshWorkspace, setFreshWorkspace] = useState(false);
+  const state = useSessionChoices();
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
 
   const submit = (event: FormEvent): void => {
     event.preventDefault();
-    const request = buildRequest(question, retrievalMode, reasoningEffort, freshWorkspace);
     setStarting(true);
-    startSession(request)
+    startSession(toStartRequest(question, state.choices))
       .then((response) => {
         setError(null);
+        state.change({ cleanWorkspace: false });
         onStarted(response.sessionId);
       })
       .catch((reason: unknown) => {
@@ -46,111 +63,110 @@ export function SessionForm({ onStarted }: SessionFormProps): ReactElement {
 
   return (
     <form className={styles.form} onSubmit={submit}>
-      <label className={styles.field}>
-        <span className={styles.label}>Вопрос агенту</span>
-        <textarea
-          className={styles.question}
-          value={question}
-          required
-          placeholder="Например: удалёнка"
-          onChange={(event) => {
-            setQuestion(event.target.value);
-          }}
-        />
-      </label>
-      <SessionOptions
-        retrievalMode={retrievalMode}
-        reasoningEffort={reasoningEffort}
-        freshWorkspace={freshWorkspace}
-        onRetrievalMode={setRetrievalMode}
-        onReasoningEffort={setReasoningEffort}
-        onFreshWorkspace={setFreshWorkspace}
+      <textarea
+        className={styles.question}
+        aria-label="Вопрос агенту"
+        value={question}
+        required
+        placeholder="Вопрос агенту — например: удалёнка"
+        onChange={(event) => {
+          setQuestion(event.target.value);
+        }}
       />
+      <Toggles state={state} />
+      <Choices state={state} />
       {error !== null && <div className={styles.error}>Сессия не запущена: {error}</div>}
-      <Button type="submit" variant="accent" disabled={starting}>
-        {starting ? 'Запускаю…' : 'Запустить'}
-      </Button>
+      <div className={styles.foot}>
+        <span className={styles.cost}>{describeCost(state)}</span>
+        <Button type="submit" variant="accent" disabled={starting}>
+          {starting ? 'Запускаю…' : 'Запустить'}
+        </Button>
+      </div>
     </form>
   );
 }
 
-interface SessionOptionsProps {
-  retrievalMode: string;
-  reasoningEffort: string;
-  freshWorkspace: boolean;
-  onRetrievalMode: (value: string) => void;
-  onReasoningEffort: (value: string) => void;
-  onFreshWorkspace: (value: boolean) => void;
-}
-
-function SessionOptions(props: SessionOptionsProps): ReactElement {
-  const { retrievalMode, reasoningEffort, freshWorkspace } = props;
-  const { onRetrievalMode, onReasoningEffort, onFreshWorkspace } = props;
+function Toggles({ state }: { state: ChoicesState }): ReactElement {
+  const { choices, options, change } = state;
+  const hasSubagents = options === null || options.subagents.agents.length > 0;
   return (
-    <>
-      <div className={styles.options}>
-        <label className={styles.field}>
-          <span className={styles.label}>Retrieval</span>
-          <select
-            className={styles.select}
-            value={retrievalMode}
-            onChange={(event) => {
-              onRetrievalMode(event.target.value);
-            }}
-          >
-            {RETRIEVAL_MODES.map((mode) => (
-              <option key={mode.value} value={mode.value}>
-                {mode.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className={styles.field}>
-          <span className={styles.label}>Reasoning effort</span>
-          <select
-            className={styles.select}
-            value={reasoningEffort}
-            onChange={(event) => {
-              onReasoningEffort(event.target.value);
-            }}
-          >
-            {REASONING_EFFORTS.map((effort) => (
-              <option key={effort} value={effort}>
-                {effort === '' ? 'из настроек' : effort}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <label className={styles.checkbox}>
-        <input
-          type="checkbox"
-          checked={freshWorkspace}
-          onChange={(event) => {
-            onFreshWorkspace(event.target.checked);
+    <div className={styles.row}>
+      <span className={styles.key}>Включить</span>
+      {hasSubagents && (
+        <TogglePill
+          label="Субагенты"
+          hint="Агент сможет поручить чтение субагенту-исследователю: у того своя история, вернётся короткий отчёт."
+          pressed={choices.subagents}
+          onChange={(subagents) => {
+            change({ subagents });
           }}
         />
-        пересоздать workspace из примеров
-      </label>
-    </>
+      )}
+      <TogglePill
+        label="Clean Workspace"
+        hint="Пересоздать workspace из примеров — заметки и память прошлых сессий пропадут."
+        pressed={choices.cleanWorkspace}
+        onChange={(cleanWorkspace) => {
+          change({ cleanWorkspace });
+        }}
+      />
+      <TogglePill
+        label="Оркестрация"
+        hint="Пайплайн, суперагент или гибрид на одной задаче — появится на этапе 6d."
+        pressed={false}
+        soon="6d"
+      />
+      <TogglePill
+        label="Injection"
+        hint="Атака в документах: кто защитит — промпт или харнесс. Этап 4b."
+        pressed={false}
+        soon="4b"
+      />
+    </div>
   );
 }
 
-function buildRequest(
-  question: string,
-  retrievalMode: string,
-  reasoningEffort: string,
-  freshWorkspace: boolean,
-): StartSessionRequest {
-  // Значения списков совпадают с допустимыми на сервере; сервер всё равно проверит их сам (zod).
-  return {
-    question,
-    ...(retrievalMode === ''
-      ? {}
-      : { retrievalMode: retrievalMode as StartSessionRequest['retrievalMode'] }),
-    ...(reasoningEffort === ''
-      ? {}
-      : { reasoningEffort: reasoningEffort as StartSessionRequest['reasoningEffort'] }),
-    ...(freshWorkspace ? { freshWorkspace } : {}),
-  };
+function Choices({ state }: { state: ChoicesState }): ReactElement {
+  const { choices, change } = state;
+  return (
+    <div className={styles.row}>
+      <span className={styles.key}>Поиск</span>
+      <Menu
+        label="Кто ищет в базе знаний"
+        shape="small"
+        align="left"
+        trigger={<>в базе знаний {RETRIEVAL[choices.retrievalMode].label} ▾</>}
+        sections={[
+          {
+            items: RETRIEVAL_ORDER.map((mode) => ({
+              ...RETRIEVAL[mode],
+              checked: mode === choices.retrievalMode,
+              onSelect: () => {
+                change({ retrievalMode: mode });
+              },
+            })),
+          },
+        ]}
+      />
+      <span className={styles.key}>Effort</span>
+      <Segmented
+        label="Reasoning effort"
+        size="small"
+        options={EFFORTS}
+        value={choices.reasoningEffort}
+        onChange={(reasoningEffort) => {
+          change({ reasoningEffort });
+        }}
+      />
+    </div>
+  );
+}
+
+// Цена опции до запуска: delegate_task уходит модели в каждом запросе.
+function describeCost({ choices, options }: ChoicesState): string {
+  const tokens = options?.subagents.delegateToolTokens ?? null;
+  if (choices.subagents && tokens !== null) {
+    return `delegate_task добавит ≈${tokens.toLocaleString('ru-RU')} токенов в каждый запрос к модели`;
+  }
+  return 'по умолчанию — как в harness.config.json; выбор запоминается';
 }

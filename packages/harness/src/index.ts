@@ -74,3 +74,7 @@ export {
 export { readConfigFile } from './settings/loadSettings.js';
 export { createConsolePrinter } from './events/createConsolePrinter.js';
 export { describeEventForConsole } from './events/describeEventForConsole.js';
+export {
+  describeSubagentsOption,
+  type SubagentsOption,
+} from './subagents/describeSubagentsOption.js';

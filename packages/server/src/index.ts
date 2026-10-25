@@ -9,6 +9,7 @@ export type { PendingPermissionSummary } from './permissions/PendingPermissions.
 export type { PendingQuestionSummary } from './sessions/PendingQuestions.js';
 export type { SessionStatus, SessionSummary } from './sessions/SessionRegistry.js';
 export type { StartSessionRequest } from './sessions/startSessionRequest.js';
+export type { SessionOptionsResponse } from './sessions/sessionRoutes.js';
 export type { TraceKind, TraceSummary } from './traces/TraceCatalog.js';
 export type { TraceStreamEnd } from './traces/traceRoutes.js';
 export type { GroundingClaim, GroundingReportResponse } from './rag/groundingReport.js';

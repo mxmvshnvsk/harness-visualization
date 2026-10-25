@@ -10,6 +10,7 @@ import type {
   TraceSummary,
   GroundingReportResponse,
   McpCourseResponse,
+  SessionOptionsResponse,
 } from '@harness-visualization/server';
 
 export async function listSessions(): Promise<SessionSummary[]> {
@@ -22,6 +23,11 @@ export async function listTraces(): Promise<TraceSummary[]> {
 
 export async function getSession(sessionId: string): Promise<SessionDetails> {
   return getJson<SessionDetails>(`/api/sessions/${encodeURIComponent(sessionId)}`);
+}
+
+// Значения формы новой сессии по умолчанию — из harness.config.json.
+export async function getSessionOptions(): Promise<SessionOptionsResponse> {
+  return getJson<SessionOptionsResponse>('/api/session-options');
 }
 
 export async function startSession(request: StartSessionRequest): Promise<StartSessionResponse> {

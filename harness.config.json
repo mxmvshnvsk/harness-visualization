@@ -178,6 +178,7 @@
     "manual": ["meeting-summary"]
   },
   "subagents": {
+    "enabled": false,
     "parallel": true,
     "agents": {
       "researcher": {

@@ -210,6 +210,7 @@ async function runOnce(
     retrievalMode: variant.retrievalMode,
     retrievalToolName: variant.retrievalToolName,
     freshWorkspace: false,
+    subagents: null,
     workspaceDirectory: join(context.temporaryRoot, `session-${context.startedSessions}`),
     verbose: false,
     quiet: true,

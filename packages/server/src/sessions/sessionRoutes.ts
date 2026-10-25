@@ -1,6 +1,7 @@
 // Маршруты сессий:
 //   POST /api/sessions                    — запустить сессию, сразу ответить её id;
 //   GET  /api/sessions                    — список сессий этого запуска сервера;
+//   GET  /api/session-options             — что форма новой сессии берёт по умолчанию;
 //   GET  /api/sessions/:sessionId         — состояние одной сессии и вопросы, ждущие ответа;
 //   GET  /api/sessions/:sessionId/events  — поток её событий (SSE), с пропущенными по Last-Event-ID;
 //   POST /api/sessions/:sessionId/permissions — ответ на permission_requested;
@@ -8,9 +9,11 @@
 //   POST /api/sessions/:sessionId/finish      — закончить диалог.
 
 import {
+  describeSubagentsOption,
   startSession,
   type LoadedSettings,
   type SessionInput,
+  type SubagentsOption,
 } from '@harness-visualization/harness';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { answerPermissionRequestSchema } from '../permissions/answerPermissionRequest.js';
@@ -30,6 +33,13 @@ export interface SessionRoutesOptions {
   registry: SessionRegistry;
   permissions: PendingPermissions;
   questions: PendingQuestions;
+}
+
+// GET /api/session-options: значения из harness.config.json — с них форма начинает.
+export interface SessionOptionsResponse {
+  reasoningEffort: StartSessionRequest['reasoningEffort'];
+  retrievalMode: StartSessionRequest['retrievalMode'];
+  subagents: SubagentsOption;
 }
 
 interface SessionParams {
@@ -53,6 +63,15 @@ export function registerSessionRoutes(app: FastifyInstance, options: SessionRout
   });
 
   app.get('/api/sessions', () => registry.list());
+
+  app.get('/api/session-options', (): SessionOptionsResponse => {
+    const { settings } = options.loadedSettings;
+    return {
+      reasoningEffort: settings.model.defaultReasoningEffort,
+      retrievalMode: settings.retrieval.mode,
+      subagents: describeSubagentsOption(settings),
+    };
+  });
 
   app.get<{ Params: SessionParams }>('/api/sessions/:sessionId', (request, reply) => {
     const summary = registry.summary(request.params.sessionId);
@@ -177,6 +196,7 @@ function toSessionInput(
     retrievalMode: body.retrievalMode ?? settings.retrieval.mode,
     retrievalToolName: body.retrievalToolName ?? null,
     freshWorkspace: body.freshWorkspace ?? false,
+    subagents: body.subagents ?? null,
     workspaceDirectory: null,
   };
 }

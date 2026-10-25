@@ -293,6 +293,7 @@
               </select>
             </label>
             <label><input type="checkbox" id="freshWorkspace" /> пересоздать workspace</label>
+            <label><input type="checkbox" id="subagents" /> субагенты</label>
             <button type="submit">Запустить</button>
           </form>
         </section>
@@ -537,6 +538,7 @@
         if (byId('retrievalMode').value) body.retrievalMode = byId('retrievalMode').value;
         if (byId('reasoningEffort').value) body.reasoningEffort = byId('reasoningEffort').value;
         if (byId('freshWorkspace').checked) body.freshWorkspace = true;
+        body.subagents = byId('subagents').checked;
         const response = await fetch('/api/sessions', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },

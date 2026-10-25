@@ -6,6 +6,8 @@ import styles from './Menu.module.css';
 export interface MenuItem {
   label: string;
   hint?: string;
+  // Выбор одного из вариантов: у выбранного — галочка.
+  checked?: boolean;
   onSelect: () => void;
 }
 
@@ -19,11 +21,14 @@ interface MenuProps {
   trigger: ReactNode;
   label: string;
   sections: MenuSection[];
-  // icon — круглая кнопка без подписи.
-  shape?: 'pill' | 'icon';
+  // icon — круглая кнопка без подписи; small — кнопка поменьше, для формы.
+  shape?: 'pill' | 'icon' | 'small';
+  // К какому краю кнопки прижато меню.
+  align?: 'left' | 'right';
 }
 
-export function Menu({ trigger, label, sections, shape = 'pill' }: MenuProps): ReactElement {
+export function Menu(props: MenuProps): ReactElement {
+  const { trigger, label, sections, shape = 'pill', align = 'right' } = props;
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -66,6 +71,7 @@ export function Menu({ trigger, label, sections, shape = 'pill' }: MenuProps): R
       {open && (
         <MenuList
           label={label}
+          align={align}
           sections={sections}
           onDone={() => {
             setOpen(false);
@@ -78,11 +84,12 @@ export function Menu({ trigger, label, sections, shape = 'pill' }: MenuProps): R
 
 function MenuList(props: {
   label: string;
+  align: 'left' | 'right';
   sections: MenuSection[];
   onDone: () => void;
 }): ReactElement {
   return (
-    <div className={styles.menu} role="menu" aria-label={props.label}>
+    <div className={styles.menu} data-align={props.align} role="menu" aria-label={props.label}>
       {props.sections.map((section, index) => (
         <div key={section.title ?? index} className={styles.section}>
           {section.title !== undefined && <span className={styles.title}>{section.title}</span>}
@@ -90,7 +97,9 @@ function MenuList(props: {
             <button
               key={item.label}
               type="button"
-              role="menuitem"
+              role={item.checked === undefined ? 'menuitem' : 'menuitemradio'}
+              aria-checked={item.checked}
+              data-checkable={item.checked !== undefined}
               onClick={() => {
                 props.onDone();
                 item.onSelect();

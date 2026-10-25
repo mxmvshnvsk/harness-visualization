@@ -15,6 +15,8 @@ export interface SessionAnnouncement {
   // null — веб-поиск выключен.
   searchProviderName: string | null;
   retrievalMode: RetrievalMode;
+  // null — субагенты выключены.
+  subagents: { agents: string[]; parallel: boolean } | null;
 }
 
 export function announceSession(events: EventStream, announcement: SessionAnnouncement): void {
@@ -28,6 +30,7 @@ export function announceSession(events: EventStream, announcement: SessionAnnoun
     networkProxy: describeNetworkProxy(),
     searchProvider: announcement.searchProviderName,
     retrievalMode: announcement.retrievalMode,
+    subagents: announcement.subagents,
   });
   events.emit({
     type: 'workspace_prepared',

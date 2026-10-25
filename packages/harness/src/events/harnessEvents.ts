@@ -47,6 +47,9 @@ export interface SessionStartedPayload {
   searchProvider: string | null;
   // tool — модель ищет в базе знаний сама; auto — харнесс подмешивает найденное до запроса.
   retrievalMode: RetrievalMode;
+  // Субагенты сессии (этап 6c): кому модель может поручать задачи; null — выключены.
+  // В трейсах до этого поля нет — субагентов там не было.
+  subagents?: { agents: string[]; parallel: boolean } | null;
 }
 
 export interface WorkspacePreparedPayload {

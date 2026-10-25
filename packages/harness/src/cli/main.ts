@@ -25,6 +25,7 @@ async function main(): Promise<void> {
     retrievalMode: cliOptions.retrievalMode ?? loadedSettings.settings.retrieval.mode,
     retrievalToolName: cliOptions.retrievalToolName,
     freshWorkspace: cliOptions.freshWorkspace,
+    subagents: cliOptions.subagents,
     workspaceDirectory: null,
     verbose: cliOptions.verbose,
     quiet: false,

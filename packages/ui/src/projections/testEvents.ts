@@ -50,6 +50,7 @@ export function usage(
 
 export function sessionStarted(
   retrievalMode: 'tool' | 'auto' | 'rewrite' = 'tool',
+  subagents: { agents: string[]; parallel: boolean } | null = null,
 ): HarnessEventPayload {
   return {
     type: 'session_started',
@@ -60,6 +61,7 @@ export function sessionStarted(
     networkProxy: null,
     searchProvider: null,
     retrievalMode,
+    ...(subagents === null ? {} : { subagents }),
   };
 }
 

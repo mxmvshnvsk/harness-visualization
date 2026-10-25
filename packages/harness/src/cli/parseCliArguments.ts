@@ -6,6 +6,7 @@
 //                                        словами пользователя), rewrite (харнесс запросом модели)
 //   pnpm chat --retrieval auto --retrieval-tool kedr__hybrid_search "вопрос" — каким тулом ищет харнесс
 //   pnpm chat --fresh "вопрос"        — начать с чистой рабочей папки (пересоздать из примеров)
+//   pnpm chat --subagents "вопрос"    — дать модели субагентов (этап 6c), даже если в настройках выключены
 //   pnpm chat --verbose "вопрос"      — печатать и полные события в JSON
 
 import { parseArgs } from 'node:util';
@@ -29,6 +30,8 @@ export interface CliOptions {
   // null — тул поиска харнесса из harness.config.json (retrieval.toolName).
   retrievalToolName: string | null;
   freshWorkspace: boolean;
+  // true — флаг --subagents; null — как в harness.config.json.
+  subagents: true | null;
   verbose: boolean;
 }
 
@@ -42,6 +45,7 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
       retrieval: { type: 'string' },
       'retrieval-tool': { type: 'string' },
       fresh: { type: 'boolean', default: false },
+      subagents: { type: 'boolean', default: false },
       verbose: { type: 'boolean', default: false },
     },
   });
@@ -53,6 +57,7 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
     retrievalMode: values.retrieval === undefined ? null : parseRetrievalMode(values.retrieval),
     retrievalToolName: values['retrieval-tool'] ?? null,
     freshWorkspace: values.fresh,
+    subagents: values.subagents ? true : null,
     verbose: values.verbose,
   };
 }

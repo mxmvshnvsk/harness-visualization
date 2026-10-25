@@ -306,6 +306,9 @@ const subagentSchema = z.object({
 });
 
 const subagentsSettingsSchema = z.object({
+  // Включены ли субагенты по умолчанию; сессия может включить их сама (--subagents, галочка
+  // в форме). Выключены — описания остаются, но модель не получает delegate_task.
+  enabled: z.boolean().default(false),
   // Несколько delegate_task в одном шаге — параллельно; остальные тулы всегда по очереди.
   parallel: z.boolean().default(true),
   // Нет субагентов — нет и тула delegate_task.
@@ -341,7 +344,7 @@ export const harnessSettingsSchema = z.object({
   }),
   grounding: groundingSettingsSchema.default({ similarityThreshold: 0.87 }),
   skills: skillsSettingsSchema.default({ directory: 'skills', always: [], manual: [] }),
-  subagents: subagentsSettingsSchema.default({ parallel: true, agents: {} }),
+  subagents: subagentsSettingsSchema.default({ enabled: false, parallel: true, agents: {} }),
   server: serverSettingsSchema.default({
     port: 4317,
     permissionTimeoutSeconds: 120,

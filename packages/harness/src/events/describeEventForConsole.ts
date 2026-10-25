@@ -93,6 +93,12 @@ const EVENT_DESCRIBERS: EventDescribers = {
     ),
     styleText('dim', `Поиск: ${event.searchProvider ?? 'выключен'}`),
     styleText('dim', `База знаний: ${RETRIEVAL_MODE_DESCRIPTIONS[event.retrievalMode]}`),
+    styleText(
+      'dim',
+      event.subagents === undefined || event.subagents === null
+        ? 'Субагенты: выключены'
+        : `Субагенты: ${event.subagents.agents.join(', ')}${event.subagents.parallel ? ' · поручения параллельно' : ''}`,
+    ),
   ],
   workspace_prepared: describeWorkspacePrepared,
   mcp_server_starting: (event) => [

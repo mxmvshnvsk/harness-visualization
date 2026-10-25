@@ -14,6 +14,8 @@ export const startSessionRequestSchema = z.object({
   retrievalToolName: z.string().min(1).optional(),
   searchProvider: z.enum(SEARCH_PROVIDERS).optional(),
   freshWorkspace: z.boolean().optional(),
+  // Дать ли модели субагентов (этап 6c); нет поля — как в harness.config.json.
+  subagents: z.boolean().optional(),
 });
 
 export type StartSessionRequest = z.infer<typeof startSessionRequestSchema>;
