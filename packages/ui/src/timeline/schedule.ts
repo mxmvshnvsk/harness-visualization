@@ -10,7 +10,7 @@
 import type { FlowAction } from './actions';
 
 // Темп на 1×, мс повтора.
-export const TRAVEL_MS = 1000;
+export const TRAVEL_MS = 650;
 export const HOLD_MS = 500;
 export const INSIDE_MS = 1300;
 export const GAP_MS = 280;
