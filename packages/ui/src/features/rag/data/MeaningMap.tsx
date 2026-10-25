@@ -9,6 +9,7 @@ import { formatSimilarity, kindColor } from '../session/retrievalLabels';
 import { star } from '../course/StepVectors';
 import type { Point } from '../vectors';
 import styles from './Data.module.css';
+import { MapExplainer } from './MapExplainer';
 import { chunksOf, pcaLayout, umapLayout, type MapChunk, type MapMethod } from './mapProjection';
 
 const METHODS = [
@@ -58,6 +59,7 @@ export function MeaningMap({ base, search, question }: MapProps): ReactElement {
         />
       </div>
       <MapNote count={chunks.length} method={method} />
+      <MapExplainer method={method} />
       <Legend />
       <div className={styles.mapWork}>
         <MapPicture
