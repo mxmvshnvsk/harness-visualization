@@ -13,9 +13,8 @@ import { registerKnowledgeBaseTools } from './tools/registerKnowledgeBaseTools.j
 import { registerSemanticSearchTool } from './tools/registerSemanticSearchTool.js';
 
 const SERVER_INSTRUCTIONS =
-  'База знаний вымышленной компании «Кедр Софт». Ищи документы по словам через search, ' +
-  'по смыслу через semantic_search или сразу обоими через hybrid_search, ' +
-  'читай целиком через read_document. ' +
+  'База знаний вымышленной компании «Кедр Софт». Ищи документы по словам через search ' +
+  'или по смыслу через semantic_search, читай целиком через read_document. ' +
   'Если документы противоречат друг другу, опирайся на более свежий.';
 
 async function main(): Promise<void> {
@@ -39,6 +38,8 @@ async function main(): Promise<void> {
     );
     registerKnowledgeBaseTools(server, documents);
     registerSemanticSearchTool(server, semanticIndex);
+    // hybrid_search в инструкциях не упоминается: харнесс прячет его от модели (hiddenTools)
+    // и вызывает сам в варианте hybrid. Если открыть его модели, стоит упомянуть и здесь.
     registerHybridSearchTool(server, { documents, semanticIndex });
     return server;
   });

@@ -140,7 +140,8 @@ function describeMcpServerReady(event: EventOfType<'mcp_server_ready'>): string[
   for (const tool of event.tools) {
     const effects =
       tool.effects.length > 0 ? tool.effects.join(', ') : 'не заявлены — решит defaultDecision';
-    lines.push(styleText('dim', `    тул ${tool.name}: ${effects}`));
+    const hidden = tool.hiddenFromModel ? ' · только для харнесса, модель его не видит' : '';
+    lines.push(styleText('dim', `    тул ${tool.name}: ${effects}${hidden}`));
   }
   if (event.instructions !== null) {
     lines.push(

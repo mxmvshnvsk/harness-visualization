@@ -162,12 +162,17 @@ function createAgentDependencies(
   for (const tool of [...createFileTools(), ...webTools, ...resources.mcpServers.tools]) {
     tools.register(tool);
   }
+  const harnessOnlyTools = new ToolRegistry();
+  for (const tool of resources.mcpServers.harnessOnlyTools) {
+    harnessOnlyTools.register(tool);
+  }
 
   return {
     provider: new OpenAiCompatibleProvider(settings.model, modelApiKey, resources.fetchImpl),
     events,
     prices: settings.prices,
     tools,
+    harnessOnlyTools,
     toolContext: { workspace: new Workspace(resources.workspaceDirectory) },
     confirmAction: input.quiet ? denyWithoutAsking : askConfirmation,
     permissionPolicy: settings.permissions,

@@ -160,7 +160,8 @@
       "description": "База знаний компании «Кедр Софт»: регламенты, проекты, встречи, FAQ",
       "command": "node",
       "args": ["packages/mcp-server/dist/main.js"],
-      "trustAnnotations": true
+      "trustAnnotations": true,
+      "hiddenTools": ["hybrid_search"]
     }
   ],
   "traces": {

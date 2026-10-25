@@ -68,6 +68,8 @@ export interface McpToolSummary {
   annotations: Record<string, unknown> | null;
   // Классы действий, которые харнесс вывел из пометок; пусто, если пометкам не доверяем.
   effects: ToolEffect[];
+  // true — тул в hiddenTools: модель его не видит, вызывать его может только сам харнесс.
+  hiddenFromModel: boolean;
 }
 
 export interface McpServerReadyPayload {

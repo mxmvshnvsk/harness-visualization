@@ -1,5 +1,6 @@
 // Запускает MCP-серверы из настроек и превращает их тулы в тулы харнесса.
 // Сервер, который не запустился, не роняет сессию: агент работает без его тулов.
+// Тулы из hiddenTools модель не видит — они только для вызовов самого харнесса.
 
 import type { McpServerInstructions } from '../agent/systemPrompt.js';
 import type { McpToolSummary } from '../events/harnessEvents.js';
@@ -11,7 +12,10 @@ import { McpConnection } from './McpConnection.js';
 
 export interface ConnectedMcpServers {
   connections: McpConnection[];
+  // Тулы, которые харнесс предложит модели.
   tools: Tool[];
+  // Тулы, которые вызывает только харнесс (hiddenTools в настройках сервера).
+  harnessOnlyTools: Tool[];
   instructions: McpServerInstructions[];
 }
 
@@ -24,7 +28,12 @@ export async function connectMcpServers(
   servers: McpServerSettings[],
   context: McpServersContext,
 ): Promise<ConnectedMcpServers> {
-  const connected: ConnectedMcpServers = { connections: [], tools: [], instructions: [] };
+  const connected: ConnectedMcpServers = {
+    connections: [],
+    tools: [],
+    harnessOnlyTools: [],
+    instructions: [],
+  };
   for (const settings of servers.filter((server) => server.enabled)) {
     const startedAt = performance.now();
     const connection = await openConnection(settings, context);
@@ -40,11 +49,18 @@ export async function connectMcpServers(
       serverInfo: connection.serverInfo(),
       protocolVersion: connection.protocolVersion(),
       instructions: connection.instructions,
-      tools: summarizeTools(connection, tools),
+      tools: summarizeTools(connection, tools, settings.hiddenTools),
       durationMs: Math.round(performance.now() - startedAt),
     });
     connected.connections.push(connection);
-    connected.tools.push(...tools);
+    connection.tools.forEach((mcpTool, index) => {
+      const tool = tools[index];
+      if (tool === undefined) {
+        return;
+      }
+      const isHidden = settings.hiddenTools.includes(mcpTool.name);
+      (isHidden ? connected.harnessOnlyTools : connected.tools).push(tool);
+    });
     if (connection.instructions !== null) {
       connected.instructions.push({ serverName: settings.name, text: connection.instructions });
     }
@@ -77,12 +93,17 @@ async function openConnection(
 }
 
 // Тулы харнесса созданы из тулов сервера в том же порядке.
-function summarizeTools(connection: McpConnection, tools: Tool[]): McpToolSummary[] {
+function summarizeTools(
+  connection: McpConnection,
+  tools: Tool[],
+  hiddenTools: string[],
+): McpToolSummary[] {
   return connection.tools.map((mcpTool, index) => ({
     name: tools[index]?.name ?? mcpTool.name,
     mcpName: mcpTool.name,
     annotations: mcpTool.annotations ?? null,
     effects: [...(tools[index]?.effects ?? [])],
+    hiddenFromModel: hiddenTools.includes(mcpTool.name),
   }));
 }
 

@@ -35,11 +35,15 @@ export async function retrieveContext(
   retrieval: RetrievalOptions,
   dependencies: AgentDependencies,
 ): Promise<string | null> {
-  const tool = dependencies.tools.find(retrieval.toolName);
+  // Тул поиска харнесса может быть и скрыт от модели (hiddenTools) — тогда он только для харнесса.
+  const tool =
+    dependencies.tools.find(retrieval.toolName) ??
+    dependencies.harnessOnlyTools.find(retrieval.toolName);
   if (tool === undefined) {
+    const available = [...dependencies.tools.names(), ...dependencies.harnessOnlyTools.names()];
     throw new Error(
       `Тула «${retrieval.toolName}» для поиска харнессом нет (retrieval.toolName в ` +
-        `harness.config.json). Доступные тулы: ${dependencies.tools.names().join(', ')}`,
+        `harness.config.json). Доступные тулы: ${available.join(', ')}`,
     );
   }
   const toolArguments = { query: search.query, limit: retrieval.limit };

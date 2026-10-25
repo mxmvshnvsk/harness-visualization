@@ -22,7 +22,10 @@ export interface AgentDependencies {
   provider: ModelProvider;
   events: EventStream;
   prices: Record<string, ModelPrices>;
+  // Тулы, которые харнесс предлагает модели.
   tools: ToolRegistry;
+  // Тулы, которые вызывает только сам харнесс; модель о них не знает (hiddenTools MCP-сервера).
+  harnessOnlyTools: ToolRegistry;
   toolContext: ToolContext;
   confirmAction: ConfirmAction;
   // Правила, по которым харнесс решает: разрешить вызов тула, спросить пользователя или запретить.
