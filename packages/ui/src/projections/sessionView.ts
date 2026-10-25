@@ -57,6 +57,8 @@ export interface CacheView {
   // не только этот шаг: такое же начало prompt недавно отправлял кто-то ещё.
   // null — сравнивать не с чем (первый шаг или служебный запрос).
   exceedsPreviousPrompt: boolean | null;
+  // Весь prompt предыдущего шага агента (input tokens); null — как выше.
+  previousStepInputTokens: number | null;
 }
 
 export interface AgentStep {

@@ -3,15 +3,18 @@
 
 import type { HarnessEvent } from '@harness-visualization/harness';
 import type { TraceSummary } from '@harness-visualization/server';
-import { useEffect, type ReactElement } from 'react';
+import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { listSessions, listTraces, sessionEventsUrl, traceEventsUrl } from '../api/serverApi';
 import { useEventStream } from '../api/useEventStream';
 import { useServerList } from '../api/useServerList';
 import { EmptyState } from '../components/EmptyState';
+import { Segmented } from '../components/Segmented';
 import { EventList } from '../features/EventList';
+import { InspectorView } from '../features/inspector/InspectorView';
 import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
+import { projectSession } from '../projections/projectSession';
 import styles from './App.module.css';
 import { Sidebar } from './Sidebar';
 import { useSelection, type Selection } from './useSelection';
@@ -60,11 +63,31 @@ export function App(): ReactElement {
                 {...describeSelection(selection, stream.events, traces.items)}
                 stream={stream}
               />
-              <EventList events={stream.events} />
+              {/* key: другая сессия или трейс — выбор в инспекторе начинается заново. */}
+              <StreamViews key={streamUrl(selection)} events={stream.events} />
             </section>
           )}
         </div>
       </main>
+    </div>
+  );
+}
+
+const VIEWS = [
+  { value: 'inspector', label: 'Инспектор' },
+  { value: 'events', label: 'Сырые события' },
+] as const;
+
+type ViewName = (typeof VIEWS)[number]['value'];
+
+function StreamViews({ events }: { events: HarnessEvent[] }): ReactElement {
+  const [viewName, setViewName] = useState<ViewName>('inspector');
+  // Проекция — чистая функция событий: пересчитываем, только когда пришли новые.
+  const view = useMemo(() => projectSession(events), [events]);
+  return (
+    <div className={styles.views}>
+      <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
+      {viewName === 'inspector' ? <InspectorView view={view} /> : <EventList events={events} />}
     </div>
   );
 }

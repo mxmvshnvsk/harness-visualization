@@ -187,6 +187,7 @@ function describeCache(usage: TokenUsage, previousStepInput: number | null): Cac
     warmth: classifyCacheWarmth(usage),
     exceedsPreviousPrompt:
       previousStepInput === null ? null : usage.inputCacheHitTokens > previousStepInput,
+    previousStepInputTokens: previousStepInput,
   };
 }
 

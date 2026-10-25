@@ -127,6 +127,7 @@ describe('projectSession: кэш prompt', () => {
       missTokens: 1211,
       warmth: 'warm',
       exceedsPreviousPrompt: true,
+      previousStepInputTokens: 1963,
     });
   });
 

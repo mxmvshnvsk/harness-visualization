@@ -42,6 +42,17 @@
   min-width: 0;
 }
 
+.views {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.views > :not(:first-child) {
+  align-self: stretch;
+}
+
 @media (width <= 860px) {
   .page {
     padding: 16px;

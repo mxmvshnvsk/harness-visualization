@@ -1,0 +1,20 @@
+// Крупная цифра со скромной подписью сверху и пояснением снизу.
+
+import type { ReactElement } from 'react';
+import styles from './StatCard.module.css';
+
+interface StatCardProps {
+  label: string;
+  value: string;
+  note?: string;
+}
+
+export function StatCard({ label, value, note }: StatCardProps): ReactElement {
+  return (
+    <div className={styles.card}>
+      <div className={styles.label}>{label}</div>
+      <div className={styles.value}>{value}</div>
+      {note !== undefined && <div className={styles.note}>{note}</div>}
+    </div>
+  );
+}

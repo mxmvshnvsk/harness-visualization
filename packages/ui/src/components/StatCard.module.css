@@ -1,0 +1,24 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px;
+  border-radius: var(--radius-inner);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  min-width: 0;
+}
+
+.label,
+.note {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Цифры не обрезаем многоточием: спрятанная цифра хуже переноса. */
+.value {
+  font-size: 22px;
+  font-weight: var(--weight-strong);
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
