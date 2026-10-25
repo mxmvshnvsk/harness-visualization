@@ -54,7 +54,9 @@ export async function requestModel(
 
   const requestedAt = new Date();
   const rawResponse = await sendAndReportFailure(requestId, dependencies, () =>
-    provider.send(preparedRequest),
+    provider.send(preparedRequest, (delta) => {
+      events.emitDelta({ requestId, ...delta });
+    }),
   );
   const reply = parseAndReportFailure(requestId, rawResponse, dependencies);
 

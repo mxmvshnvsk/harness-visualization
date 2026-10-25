@@ -3,7 +3,7 @@
 // позже или переподключившийся после обрыва, получил то, что пропустил: по Last-Event-ID.
 // Законченные сессии держим ограниченное число: их трейсы и так лежат на диске.
 
-import type { HarnessEvent } from '@harness-visualization/harness';
+import type { HarnessEvent, ModelDelta } from '@harness-visualization/harness';
 
 const MAX_FINISHED_SESSIONS = 20;
 
@@ -11,6 +11,8 @@ export type SessionStatus = 'running' | 'finished' | 'failed';
 
 export interface SessionSubscriber {
   onEvent: (event: HarnessEvent) => void;
+  // Кусочки ответа модели — только вживую, в буфер не попадают.
+  onDelta: (delta: ModelDelta) => void;
   onEnd: (summary: SessionSummary) => void;
 }
 
@@ -64,6 +66,14 @@ export class SessionRegistry {
     entry.summary.eventCount = entry.events.length;
     for (const subscriber of entry.subscribers) {
       subscriber.onEvent(event);
+    }
+  }
+
+  // Кусочек ответа — сразу подписчикам: при переподключении он не нужен,
+  // ответ целиком придёт событием model_response.
+  relayDelta(delta: ModelDelta): void {
+    for (const subscriber of this.sessions.get(delta.sessionId)?.subscribers ?? []) {
+      subscriber.onDelta(delta);
     }
   }
 

@@ -21,7 +21,13 @@ import type { PendingPermissions } from '../permissions/PendingPermissions.js';
 import { nextQuestionRequestSchema } from './nextQuestionRequest.js';
 import type { PendingQuestions } from './PendingQuestions.js';
 import { openEventStream } from '../sse/openEventStream.js';
-import { formatEnd, formatEvent, formatHeartbeat, parseLastEventId } from '../sse/sseMessages.js';
+import {
+  formatDelta,
+  formatEnd,
+  formatEvent,
+  formatHeartbeat,
+  parseLastEventId,
+} from '../sse/sseMessages.js';
 import type { SessionRegistry } from './SessionRegistry.js';
 import { startSessionRequestSchema, type StartSessionRequest } from './startSessionRequest.js';
 
@@ -163,6 +169,11 @@ async function launchSession(
         registry.record(event);
       },
     ],
+    deltaListeners: [
+      (delta) => {
+        registry.relayDelta(delta);
+      },
+    ],
     log: (message) => {
       console.log(`  ${message}`);
     },
@@ -226,6 +237,7 @@ function streamSessionEvents(
   }
   const unsubscribe = registry.subscribe(sessionId, {
     onEvent: (event) => socket.write(formatEvent(event)),
+    onDelta: (delta) => socket.write(formatDelta(delta)),
     onEnd: (finished) => socket.end(formatEnd(finished)),
   });
   const heartbeat = setInterval(() => socket.write(formatHeartbeat()), HEARTBEAT_INTERVAL_MS);

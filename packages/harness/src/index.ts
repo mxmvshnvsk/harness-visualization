@@ -8,7 +8,7 @@ export type {
   ConfirmationRequest,
   PermissionAnswer,
 } from './agent/agentDependencies.js';
-export { EventStream, type EventListener } from './events/EventStream.js';
+export { EventStream, type DeltaListener, type EventListener } from './events/EventStream.js';
 export type * from './context/promptBudget.js';
 export type * from './events/harnessEvents.js';
 export { JsonlTraceWriter } from './events/JsonlTraceWriter.js';

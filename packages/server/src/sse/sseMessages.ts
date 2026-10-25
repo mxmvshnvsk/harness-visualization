@@ -2,11 +2,13 @@
 // Сообщение — строки «поле: значение» и пустая строка в конце:
 //   id: 12            — sequence события; браузер вернёт его в Last-Event-ID при переподключении
 //   data: {...}        — событие харнесса в JSON, одной строкой
+// Кусочек ответа модели (этап 8d.2) — именованное событие delta без id: браузер не сдвигает
+// Last-Event-ID, и при переподключении кусочки не повторяются.
 // Событие конца потока именованное (event: end): браузер должен закрыть EventSource сам,
 // иначе по спецификации он переподключится к законченной сессии и будет делать это снова.
 // Спецификация: https://html.spec.whatwg.org/multipage/server-sent-events.html
 
-import type { HarnessEvent } from '@harness-visualization/harness';
+import type { HarnessEvent, ModelDelta } from '@harness-visualization/harness';
 
 // Через сколько миллисекунд браузеру переподключаться после обрыва.
 export const RECONNECT_DELAY_MS = 2000;
@@ -17,6 +19,10 @@ export function formatRetry(): string {
 
 export function formatEvent(event: HarnessEvent): string {
   return `id: ${String(event.sequence)}\ndata: ${JSON.stringify(event)}\n\n`;
+}
+
+export function formatDelta(delta: ModelDelta): string {
+  return `event: delta\ndata: ${JSON.stringify(delta)}\n\n`;
 }
 
 export function formatEnd(summary: unknown): string {

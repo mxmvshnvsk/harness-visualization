@@ -9,7 +9,7 @@ import { join, resolve } from 'node:path';
 import type { AgentDependencies, ConfirmAction } from '../agent/agentDependencies.js';
 import type { RetrievalOptions } from '../agent/retrieveContext.js';
 import { runAgentTurn } from '../agent/runAgentTurn.js';
-import type { EventListener, EventStream } from '../events/EventStream.js';
+import type { DeltaListener, EventListener, EventStream } from '../events/EventStream.js';
 import {
   closeMcpServers,
   connectMcpServers,
@@ -77,6 +77,8 @@ export interface SessionHooks {
   confirmAction: ConfirmAction;
   // Подписчики событий с самого первого: консоль, поток в браузер.
   listeners: EventListener[];
+  // Кусочки ответа модели вживую — для браузера (этап 8d.2); в трейс не пишутся.
+  deltaListeners?: DeltaListener[];
   // Служебные сообщения, которых нет в событиях (например, почему выключен веб-поиск).
   log: (message: string) => void;
   // Следующий вопрос того же диалога; null — закончить сессию. Нет функции — сессия из одного
@@ -105,6 +107,7 @@ export async function startSession(
     projectRoot: input.projectRoot,
     tracesDirectory: input.loadedSettings.settings.traces.directory,
     listeners: hooks.listeners,
+    deltaListeners: hooks.deltaListeners ?? [],
   });
   return {
     sessionId: recording.events.sessionId,

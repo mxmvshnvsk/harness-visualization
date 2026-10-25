@@ -3,7 +3,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { join, relative } from 'node:path';
-import { EventStream, type EventListener } from '../events/EventStream.js';
+import { EventStream, type DeltaListener, type EventListener } from '../events/EventStream.js';
 import { JsonlTraceWriter } from '../events/JsonlTraceWriter.js';
 import { SessionTokenomics } from '../tokenomics/SessionTokenomics.js';
 
@@ -12,6 +12,8 @@ export interface SessionRecordingOptions {
   tracesDirectory: string;
   // Подписчики, которые получат все события сессии с первого — после трейса и токеномики.
   listeners: EventListener[];
+  // Кусочки ответа модели вживую (этап 8d.2); в трейс не попадают.
+  deltaListeners?: DeltaListener[];
 }
 
 export interface SessionRecording {
@@ -36,6 +38,9 @@ export async function startSessionRecording(
   events.subscribe((event) => tokenomics.handleEvent(event));
   for (const listener of options.listeners) {
     events.subscribe(listener);
+  }
+  for (const listener of options.deltaListeners ?? []) {
+    events.subscribeDeltas(listener);
   }
 
   const startedAt = performance.now();

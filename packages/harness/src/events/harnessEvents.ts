@@ -233,6 +233,19 @@ export interface ModelRequestPayload {
   budget?: PromptBudget | null;
 }
 
+// Кусочек ответа модели по мере генерации (этап 8d.2) — для печатания ответа вживую.
+// Это не событие трейса: без номера, в трейс не пишется, браузеру идёт только вживую
+// (при переподключении не повторяется — ответ целиком придёт в model_response).
+export interface ModelDelta {
+  type: 'model_delta';
+  sessionId: string;
+  // Как у событий: есть только у субагента.
+  agentId?: string;
+  requestId: string;
+  kind: 'reasoning' | 'answer';
+  text: string;
+}
+
 export interface ModelResponsePayload {
   type: 'model_response';
   requestId: string;
