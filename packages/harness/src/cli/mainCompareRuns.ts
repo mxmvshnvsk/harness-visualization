@@ -28,7 +28,7 @@ import { runCliSession } from './runCliSession.js';
 const MODES: RetrievalMode[] = ['tool', 'auto'];
 const DEFAULT_RUNS = 3;
 const MAX_RUNS = 10;
-const COLUMN_WIDTHS = [8, 11, 10, 22, 13, 15, 11, 10, 8, 12];
+const COLUMN_WIDTHS = [8, 11, 10, 22, 15, 15, 11, 10, 10, 12];
 const COLUMN_TITLES = [
   'режим',
   'запросов',
@@ -195,9 +195,9 @@ function describeAggregate(mode: RetrievalMode, aggregate: RunsAggregate): strin
   const ofRuns = (count: number): string => `${count} из ${aggregate.runs}`;
   return [
     aggregate.failed > 0 ? `${mode} ✗${aggregate.failed}` : mode,
-    describeSpread(aggregate.modelRequests, String),
-    describeSpread(aggregate.toolCalls, String),
-    describeSpread(aggregate.inputTokens, formatNumber),
+    describeSpread(aggregate.modelRequests, formatNumber),
+    describeSpread(aggregate.toolCalls, formatNumber),
+    describeSpread(aggregate.inputTokens, formatTokens),
     describeSpread(aggregate.cacheHitShare, formatPercent),
     ofRuns(aggregate.firstRequestWarm),
     aggregate.costUsd === null ? '?' : aggregate.costUsd.median.toFixed(6),
@@ -220,6 +220,11 @@ function describeSpread(spread: Spread, format: (value: number) => string): stri
     return median;
   }
   return `${median} (${format(spread.min)}–${format(spread.max)})`;
+}
+
+// Медиана чётного числа прогонов бывает дробной; полтокена смысла не имеют.
+function formatTokens(tokens: number): string {
+  return formatNumber(Math.round(tokens));
 }
 
 function formatPercent(share: number): string {
