@@ -9,4 +9,5 @@ export {
   type LabQuestion,
   type LabSearch,
 } from './KnowledgeBaseLab.js';
+export type { LabIndex } from './describeIndex.js';
 export type { RankedDocument } from '../hybridSearch/fuseByReciprocalRank.js';

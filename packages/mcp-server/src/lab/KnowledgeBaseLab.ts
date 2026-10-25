@@ -17,6 +17,7 @@ import { CHUNK_TARGET_LENGTH } from '../semanticSearch/splitIntoChunks.js';
 import { SemanticIndex, type ReadyIndex } from '../semanticSearch/SemanticIndex.js';
 import { DATA_DIRECTORY, MODEL_DIRECTORY, VECTOR_CACHE_PATH } from '../serverPaths.js';
 import { EMBEDDING_MODEL_ID } from '@harness-visualization/embeddings';
+import { describeIndex, type LabIndex } from './describeIndex.js';
 
 export interface LabDocument {
   id: string;
@@ -131,6 +132,11 @@ export class KnowledgeBaseLab {
   async embed(texts: readonly string[]): Promise<number[][]> {
     const index = await this.index.ready();
     return (await index.embedder.embedQueries([...texts])).map(round);
+  }
+
+  // Где живут векторы: файл индекса, запись из него, модель.
+  async indexFile(): Promise<LabIndex> {
+    return describeIndex((await this.index.ready()).chunks);
   }
 
   // Модель для проверки опоры ответа (сходство claims с увиденным) — та же, что у поиска.

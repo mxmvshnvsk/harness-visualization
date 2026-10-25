@@ -12,6 +12,7 @@ import { StepCheck } from './course/StepCheck';
 import { StepChunks } from './course/StepChunks';
 import { StepClose } from './course/StepClose';
 import { StepMethods } from './course/StepMethods';
+import { StepStorage } from './course/StepStorage';
 import { StepVectors } from './course/StepVectors';
 import { StepWhy } from './course/StepWhy';
 import { DataTab } from './data/DataTab';
@@ -43,7 +44,7 @@ export function RagLab({ onBack }: { onBack: () => void }): ReactElement {
         <h1 className={styles.title}>Лаборатория RAG</h1>
         <p className={styles.lead}>
           Как агент находит нужное в базе знаний и почему найденное не гарантирует верный ответ.
-          «Маршрут» — шесть шагов по порядку, в каждом опыт на настоящих документах базы. «Данные» —
+          «Маршрут» — семь шагов по порядку, в каждом опыт на настоящих документах базы. «Данные» —
           та же база без подсказок: свой запрос на карте и в трёх поисках.
         </p>
       </div>
@@ -107,6 +108,8 @@ function CourseStep({ index, base, onStep }: CourseStepProps): ReactElement {
       return <StepChunks base={base} onStep={onStep} />;
     case 'vectors':
       return <StepVectors onStep={onStep} />;
+    case 'storage':
+      return <StepStorage base={base} onStep={onStep} />;
     case 'methods':
       return <StepMethods base={base} onStep={onStep} />;
     case 'close':

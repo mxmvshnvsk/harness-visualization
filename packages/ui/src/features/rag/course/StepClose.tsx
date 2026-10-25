@@ -16,7 +16,7 @@ const SCALE_FROM = 0.75;
 export function StepClose({ onStep }: { onStep: (index: number) => void }): ReactElement {
   return (
     <StepShell
-      index={4}
+      index={5}
       onStep={onStep}
       question="Если тексты похожи — значит, это правда?"
       prose={

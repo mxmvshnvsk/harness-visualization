@@ -36,7 +36,7 @@ export function StepCheck({ onStep }: { onStep: (index: number) => void }): Reac
   const report = useCourseGrounding();
   return (
     <StepShell
-      index={5}
+      index={6}
       onStep={onStep}
       question="Как проверить, что агент ответил правду?"
       prose={
@@ -48,7 +48,7 @@ export function StepCheck({ onStep }: { onStep: (index: number) => void }): Reac
           </p>
           <p>
             <b>Код</b> ищет цитаты в кавычках дословно в том, что агент прочитал. <b>Сходство</b>{' '}
-            находит самую близкую прочитанную строку (как на шаге 5). <b>Судья</b> — другая модель:
+            находит самую близкую прочитанную строку (как на шаге 6). <b>Судья</b> — другая модель:
             ей показывают утверждение и ближайшие строки и спрашивают, подтверждают ли они его. Код
             и сходство — проверка, судья — мнение.
           </p>

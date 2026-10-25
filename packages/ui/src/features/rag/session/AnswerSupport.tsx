@@ -43,7 +43,7 @@ export function AnswerSupport({ file }: { file: string }): ReactElement {
             ))}
           </ol>
           <a className={styles.link} href="?lab=rag">
-            Как устроена такая проверка — шаг 6 лаборатории RAG →
+            Как устроена такая проверка — шаг 7 лаборатории RAG →
           </a>
         </>
       ) : (

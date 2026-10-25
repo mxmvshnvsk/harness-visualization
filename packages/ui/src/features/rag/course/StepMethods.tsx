@@ -30,7 +30,7 @@ interface StepProps {
 export function StepMethods({ base, onStep }: StepProps): ReactElement {
   return (
     <StepShell
-      index={3}
+      index={4}
       onStep={onStep}
       question="Искать по словам или по смыслу?"
       prose={<MethodsProse />}

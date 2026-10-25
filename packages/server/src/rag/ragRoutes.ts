@@ -1,5 +1,6 @@
 // Маршруты лаборатории RAG (этап 8b):
 //   GET  /api/rag/base             — документы базы, их фрагменты и векторы, вопросы-примеры;
+//   GET  /api/rag/index            — где живут векторы: файл индекса, запись из него, модель;
 //   POST /api/rag/search {query}   — три выдачи (по словам, по смыслу, гибрид) и сходство с фрагментами;
 //   POST /api/rag/embed {texts}    — векторы фраз: «две фразы» и учебная карта;
 //   GET  /api/rag/grounding/:file  — проверка опоры ответа записанной сессии;
@@ -33,6 +34,9 @@ export function registerRagRoutes(app: FastifyInstance, options: RagRoutesOption
   const lab = (): Promise<KnowledgeBaseLab> => (opening ??= KnowledgeBaseLab.open());
 
   app.get('/api/rag/base', (_request, reply) => withModel(reply, async () => (await lab()).base()));
+  app.get('/api/rag/index', (_request, reply) =>
+    withModel(reply, async () => (await lab()).indexFile()),
+  );
 
   app.post('/api/rag/search', (request, reply) => {
     const parsed = searchSchema.safeParse(request.body);

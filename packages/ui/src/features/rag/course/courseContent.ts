@@ -5,6 +5,7 @@ export const COURSE_STEPS = [
   { id: 'why', title: 'Зачем агенту искать' },
   { id: 'chunks', title: 'Почему документ режут' },
   { id: 'vectors', title: 'Как машина видит смысл' },
+  { id: 'storage', title: 'Где живут векторы' },
   { id: 'methods', title: 'По словам и по смыслу' },
   { id: 'close', title: 'Близко — не значит верно' },
   { id: 'check', title: 'Проверка ответа' },

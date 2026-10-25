@@ -1,13 +1,14 @@
 // Загрузка данных лаборатории: база (документы, фрагменты, векторы) и векторы учебных фраз.
 // Модели эмбеддингов на сервере нет — понятная ошибка с подсказкой, а не пустой экран.
 
-import type { LabBase, LabSearch } from '@harness-visualization/mcp-server/lab';
+import type { LabBase, LabIndex, LabSearch } from '@harness-visualization/mcp-server/lab';
 import type { GroundingReportResponse } from '@harness-visualization/server';
 import { useEffect, useState } from 'react';
 import {
   embedTexts,
   getCourseGrounding,
   getGrounding,
+  getRagIndex,
   getRagBase,
   searchRag,
   ServerError,
@@ -24,6 +25,10 @@ export function useRagBase(): Loaded<LabBase> {
 export function useEmbeddings(texts: readonly string[]): Loaded<number[][]> {
   const key = texts.join('\n');
   return useLoaded(() => embedTexts(key.split('\n')), [key]);
+}
+
+export function useRagIndex(): Loaded<LabIndex> {
+  return useLoaded(getRagIndex, []);
 }
 
 // Три выдачи поиска по запросу; запрос сменился — ищем заново.
