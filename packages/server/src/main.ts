@@ -1,4 +1,4 @@
-// Точка входа pnpm server: сервер на 127.0.0.1 и порту из harness.config.json (server.port).
+// Точка входа pnpm serve: сервер на 127.0.0.1 и порту из harness.config.json (server.port).
 // Только локальный адрес: авторизации нет, а сессия тратит деньги владельца ключа модели.
 
 import { loadSettings } from '@harness-visualization/harness';

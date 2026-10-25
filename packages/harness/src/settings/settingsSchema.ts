@@ -227,7 +227,7 @@ const retrievalSettingsSchema = z.object({
   limit: z.number().int().min(1).max(20).default(5),
 });
 
-// Сервер для браузера (pnpm server, этап 7). Адрес не настраивается: сервер слушает только
+// Сервер для браузера (pnpm serve, этап 7). Адрес не настраивается: сервер слушает только
 // 127.0.0.1 — это локальный учебный стенд без авторизации, ключи модели остаются на нём.
 const serverSettingsSchema = z.object({
   port: z.number().int().min(1).max(65535).default(4317),
