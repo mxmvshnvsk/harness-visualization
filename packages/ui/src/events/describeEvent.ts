@@ -79,6 +79,8 @@ const DESCRIBERS: Describers = {
     `память: ${event.command} ${event.path}${event.newPath === null ? '' : ` → ${event.newPath}`}`,
   progress_updated: (event) =>
     `план v${String(event.version)}: ${event.goal} — сделано ${String(event.steps.filter((step) => step.status === 'done').length)} из ${String(event.steps.length)}`,
+  iteration_limit_reached: (event) =>
+    `лимит ${String(event.limit)} шагов (${event.setting}): последний шаг — без тулов`,
   subagent_started: (event) => `${event.subagentId}: «${event.task}»`,
   subagent_finished: (event) =>
     event.status === 'done'

@@ -18,6 +18,8 @@ export interface SubagentRun {
   startedIndex: number;
   finishedIndex: number | null;
   status: 'running' | 'done' | 'failed';
+  // Отчёт написан по лимиту шагов: харнесс попросил закончить.
+  limited: boolean;
   report: string | null;
   errorMessage: string | null;
   modelRequests: number;
@@ -45,12 +47,19 @@ export function projectSubagents(events: readonly HarnessEvent[]): SubagentRun[]
         startedIndex: index,
         finishedIndex: null,
         status: 'running',
+        limited: false,
         report: null,
         errorMessage: null,
         modelRequests: 0,
         usage: null,
         durationMs: null,
       });
+    }
+    if (event.type === 'iteration_limit_reached' && event.agentId !== undefined) {
+      const limited = runs.find((item) => item.subagentId === event.agentId);
+      if (limited !== undefined) {
+        limited.limited = true;
+      }
     }
     if (event.type === 'subagent_finished') {
       const run = runs.find((item) => item.subagentId === event.subagentId);

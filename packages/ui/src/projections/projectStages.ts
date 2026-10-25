@@ -145,6 +145,10 @@ const DESCRIBE: Describers = {
     code: null,
     text: `ход ${String(event.turn)} закончен — сессия ждёт следующего вопроса, история остаётся`,
   }),
+  iteration_limit_reached: (event) => ({
+    code: null,
+    text: `лимит шагов (${String(event.limit)}): харнесс просит ответить по найденному — тулы описаны, но звать их нельзя`,
+  }),
   subagent_started: (event) => ({
     code: event.subagentId,
     text: `поручение субагенту: «${shorten(event.task, 160)}»`,

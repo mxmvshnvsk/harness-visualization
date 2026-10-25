@@ -232,6 +232,12 @@ const EVENT_DESCRIBERS: EventDescribers = {
       `Ход ${String(event.turn)} закончен — история диалога остаётся для следующего вопроса.`,
     ),
   ],
+  iteration_limit_reached: (event) => [
+    styleText(
+      'yellow',
+      `Лимит шагов (${String(event.limit)}, ${event.setting}): харнесс просит ответить по найденному — последний шаг без тулов`,
+    ),
+  ],
   subagent_started: (event) => [
     styleText(
       'magenta',

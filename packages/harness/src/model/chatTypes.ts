@@ -57,6 +57,8 @@ export interface ModelRequest {
   messages: ChatMessage[];
   tools: ToolDefinition[];
   reasoningEffort: ReasoningEffort;
+  // none — тулы описаны (prompt тот же, кэш совпадает), но звать их нельзя: только ответ текстом.
+  toolChoice?: 'auto' | 'none';
 }
 
 export interface TokenUsage {

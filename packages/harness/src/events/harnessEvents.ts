@@ -454,6 +454,17 @@ export interface SubagentFinishedPayload {
   modelCost: SessionCost | null;
 }
 
+// Агент дошёл до последнего разрешённого шага. Харнесс не обрывает работу, а просит ответить
+// по тому, что уже найдено: тулы остаются описаны (кэш prompt совпадает), но звать их нельзя.
+export interface IterationLimitReachedPayload {
+  type: 'iteration_limit_reached';
+  limit: number;
+  // Где лимит в harness.config.json: agent.maxIterations или subagents.agents.<имя>.maxIterations.
+  setting: string;
+  // Пометка харнесса, которая ушла модели перед последним запросом.
+  note: string;
+}
+
 export interface AwaitingQuestionPayload {
   type: 'awaiting_question';
   // Сколько ходов диалога уже было.
@@ -515,6 +526,7 @@ export type HarnessEventPayload =
   | MemoryLoadedPayload
   | MemoryUpdatedPayload
   | ProgressUpdatedPayload
+  | IterationLimitReachedPayload
   | SubagentStartedPayload
   | SubagentFinishedPayload
   | SessionFinishedPayload

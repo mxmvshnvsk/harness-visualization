@@ -86,6 +86,7 @@ function facts(run: SubagentRun, charsPerToken: number, lane: AgentLane | undefi
     run.report === null ? [] : [`отчёт ≈${formatTokens(reportTokens(run, charsPerToken))}`];
   const duration = run.durationMs === null ? [] : [formatSeconds(run.durationMs)];
   return [
+    ...(run.limited ? ['по лимиту шагов'] : []),
     `запросов к модели ${String(counts.modelRequests)}`,
     `тулов ${String(counts.calls.length)}`,
     `input ${formatTokens(counts.inputTokens)}`,

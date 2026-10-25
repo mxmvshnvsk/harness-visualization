@@ -34,15 +34,27 @@ export async function runAgentLoop(
 ): Promise<string> {
   const { tools } = dependencies;
   for (let iteration = 1; iteration <= options.maxIterations; iteration += 1) {
+    const last = iteration === options.maxIterations;
+    if (last) {
+      askToFinish(messages, dependencies, options);
+    }
     await freeContextSpace(messages, dependencies, options.reasoningEffort);
     const { reply } = await requestModel(
-      { messages, tools: tools.definitions(), reasoningEffort: options.reasoningEffort },
+      {
+        messages,
+        tools: tools.definitions(),
+        reasoningEffort: options.reasoningEffort,
+        ...(last ? { toolChoice: 'none' as const } : {}),
+      },
       dependencies,
       { purpose: 'agentStep', iteration },
     );
     messages.push(toAssistantMessage(reply));
-    if (reply.toolCalls.length === 0) {
+    if (reply.toolCalls.length === 0 || (last && (reply.text ?? '') !== '')) {
       return reply.text ?? '';
+    }
+    if (last) {
+      break;
     }
     await runRequestedTools(reply.toolCalls, messages, dependencies);
   }
@@ -50,6 +62,27 @@ export async function runAgentLoop(
     `Агент не закончил работу за ${String(options.maxIterations)} шагов. ` +
       `Лимит задаётся в harness.config.json: ${options.limitSetting}.`,
   );
+}
+
+export const ITERATION_LIMIT_PREFIX = '[Харнесс] Лимит шагов';
+
+// Последний разрешённый шаг: вместо обрыва — просьба ответить по найденному. Без неё всё
+// прочитанное пропало бы: субагент не вернул бы отчёт, главный — ответ пользователю.
+function askToFinish(
+  messages: ChatMessage[],
+  dependencies: AgentDependencies,
+  options: LoopOptions,
+): void {
+  const note =
+    `${ITERATION_LIMIT_PREFIX} (${String(options.maxIterations)}): это последний шаг, тулы больше ` +
+    'недоступны. Ответь сейчас по тому, что уже нашёл; чего не успел проверить — так и напиши.';
+  messages.push({ role: 'user', content: note });
+  dependencies.events.emit({
+    type: 'iteration_limit_reached',
+    limit: options.maxIterations,
+    setting: options.limitSetting,
+    note,
+  });
 }
 
 // Перед запросом к модели: prompt дорос до порога — сначала убрать старые результаты тулов

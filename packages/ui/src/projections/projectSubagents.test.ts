@@ -72,6 +72,25 @@ describe('projectSubagents', () => {
   });
 });
 
+describe('лимит шагов субагента', () => {
+  it('отчёт по лимиту помечен', () => {
+    const log = delegation();
+    const events = [...log.events];
+    const finished = events.findIndex((event) => event.type === 'subagent_finished');
+    const limit = new EventLog().add(
+      { type: 'iteration_limit_reached', limit: 6, setting: 'subagents', note: 'лимит' },
+      'researcher-2',
+    ).events[0];
+    if (limit === undefined) {
+      throw new Error('нет события');
+    }
+    events.splice(finished, 0, limit);
+    const [first, second] = projectSubagents(events);
+
+    expect([first?.limited, second?.limited]).toEqual([false, true]);
+  });
+});
+
 describe('projectStages по агентам', () => {
   it('у главного агента — его шаги и строки поручений, без шагов субагентов', () => {
     const stages = projectStages(delegation().events);

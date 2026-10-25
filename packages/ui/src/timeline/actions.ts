@@ -352,6 +352,19 @@ const HANDLERS: Handlers = {
   tool_result: (builder, event, at) => {
     closeTool(builder, event, at);
   },
+  iteration_limit_reached: (builder, event, at) => {
+    addInside(
+      builder,
+      { event, at },
+      {
+        node: 'loop',
+        group: 'model',
+        out: `лимит ${String(event.limit)} шагов`,
+        what: 'Лимит шагов: харнесс просит ответить по найденному',
+        detail: `последний шаг — тулы описаны, но звать их нельзя (tool_choice: none); ${event.setting}`,
+      },
+    );
+  },
   tool_result_truncated: (builder, event, at) => {
     // Результат кладётся в историю — тут харнесс и обрезает его: часть «Контекст и prompt».
     addInside(

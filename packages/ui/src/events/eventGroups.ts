@@ -38,6 +38,7 @@ const EVENT_GROUPS: Record<HarnessEventType, EventGroup> = {
   skill_catalog: 'meta',
   skill_loaded: 'model',
   memory_loaded: 'meta',
+  iteration_limit_reached: 'model',
   subagent_started: 'tool',
   subagent_finished: 'tool',
   memory_updated: 'tool',

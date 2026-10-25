@@ -113,6 +113,7 @@ const STATUSES: Partial<Record<HarnessEvent['type'], (event: HarnessEvent) => st
   tool_result_truncated: () => 'харнесс обрезает большой результат тула',
   tool_results_cleared: () => 'харнесс освобождает место в контексте',
   history_compacted: () => 'харнесс заменил прошлые ходы сводкой',
+  iteration_limit_reached: () => 'лимит шагов — харнесс просит ответить по найденному',
   subagent_started: (event) =>
     event.type === 'subagent_started'
       ? `поручает задачу субагенту ${event.subagentId}`

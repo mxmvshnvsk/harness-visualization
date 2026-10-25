@@ -55,7 +55,7 @@ export class OpenAiCompatibleProvider implements ModelProvider {
         ...buildReasoningParameters(this.settings.reasoningStyle, request.reasoningEffort),
         model: this.settings.model,
         messages: toWireMessages(request.messages, this.settings.reasoningStyle),
-        ...buildToolsParameter(request.tools),
+        ...buildToolsParameter(request.tools, request.toolChoice ?? 'auto'),
         max_tokens: this.settings.maxOutputTokens,
         stream: false,
       },
@@ -129,11 +129,14 @@ export class OpenAiCompatibleProvider implements ModelProvider {
 }
 
 // Без тулов поле tools не передаём совсем: часть API не принимает пустой список.
-function buildToolsParameter(tools: ToolDefinition[]): Record<string, unknown> {
+function buildToolsParameter(
+  tools: ToolDefinition[],
+  toolChoice: 'auto' | 'none',
+): Record<string, unknown> {
   if (tools.length === 0) {
     return {};
   }
-  return { tools: toWireTools(tools) };
+  return { tools: toWireTools(tools), ...(toolChoice === 'none' ? { tool_choice: 'none' } : {}) };
 }
 
 function fromWireToolCall(wireToolCall: WireToolCall): ToolCall {
