@@ -3,6 +3,7 @@
 
 import type { HarnessEvent } from '@harness-visualization/harness';
 import { useMemo, type ReactElement } from 'react';
+import type { SearchLink } from '../../../app/viewLinks';
 import { projectMcp, toolTokens, type McpView } from '../../../projections/projectMcp';
 import { McpTiles } from './McpTiles';
 import { ProtocolJournal } from './ProtocolJournal';
@@ -13,9 +14,11 @@ import styles from './McpSession.module.css';
 interface McpSessionViewProps {
   events: readonly HarnessEvent[];
   shown: number;
+  // Пришли из «RAG»: какую пару сообщений открыть в журнале.
+  focus?: SearchLink | null;
 }
 
-export function McpSessionView({ events, shown }: McpSessionViewProps): ReactElement {
+export function McpSessionView({ events, shown, focus }: McpSessionViewProps): ReactElement {
   const full = useMemo(() => projectMcp(events), [events]);
   const tokens = useMemo(() => toolTokens(events), [events]);
   if (full.servers.length === 0) {
@@ -38,7 +41,7 @@ export function McpSessionView({ events, shown }: McpSessionViewProps): ReactEle
       {view.servers.map((server) => (
         <ServerTools key={server.name} server={server} calls={view.calls} tokens={tokens} />
       ))}
-      <ProtocolJournal journal={view.journal} />
+      <ProtocolJournal journal={view.journal} focus={focus ?? null} />
     </div>
   );
 }

@@ -1,7 +1,7 @@
 // Карточка этапа: пиктограмма типа, заголовок, пометка, состояние и строки событий.
 // Будущее приглушено, текущий этап выделен цветом акцента (в тёмной теме) или группы (в светлой).
 
-import { useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import type { Stage, StageKind, StageRow } from '../../projections/projectStages';
 import type { SessionView } from '../../projections/sessionView';
 import { hasRetrieval, type Focus } from './focus';
@@ -13,6 +13,8 @@ interface StageCardProps {
   view: SessionView;
   shown: number;
   active: boolean;
+  // Пришли по ссылке из другого вида: раскрыть «Подробнее» на этом вызове.
+  focus?: Focus | null;
   cardRef: (element: HTMLElement | null) => void;
   onSeek: (at: number) => void;
 }
@@ -22,6 +24,7 @@ export function StageCard({
   view,
   shown,
   active,
+  focus,
   cardRef,
   onSeek,
 }: StageCardProps): ReactElement {
@@ -54,7 +57,7 @@ export function StageCard({
           />
         ))}
       </ul>
-      {started && <Details stage={stage} view={view} />}
+      {started && <Details stage={stage} view={view} target={focus ?? null} />}
     </article>
   );
 }
@@ -90,15 +93,28 @@ function Row({
 }
 
 // «Подробнее»: запрос к модели этапа, его тулы или retrieval — те же панели, что были в инспекторе.
-function Details({ stage, view }: { stage: Stage; view: SessionView }): ReactElement | null {
+function Details(props: {
+  stage: Stage;
+  view: SessionView;
+  target: Focus | null;
+}): ReactElement | null {
+  const { stage, view, target } = props;
   const initial = initialFocus(stage, view);
-  const [open, setOpen] = useState(false);
-  const [focus, setFocus] = useState<Focus | null>(initial);
+  const [open, setOpen] = useState(target !== null);
+  const [focus, setFocus] = useState<Focus | null>(target ?? initial);
+  const ref = useRef<HTMLDivElement>(null);
+  // Новый объект цели на каждом кадре повтора — прокручиваем по смыслу цели, а не по ссылке.
+  const targetKey = target === null ? null : JSON.stringify(target);
+  useEffect(() => {
+    if (targetKey !== null) {
+      ref.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+  }, [targetKey]);
   if (initial === null) {
     return null;
   }
   return (
-    <div className={styles.details}>
+    <div ref={ref} className={styles.details}>
       <button
         type="button"
         className={styles.more}

@@ -2,6 +2,7 @@
 // сообщений JSON-RPC ушла и пришла ради этого вызова.
 
 import type { ReactElement } from 'react';
+import { ChainLinks, hasVector } from '../ChainLinks';
 import { PairMessages } from '../mcp/session/ProtocolJournal';
 import { formatMs } from '../mcp/session/mcpFormat';
 import styles from './Inspector.module.css';
@@ -18,8 +19,10 @@ export function McpCallBlock({
   if (pair === null) {
     return null;
   }
-  const params = pair.request as { params?: { name?: unknown } };
-  const serverTool = typeof params.params?.name === 'string' ? params.params.name : '—';
+  const params = (pair.request as { params?: { name?: unknown; arguments?: { query?: unknown } } })
+    .params;
+  const serverTool = typeof params?.name === 'string' ? params.name : '—';
+  const query = typeof params?.arguments?.query === 'string' ? params.arguments.query : '';
   return (
     <section className={styles.block}>
       <h3 className={styles.blockTitle}>через MCP</h3>
@@ -37,6 +40,7 @@ export function McpCallBlock({
         </span>
       </p>
       <PairMessages pair={pair} />
+      <ChainLinks link={{ toolCallId, query }} mcp rag={hasVector(serverTool)} />
     </section>
   );
 }

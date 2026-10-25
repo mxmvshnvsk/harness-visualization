@@ -1,0 +1,27 @@
+/* Ссылки цепочки вызова между видами. */
+
+.links {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.links button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.links button:hover {
+  text-decoration: underline;
+}
+
+.links button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}

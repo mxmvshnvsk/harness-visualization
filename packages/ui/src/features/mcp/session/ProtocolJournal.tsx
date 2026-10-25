@@ -1,13 +1,19 @@
 // Журнал протокола: сообщения JSON-RPC парами «вопрос — ответ» по id, со временем ответа;
 // над tools/call — просьба модели и решение политики; строки stderr сервера между ними.
 
-import { useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { sameSearch, type SearchLink } from '../../../app/viewLinks';
+import { ChainLinks, hasVector } from '../../ChainLinks';
 import type { McpJournalItem, McpPair } from '../../../projections/projectMcp';
 import { describePair, formatKb, formatMs } from './mcpFormat';
 import styles from './McpSession.module.css';
 
-export function ProtocolJournal({ journal }: { journal: readonly McpJournalItem[] }): ReactElement {
-  const [open, setOpen] = useState<number | null>(null);
+export function ProtocolJournal(props: {
+  journal: readonly McpJournalItem[];
+  focus: SearchLink | null;
+}): ReactElement {
+  const { journal } = props;
+  const [open, setOpen] = useState<number | null>(() => focusedPair(journal, props.focus));
   return (
     <section className={styles.card}>
       <h2 className={styles.title}>Журнал протокола</h2>
@@ -37,6 +43,7 @@ export function ProtocolJournal({ journal }: { journal: readonly McpJournalItem[
               ) : (
                 <PairRow
                   pair={item.pair}
+                  focused={item.pair.index === focusedPair(journal, props.focus)}
                   open={open === item.pair.index}
                   onToggle={() => {
                     setOpen(open === item.pair.index ? null : item.pair.index);
@@ -53,25 +60,25 @@ export function ProtocolJournal({ journal }: { journal: readonly McpJournalItem[
 
 interface PairRowProps {
   pair: McpPair;
+  focused?: boolean;
   open: boolean;
   onToggle: () => void;
 }
 
-export function PairRow({ pair, open, onToggle }: PairRowProps): ReactElement {
+export function PairRow({ pair, focused, open, onToggle }: PairRowProps): ReactElement {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (focused === true) {
+      ref.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }
+  }, [focused]);
   return (
     <>
-      {pair.call !== null && (
-        <span className={styles.cause}>
-          модель попросила <b className={styles.mono}>{pair.call.toolName}</b> → политика:{' '}
-          {pair.call.reason ?? '—'} →{' '}
-          <span className={styles.decision} data-decision={pair.call.decision}>
-            {pair.call.decision ?? '—'}
-          </span>{' '}
-          → харнесс снял приставку и зовёт тул на сервере {pair.serverName}
-        </span>
-      )}
+      <Cause pair={pair} />
       <div
+        ref={ref}
         className={styles.pair}
+        data-focused={focused === true ? 'true' : undefined}
         data-pending={pair.response === null && pair.id !== null ? 'true' : undefined}
       >
         <button type="button" aria-expanded={open} onClick={onToggle}>
@@ -86,6 +93,7 @@ export function PairRow({ pair, open, onToggle }: PairRowProps): ReactElement {
           </span>
         </button>
         {open && <PairMessages pair={pair} />}
+        <PairLinks pair={pair} />
       </div>
     </>
   );
@@ -106,6 +114,71 @@ export function PairMessages({ pair }: { pair: McpPair }): ReactElement {
       </div>
     </div>
   );
+}
+
+// Откуда взялся tools/call: просьба модели и решение политики — или поиск харнесса.
+function Cause({ pair }: { pair: McpPair }): ReactElement {
+  return (
+    <>
+      {pair.call === null && pair.method === 'tools/call' && (
+        <span className={styles.cause}>
+          вызов без просьбы модели — харнесс искал сам, до первого шага (retrieval)
+        </span>
+      )}
+      {pair.call !== null && (
+        <span className={styles.cause}>
+          модель попросила <b className={styles.mono}>{pair.call.toolName}</b> → политика:{' '}
+          {pair.call.reason ?? '—'} →{' '}
+          <span className={styles.decision} data-decision={pair.call.decision}>
+            {pair.call.decision ?? '—'}
+          </span>{' '}
+          → харнесс снял приставку и зовёт тул на сервере {pair.serverName}
+        </span>
+      )}
+    </>
+  );
+}
+
+// Запрос tools/call: имя тула на сервере и query, если он есть.
+function searchOf(pair: McpPair): { tool: string; query: string } | null {
+  if (pair.method !== 'tools/call') {
+    return null;
+  }
+  const params = (pair.request as { params?: { name?: unknown; arguments?: { query?: unknown } } })
+    .params;
+  const tool = params?.name;
+  const query = params?.arguments?.query;
+  return typeof tool === 'string' ? { tool, query: typeof query === 'string' ? query : '' } : null;
+}
+
+function PairLinks({ pair }: { pair: McpPair }): ReactElement | null {
+  const search = searchOf(pair);
+  if (search === null) {
+    return null;
+  }
+  return (
+    <div className={styles.pairLinks}>
+      <ChainLinks
+        link={{ toolCallId: pair.call?.toolCallId ?? null, query: search.query }}
+        inspector
+        rag={hasVector(search.tool)}
+      />
+    </div>
+  );
+}
+
+// Пара, к которой пришли из «RAG»: тот же вызов модели или тот же запрос харнесса.
+function focusedPair(journal: readonly McpJournalItem[], focus: SearchLink | null): number | null {
+  if (focus === null) {
+    return null;
+  }
+  const found = journal.find(
+    (item) =>
+      item.kind === 'pair' &&
+      searchOf(item.pair) !== null &&
+      sameSearch(focus, item.pair.call?.toolCallId ?? null, searchOf(item.pair)?.query ?? ''),
+  );
+  return found?.kind === 'pair' ? found.pair.index : null;
 }
 
 function stepOf(item: McpJournalItem): number | null {

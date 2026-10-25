@@ -43,6 +43,7 @@ import styles from './App.module.css';
 import { Sidebar } from './Sidebar';
 import { ThemeSwitch } from './ThemeSwitch';
 import { useSelection, type LabName, type Selection } from './useSelection';
+import { ViewLinksContext, type SearchLink, type ViewLinks } from './viewLinks';
 
 export function App(): ReactElement {
   const [selection, select] = useSelection();
@@ -345,32 +346,84 @@ interface ViewSwitchProps {
 function ViewSwitch({ events, replay, liveStartedAt, traceFile }: ViewSwitchProps): ReactElement {
   const [viewName, setViewName] = useState<ViewName>('flow');
   const { clock, cursor, schedule, shown, view } = replay;
+  const { links, link } = useLinkedViews(setViewName);
   return (
-    <div className={styles.views}>
-      <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
-      {viewName === 'flow' && (
-        <FlowView clock={clock} schedule={schedule} liveStartedAt={liveStartedAt} />
-      )}
-      {viewName === 'inspector' && (
-        <InspectorView
-          view={view}
-          events={events}
-          shown={cursor}
-          clock={clock}
-          schedule={schedule}
-        />
-      )}
-      {viewName === 'context' && (
-        <ContextView events={events} shown={cursor} clock={clock} schedule={schedule} />
-      )}
-      {viewName === 'rag' && <RetrievalView events={events} shown={cursor} traceFile={traceFile} />}
-      {viewName === 'mcp' && <McpSessionView events={events} shown={cursor} />}
-      {viewName === 'skills' && (
-        <SkillsMemoryView events={events} shown={cursor} clock={clock} schedule={schedule} />
-      )}
-      {viewName === 'events' && <EventList events={shown} />}
-    </div>
+    <ViewLinksContext.Provider value={links}>
+      <div className={styles.views}>
+        <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
+        {viewName === 'flow' && (
+          <FlowView clock={clock} schedule={schedule} liveStartedAt={liveStartedAt} />
+        )}
+        {viewName === 'inspector' && (
+          <InspectorView
+            key={`inspector-${String(link.nonce)}`}
+            focus={link.focusFor('inspector')}
+            view={view}
+            events={events}
+            shown={cursor}
+            clock={clock}
+            schedule={schedule}
+          />
+        )}
+        {viewName === 'context' && (
+          <ContextView events={events} shown={cursor} clock={clock} schedule={schedule} />
+        )}
+        {viewName === 'rag' && (
+          <RetrievalView
+            key={`rag-${String(link.nonce)}`}
+            events={events}
+            shown={cursor}
+            traceFile={traceFile}
+            focus={link.focusFor('rag')}
+          />
+        )}
+        {viewName === 'mcp' && (
+          <McpSessionView
+            key={`mcp-${String(link.nonce)}`}
+            events={events}
+            shown={cursor}
+            focus={link.focusFor('mcp')}
+          />
+        )}
+        {viewName === 'skills' && (
+          <SkillsMemoryView events={events} shown={cursor} clock={clock} schedule={schedule} />
+        )}
+        {viewName === 'events' && <EventList events={shown} />}
+      </div>
+    </ViewLinksContext.Provider>
   );
+}
+
+type LinkedView = 'rag' | 'mcp' | 'inspector';
+
+// Переход из одного вида в другой с целью: какой поиск показать. nonce — новый переход,
+// даже к той же цели: вид открывается заново и раскрывает нужное.
+function useLinkedViews(setViewName: (view: ViewName) => void) {
+  const [link, setLink] = useState<{
+    view: LinkedView | null;
+    target: SearchLink | null;
+    nonce: number;
+  }>({ view: null, target: null, nonce: 0 });
+  const links = useMemo<ViewLinks>(() => {
+    const go = (view: LinkedView, target: SearchLink): void => {
+      setLink((current) => ({ view, target, nonce: current.nonce + 1 }));
+      setViewName(view);
+    };
+    return {
+      toRag: (target) => {
+        go('rag', target);
+      },
+      toMcp: (target) => {
+        go('mcp', target);
+      },
+      toInspector: (target) => {
+        go('inspector', target);
+      },
+    };
+  }, [setViewName]);
+  const focusFor = (view: LinkedView): SearchLink | null =>
+    link.view === view ? link.target : null;
+  return { links, link: { nonce: link.nonce, focusFor } };
 }
 
 interface PlayerDockProps {

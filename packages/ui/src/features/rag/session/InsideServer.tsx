@@ -5,7 +5,7 @@
 // в трейсе их нет.
 
 import type { LabBase, LabSearch } from '@harness-visualization/mcp-server/lab';
-import { useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import type { FoundDocument, SearchAction } from '../../../projections/projectRetrieval';
 import { useRagBase, useSearch } from '../useRagData';
 import { cosine } from '../vectors';
@@ -13,10 +13,19 @@ import { Fingerprint } from './Fingerprint';
 import { formatSimilarity } from './retrievalLabels';
 import styles from './Retrieval.module.css';
 
-export function InsideServer({ action }: { action: SearchAction }): ReactElement {
-  const [open, setOpen] = useState(false);
+export function InsideServer(props: { action: SearchAction; defaultOpen: boolean }): ReactElement {
+  const { action } = props;
+  const [open, setOpen] = useState(props.defaultOpen);
+  const ref = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    if (props.defaultOpen) {
+      ref.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+  }, [props.defaultOpen]);
   return (
     <details
+      ref={ref}
+      open={props.defaultOpen}
       className={styles.inside}
       onToggle={(event) => {
         setOpen(event.currentTarget.open);
@@ -168,9 +177,11 @@ function Check({
   return (
     <p className={styles.note}>
       <b>Сверка:</b> в браузере косинус запроса и лучшего фрагмента — {formatSimilarity(computed)},
-      сервер написал модели «сходство {written.toFixed(3)}». Разница в последнем знаке — от
-      округления: в браузер векторы приходят с 4 знаками. Если база менялась после записи сессии,
-      разница будет больше.
+      сервер написал модели «сходство {written.toFixed(3)}», разница{' '}
+      {formatSimilarity(Math.abs(computed - written))}. Вектор запроса здесь посчитан заново, а
+      векторы приходят в браузер округлёнными до 4 знаков — поэтому тысячные могут разойтись,
+      особенно если запись сделана на другом компьютере. Большая разница значит, что база менялась
+      после записи сессии.
     </p>
   );
 }

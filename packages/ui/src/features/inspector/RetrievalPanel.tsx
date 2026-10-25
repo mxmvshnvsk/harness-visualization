@@ -5,6 +5,7 @@ import type { ReactElement } from 'react';
 import type { RetrievalView } from '../../projections/sessionView';
 import styles from './Inspector.module.css';
 import { HelpButton } from '../../help/HelpLinks';
+import { ChainLinks, hasVector } from '../ChainLinks';
 
 export function RetrievalPanel({ retrieval }: { retrieval: RetrievalView }): ReactElement {
   const { rewrite, retrieved } = retrieval;
@@ -35,10 +36,19 @@ export function RetrievalPanel({ retrieval }: { retrieval: RetrievalView }): Rea
             {retrieved.durationMs.toLocaleString('ru-RU')} мс
           </h3>
           <pre className={styles.code}>{JSON.stringify(retrieved.arguments, null, 2)}</pre>
+          <ChainLinks
+            link={{ toolCallId: null, query: queryOf(retrieved.arguments) }}
+            mcp
+            rag={hasVector(retrieved.toolName.split('__').at(-1) ?? '')}
+          />
           <div className={styles.caption}>подмешано в контекст до первого запроса:</div>
           <pre className={styles.code}>{retrieved.content}</pre>
         </section>
       )}
     </article>
   );
+}
+
+function queryOf(args: Record<string, unknown>): string {
+  return typeof args.query === 'string' ? args.query : '';
 }

@@ -9,6 +9,7 @@ import type {
   RetrievalAction,
   SearchAction,
 } from '../../../projections/projectRetrieval';
+import { ChainLinks } from '../../ChainLinks';
 import { InsideServer } from './InsideServer';
 import { formatSimilarity, kindColor, SEARCH_LABELS } from './retrievalLabels';
 import styles from './Retrieval.module.css';
@@ -17,13 +18,21 @@ interface DetailProps {
   action: RetrievalAction;
   actions: readonly RetrievalAction[];
   cited: ReadonlySet<string>;
+  // Пришли сюда из журнала MCP — сразу раскрыть «внутри MCP-сервера».
+  focused?: boolean;
 }
 
-export function SearchDetail({ action, actions, cited }: DetailProps): ReactElement {
+export function SearchDetail({ action, actions, cited, focused }: DetailProps): ReactElement {
   return action.kind === 'read' ? (
     <ReadDetail action={action} actions={actions} cited={cited} />
   ) : (
-    <SearchResult key={action.index} action={action} actions={actions} cited={cited} />
+    <SearchResult
+      key={action.index}
+      action={action}
+      actions={actions}
+      cited={cited}
+      focused={focused}
+    />
   );
 }
 
@@ -68,7 +77,10 @@ function SearchResult(props: { action: SearchAction } & Omit<DetailProps, 'actio
         {SEARCH_LABELS[action.search].name}
       </h3>
       <QueryChain action={action} />
-      {action.search !== 'words' && !action.failed && <InsideServer action={action} />}
+      <ChainLinks link={{ toolCallId: action.toolCallId, query: action.query }} inspector mcp />
+      {action.search !== 'words' && !action.failed && (
+        <InsideServer action={action} defaultOpen={props.focused === true} />
+      )}
       <div className={styles.meta}>
         <span>
           в выдаче <b>{action.documents.length}</b> док. ({action.chunkCount} фрагм.)

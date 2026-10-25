@@ -42,6 +42,8 @@ export interface SearchAction extends ActionBase {
   // Поиск харнесса: вопрос пользователя и кто сформулировал запрос.
   userQuestion: string | null;
   queryAuthor: 'user' | 'model' | null;
+  // Вызов модели, из-за которого искали; null — искал харнесс до модели.
+  toolCallId: string | null;
   limit: number | null;
   documents: FoundDocument[];
   chunkCount: number;
@@ -137,7 +139,12 @@ function harnessAction(
   return searchAction(
     { ...base(), chars: event.content.length, failed: event.status === 'error' },
     { search, toolName: event.toolName, arguments: event.arguments, content: event.content },
-    { by: 'harness', userQuestion: event.userQuestion, queryAuthor: event.queryAuthor },
+    {
+      by: 'harness',
+      userQuestion: event.userQuestion,
+      queryAuthor: event.queryAuthor,
+      toolCallId: null,
+    },
   );
 }
 
@@ -164,7 +171,7 @@ function modelAction(
       arguments: call?.arguments ?? {},
       content: event.status === 'success' ? event.content : '',
     },
-    { by: 'model', userQuestion: null, queryAuthor: null },
+    { by: 'model', userQuestion: null, queryAuthor: null, toolCallId: event.toolCallId },
   );
 }
 
@@ -176,7 +183,7 @@ function searchAction(
     arguments: Record<string, unknown>;
     content: string;
   },
-  origin: Pick<SearchAction, 'by' | 'userQuestion' | 'queryAuthor'>,
+  origin: Pick<SearchAction, 'by' | 'userQuestion' | 'queryAuthor' | 'toolCallId'>,
 ): SearchAction {
   const chunks = parseSearchResult(tool.content);
   const limit = tool.arguments.limit;

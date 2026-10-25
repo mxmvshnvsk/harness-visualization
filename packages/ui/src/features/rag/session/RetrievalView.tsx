@@ -11,6 +11,7 @@ import {
   sessionDocuments,
   type RetrievalAction,
 } from '../../../projections/projectRetrieval';
+import { sameSearch, type SearchLink } from '../../../app/viewLinks';
 import { AnswerSupport } from './AnswerSupport';
 import { DocumentMatrix } from './DocumentMatrix';
 import styles from './Retrieval.module.css';
@@ -23,12 +24,15 @@ interface RetrievalViewProps {
   shown: number;
   // Записанный трейс — для разбора опоры ответа; null — живая сессия.
   traceFile: string | null;
+  // Пришли из журнала MCP: какой поиск открыть и раскрыть «внутри MCP-сервера».
+  focus?: SearchLink | null;
 }
 
-export function RetrievalView({ events, shown, traceFile }: RetrievalViewProps): ReactElement {
+export function RetrievalView(props: RetrievalViewProps): ReactElement {
+  const { events, shown, traceFile } = props;
   const view = useMemo(() => projectRetrieval(events), [events]);
   const actions = view.actions.filter((action) => action.index < shown);
-  const [chosen, setChosen] = useState<number | null>(null);
+  const { focusIndex, chosen, setChosen } = useFocusedChoice(view.actions, props.focus);
   if (view.actions.length === 0) {
     return (
       <div className={styles.empty}>
@@ -64,7 +68,9 @@ export function RetrievalView({ events, shown, traceFile }: RetrievalViewProps):
               setChosen(action.index);
             }}
           />
-          {selected !== undefined && <SearchDetail {...context} action={selected} />}
+          {selected !== undefined && (
+            <SearchDetail {...context} action={selected} focused={selected.index === focusIndex} />
+          )}
         </div>
       </section>
       <DocumentMatrix {...context} documents={documents} />
@@ -73,4 +79,27 @@ export function RetrievalView({ events, shown, traceFile }: RetrievalViewProps):
       )}
     </div>
   );
+}
+
+function focusedAction(
+  actions: readonly RetrievalAction[],
+  focus: SearchLink | null,
+): number | null {
+  if (focus === null) {
+    return null;
+  }
+  const found = actions.find(
+    (action) => action.kind === 'search' && sameSearch(focus, action.toolCallId, action.query),
+  );
+  return found?.index ?? null;
+}
+
+// Какой поиск выбран: сначала тот, к которому пришли из другого вида.
+function useFocusedChoice(
+  actions: readonly RetrievalAction[],
+  focus: SearchLink | null | undefined,
+): { focusIndex: number | null; chosen: number | null; setChosen: (index: number) => void } {
+  const focusIndex = focusedAction(actions, focus ?? null);
+  const [chosen, setChosen] = useState<number | null>(focusIndex);
+  return { focusIndex, chosen, setChosen };
 }
