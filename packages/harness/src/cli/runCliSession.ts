@@ -1,8 +1,9 @@
 // Собирает сессию: поток событий, подписчиков, провайдера, песочницу и тулы —
 // и запускает один ход агента.
 
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import type { AgentDependencies } from '../agent/agentDependencies.js';
+import type { RetrievalOptions } from '../agent/retrieveContext.js';
 import { runAgentTurn } from '../agent/runAgentTurn.js';
 import type { EventStream } from '../events/EventStream.js';
 import {
@@ -42,15 +43,29 @@ export interface CliSessionInput {
   retrievalMode: RetrievalMode;
   // true — пересоздать рабочую папку из примеров (флаг --fresh).
   freshWorkspace: boolean;
+  // null — рабочая папка из harness.config.json; иначе своя папка сессии
+  // (у pnpm compare-runs — временная, чтобы заметки одного прогона не влияли на другие).
+  workspaceDirectory: string | null;
   verbose: boolean;
+  // true — сессия без консоли (её запускает pnpm compare-runs): события пишутся только в трейс,
+  // а действия, требующие разрешения, запрещаются — спросить некого.
+  quiet: boolean;
 }
 
-export async function runCliSession(input: CliSessionInput): Promise<void> {
+export interface CliSessionResult {
+  // Путь к трейсу от корня проекта.
+  tracePath: string;
+  // true — сессия прервалась ошибкой (событие error в трейсе).
+  failed: boolean;
+}
+
+export async function runCliSession(input: CliSessionInput): Promise<CliSessionResult> {
   const { settings } = input.loadedSettings;
   const recording = await startSessionRecording({
     projectRoot: input.projectRoot,
     tracesDirectory: settings.traces.directory,
     verbose: input.verbose,
+    quiet: input.quiet,
   });
   const { events } = recording;
   const network = new NetworkRouter({
@@ -59,7 +74,8 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     onRequest: (request) => events.emit({ type: 'network_request', ...request }),
   });
 
-  const workspaceDirectory = join(input.projectRoot, settings.workspace.directory);
+  const workspaceSetting = input.workspaceDirectory ?? settings.workspace.directory;
+  const workspaceDirectory = resolve(input.projectRoot, workspaceSetting);
   const preparedWorkspace = await prepareWorkspace({
     projectRoot: input.projectRoot,
     workspaceDirectory,
@@ -70,7 +86,7 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
   announceSession(events, {
     settings,
     reasoningEffort: input.reasoningEffort,
-    workspaceDirectory: settings.workspace.directory,
+    workspaceDirectory: workspaceSetting,
     preparedWorkspace,
     searchProviderName: searchProvider?.name ?? null,
     retrievalMode: input.retrievalMode,
@@ -86,23 +102,22 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     fetchImpl: network.fetch,
   });
 
+  let failed = false;
   try {
     await runAgentTurn(input.question, dependencies, {
       reasoningEffort: input.reasoningEffort,
       maxIterations: settings.agent.maxIterations,
-      retrieval:
-        input.retrievalMode === 'auto'
-          ? { toolName: settings.retrieval.toolName, limit: settings.retrieval.limit }
-          : null,
+      retrieval: createRetrievalOptions(input),
     });
   } catch (error) {
     events.emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });
-    process.exitCode = 1;
+    failed = true;
   } finally {
     await closeMcpServers(mcpServers.connections, events);
     await network.close();
-    await recording.finish();
   }
+  const tracePath = await recording.finish();
+  return { tracePath, failed };
 }
 
 async function prepareSearchProvider(
@@ -111,7 +126,7 @@ async function prepareSearchProvider(
 ): Promise<SearchProvider | null> {
   const { settings } = input.loadedSettings;
   const searchSetup = await createSearchProvider(settings.search, input.searchProvider, fetchImpl);
-  if (searchSetup.provider === null) {
+  if (searchSetup.provider === null && !input.quiet) {
     console.log(
       `Веб-поиск выключен: ${searchSetup.disabledReason}. Тул web_search не зарегистрирован.`,
     );
@@ -151,10 +166,24 @@ function createAgentDependencies(
     prices: settings.prices,
     tools,
     toolContext: { workspace: new Workspace(resources.workspaceDirectory) },
-    confirmAction: askConfirmation,
+    confirmAction: input.quiet ? denyWithoutAsking : askConfirmation,
     permissionPolicy: settings.permissions,
     mcpServerInstructions: resources.mcpServers.instructions,
   };
+}
+
+// null — модель ищет сама; иначе харнесс ищет до запроса тулом из раздела retrieval.
+function createRetrievalOptions(input: CliSessionInput): RetrievalOptions | null {
+  if (input.retrievalMode !== 'auto') {
+    return null;
+  }
+  const { retrieval } = input.loadedSettings.settings;
+  return { toolName: retrieval.toolName, limit: retrieval.limit };
+}
+
+// В тихой сессии спросить некого, а молчание — не согласие.
+function denyWithoutAsking(): Promise<boolean> {
+  return Promise.resolve(false);
 }
 
 function createSearchOption(

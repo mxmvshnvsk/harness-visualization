@@ -12,12 +12,14 @@ export interface SessionRecordingOptions {
   projectRoot: string;
   tracesDirectory: string;
   verbose: boolean;
+  // true — ничего не печатать в консоль: сессию запускает другая команда, у неё свой вывод.
+  quiet: boolean;
 }
 
 export interface SessionRecording {
   events: EventStream;
-  // Пишет итог сессии и закрывает трейс.
-  finish(): Promise<void>;
+  // Пишет итог сессии, закрывает трейс и возвращает путь к нему от корня проекта.
+  finish(): Promise<string>;
 }
 
 export async function startSessionRecording(
@@ -34,7 +36,9 @@ export async function startSessionRecording(
   // чем придёт событие об окончании сессии.
   events.subscribe((event) => traceWriter.write(event));
   events.subscribe((event) => tokenomics.handleEvent(event));
-  events.subscribe(createConsolePrinter({ verbose: options.verbose }));
+  if (!options.quiet) {
+    events.subscribe(createConsolePrinter({ verbose: options.verbose }));
+  }
 
   const startedAt = performance.now();
   return {
@@ -46,7 +50,11 @@ export async function startSessionRecording(
         ...tokenomics.summary(),
       });
       await traceWriter.close();
-      console.log(`Трейс сессии: ${relative(options.projectRoot, traceWriter.filePath)}`);
+      const tracePath = relative(options.projectRoot, traceWriter.filePath);
+      if (!options.quiet) {
+        console.log(`Трейс сессии: ${tracePath}`);
+      }
+      return tracePath;
     },
   };
 }

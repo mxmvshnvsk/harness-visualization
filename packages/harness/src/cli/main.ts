@@ -15,7 +15,7 @@ async function main(): Promise<void> {
     console.log('Пустой запрос — нечего отправлять модели.');
     return;
   }
-  await runCliSession({
+  const result = await runCliSession({
     loadedSettings,
     projectRoot,
     question,
@@ -24,8 +24,13 @@ async function main(): Promise<void> {
     searchProvider: cliOptions.searchProvider,
     retrievalMode: cliOptions.retrievalMode ?? loadedSettings.settings.retrieval.mode,
     freshWorkspace: cliOptions.freshWorkspace,
+    workspaceDirectory: null,
     verbose: cliOptions.verbose,
+    quiet: false,
   });
+  if (result.failed) {
+    process.exitCode = 1;
+  }
 }
 
 main().catch((error: unknown) => {
