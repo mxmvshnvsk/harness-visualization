@@ -149,6 +149,9 @@
       }
     }
   },
+  "server": {
+    "port": 4317
+  },
   "grounding": {
     "similarityThreshold": 0.87
   },

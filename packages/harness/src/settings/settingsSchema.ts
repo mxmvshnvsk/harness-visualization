@@ -227,6 +227,12 @@ const retrievalSettingsSchema = z.object({
   limit: z.number().int().min(1).max(20).default(5),
 });
 
+// Сервер для браузера (pnpm server, этап 7). Адрес не настраивается: сервер слушает только
+// 127.0.0.1 — это локальный учебный стенд без авторизации, ключи модели остаются на нём.
+const serverSettingsSchema = z.object({
+  port: z.number().int().min(1).max(65535).default(4317),
+});
+
 // Проверка опоры ответа (pnpm check-grounding, этап 5b).
 const groundingSettingsSchema = z.object({
   // С какого сходства claim и строки увиденного подсвечивать пару как «про то же». Порог
@@ -255,6 +261,7 @@ export const harnessSettingsSchema = z.object({
     limit: 5,
   }),
   grounding: groundingSettingsSchema.default({ similarityThreshold: 0.87 }),
+  server: serverSettingsSchema.default({ port: 4317 }),
   prices: z.record(z.string(), modelPricesSchema).default({}),
   traces: tracesSettingsSchema,
 });
@@ -277,6 +284,7 @@ export type McpServerSettings = z.infer<typeof mcpServerSettingsSchema>;
 export type NetworkSettings = z.infer<typeof networkSettingsSchema>;
 export type NetworkRule = z.infer<typeof networkRuleSchema>;
 export type NetworkRoute = z.infer<typeof networkRouteSchema>;
+export type ServerSettings = z.infer<typeof serverSettingsSchema>;
 export type GroundingSettings = z.infer<typeof groundingSettingsSchema>;
 export type RetrievalSettings = z.infer<typeof retrievalSettingsSchema>;
 export type RetrievalMode = RetrievalSettings['mode'];

@@ -22,6 +22,12 @@ const typeScriptRules = {
     { selector: 'function', format: ['camelCase', 'PascalCase'] },
     { selector: 'typeLike', format: ['PascalCase'] },
     { selector: 'enumMember', format: ['PascalCase'] },
+    // Ключи типов маршрутов Fastify (Params, Querystring, Body…) — имена из его API.
+    {
+      selector: 'typeProperty',
+      filter: { regex: '^(Params|Querystring|Body|Headers|Reply)$', match: true },
+      format: null,
+    },
     // Поля внешних API приходят в snake_case (finish_reason, tool_calls).
     { selector: 'typeProperty', format: ['camelCase', 'snake_case'] },
     // Ключи в литералах объектов не проверяем: это HTTP-заголовки, JSON-поля

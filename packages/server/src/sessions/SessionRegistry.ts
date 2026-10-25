@@ -1,0 +1,114 @@
+// Сессии, запущенные через сервер, — в памяти. У каждой — все её события по порядку
+// (буфер) и подписчики, которым события идут вживую. Буфер нужен, чтобы браузер, подключившийся
+// позже или переподключившийся после обрыва, получил то, что пропустил: по Last-Event-ID.
+// Законченные сессии держим ограниченное число: их трейсы и так лежат на диске.
+
+import type { HarnessEvent } from '@harness-visualization/harness';
+
+const MAX_FINISHED_SESSIONS = 20;
+
+export type SessionStatus = 'running' | 'finished' | 'failed';
+
+export interface SessionSubscriber {
+  onEvent: (event: HarnessEvent) => void;
+  onEnd: (summary: SessionSummary) => void;
+}
+
+export interface SessionSummary {
+  sessionId: string;
+  question: string;
+  status: SessionStatus;
+  startedAt: string;
+  eventCount: number;
+  // Путь к трейсу от корня проекта; null — сессия ещё идёт.
+  tracePath: string | null;
+}
+
+interface SessionEntry {
+  summary: SessionSummary;
+  events: HarnessEvent[];
+  subscribers: Set<SessionSubscriber>;
+}
+
+export class SessionRegistry {
+  private readonly sessions = new Map<string, SessionEntry>();
+
+  // Сессию регистрирует первое из двух: её первое событие или ответ startSession, —
+  // какое придёт раньше, зависит от того, когда харнесс начнёт отправлять события.
+  ensure(sessionId: string, question: string): void {
+    if (this.sessions.has(sessionId)) {
+      return;
+    }
+    this.sessions.set(sessionId, {
+      summary: {
+        sessionId,
+        question,
+        status: 'running',
+        startedAt: new Date().toISOString(),
+        eventCount: 0,
+        tracePath: null,
+      },
+      events: [],
+      subscribers: new Set(),
+    });
+  }
+
+  record(event: HarnessEvent): void {
+    const entry = this.sessions.get(event.sessionId);
+    if (entry === undefined) {
+      return;
+    }
+    entry.events.push(event);
+    entry.summary.eventCount = entry.events.length;
+    for (const subscriber of entry.subscribers) {
+      subscriber.onEvent(event);
+    }
+  }
+
+  finish(sessionId: string, outcome: { failed: boolean; tracePath: string }): void {
+    const entry = this.sessions.get(sessionId);
+    if (entry === undefined) {
+      return;
+    }
+    entry.summary.status = outcome.failed ? 'failed' : 'finished';
+    entry.summary.tracePath = outcome.tracePath;
+    for (const subscriber of entry.subscribers) {
+      subscriber.onEnd({ ...entry.summary });
+    }
+    entry.subscribers.clear();
+    this.forgetOldFinished();
+  }
+
+  summary(sessionId: string): SessionSummary | null {
+    const entry = this.sessions.get(sessionId);
+    return entry === undefined ? null : { ...entry.summary };
+  }
+
+  list(): SessionSummary[] {
+    return [...this.sessions.values()].map((entry) => ({ ...entry.summary }));
+  }
+
+  // События после указанного sequence — то, что подписчик пропустил.
+  eventsAfter(sessionId: string, sequence: number): HarnessEvent[] {
+    const entry = this.sessions.get(sessionId);
+    return entry === undefined ? [] : entry.events.filter((event) => event.sequence > sequence);
+  }
+
+  // Возвращает функцию отписки: браузер может закрыть поток в любой момент.
+  subscribe(sessionId: string, subscriber: SessionSubscriber): () => void {
+    const entry = this.sessions.get(sessionId);
+    entry?.subscribers.add(subscriber);
+    return () => {
+      entry?.subscribers.delete(subscriber);
+    };
+  }
+
+  private forgetOldFinished(): void {
+    const finished = [...this.sessions.values()].filter(
+      (entry) => entry.summary.status !== 'running',
+    );
+    for (const entry of finished.slice(0, Math.max(0, finished.length - MAX_FINISHED_SESSIONS))) {
+      this.sessions.delete(entry.summary.sessionId);
+    }
+  }
+}
