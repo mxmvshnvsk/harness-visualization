@@ -70,10 +70,8 @@ const ROUTES: Routes = {
     label: `подмешано: ${event.toolName}`,
   }),
   query_rewritten: (event) => ({ from: 'harness', to: 'harness', label: `query: ${event.query}` }),
-  mcp_message: (event) =>
-    event.direction === 'to_server'
-      ? { from: 'harness', to: 'mcp', label: 'JSON-RPC' }
-      : { from: 'mcp', to: 'harness', label: 'JSON-RPC' },
+  // mcp_message на схеме не рисуем: каждый вызов tool MCP-сервера уже показан парой
+  // tool_call и tool_result, а JSON-RPC — их транспорт; он виден в «Сырых событиях».
   mcp_server_ready: (event) => ({ from: 'mcp', to: 'mcp', label: `${event.serverName}: готов` }),
   network_request: (event, context) =>
     event.host === context.modelHost

@@ -65,87 +65,162 @@
   font-family: var(--font-mono);
 }
 
-.packet rect {
+.packetLabel rect {
   fill: var(--raised);
   stroke-width: 1.5;
 }
 
-.packet text {
+.packetLabel text {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: var(--weight-medium);
 }
 
-/* Цвет пакета и активного узла — цвет группы события, как во всём интерфейсе. */
+/* Подпись проявляется, пока летит точка, — читать неподвижный текст легче. */
+.packetLabel {
+  animation: appear var(--travel) ease-out both;
+}
+
+.dot {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+/* Адресат вспыхивает, когда точка долетела. */
+.pulse {
+  fill: none;
+  stroke-width: 3;
+  opacity: 0;
+  animation: pulse 700ms ease-out var(--travel) both;
+}
+
+/* Ожидание: бегущая рамка — модель думает, tool выполняется, ждём пользователя. */
+.waiting {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+  stroke-dasharray: 8 6;
+  animation: march 1.2s linear infinite;
+}
+
+.nodeWaiting {
+  fill: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.9;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes march {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .packetLabel,
+  .pulse,
+  .waiting {
+    animation: none;
+  }
+}
+
+/* Цвет группы события: рамка активного узла, подпись и точка пакета — как во всём интерфейсе. */
 .node[data-group='dialog'] rect,
-.packet[data-group='dialog'] rect {
+.packet[data-group='dialog'] .packetLabel rect {
   stroke: var(--dialog);
 }
 
-.packet[data-group='dialog'] text {
+.packet[data-group='dialog'] .packetLabel text,
+.packet[data-group='dialog'] .dot {
   fill: var(--dialog);
 }
 
 .node[data-group='model'] rect,
-.packet[data-group='model'] rect {
+.packet[data-group='model'] .packetLabel rect {
   stroke: var(--model);
 }
 
-.packet[data-group='model'] text {
+.packet[data-group='model'] .packetLabel text,
+.packet[data-group='model'] .dot {
   fill: var(--model);
 }
 
 .node[data-group='tool'] rect,
-.packet[data-group='tool'] rect {
+.packet[data-group='tool'] .packetLabel rect {
   stroke: var(--tool);
 }
 
-.packet[data-group='tool'] text {
+.packet[data-group='tool'] .packetLabel text,
+.packet[data-group='tool'] .dot {
   fill: var(--tool);
 }
 
 .node[data-group='permission'] rect,
-.packet[data-group='permission'] rect {
+.packet[data-group='permission'] .packetLabel rect {
   stroke: var(--permission);
 }
 
-.packet[data-group='permission'] text {
+.packet[data-group='permission'] .packetLabel text,
+.packet[data-group='permission'] .dot {
   fill: var(--permission);
 }
 
 .node[data-group='retrieval'] rect,
-.packet[data-group='retrieval'] rect {
+.packet[data-group='retrieval'] .packetLabel rect {
   stroke: var(--retrieval);
 }
 
-.packet[data-group='retrieval'] text {
+.packet[data-group='retrieval'] .packetLabel text,
+.packet[data-group='retrieval'] .dot {
   fill: var(--retrieval);
 }
 
 .node[data-group='judge'] rect,
-.packet[data-group='judge'] rect {
+.packet[data-group='judge'] .packetLabel rect {
   stroke: var(--judge);
 }
 
-.packet[data-group='judge'] text {
+.packet[data-group='judge'] .packetLabel text,
+.packet[data-group='judge'] .dot {
   fill: var(--judge);
 }
 
 .node[data-group='error'] rect,
-.packet[data-group='error'] rect {
+.packet[data-group='error'] .packetLabel rect {
   stroke: var(--error);
 }
 
-.packet[data-group='error'] text {
+.packet[data-group='error'] .packetLabel text,
+.packet[data-group='error'] .dot {
   fill: var(--error);
 }
 
 .node[data-group='meta'] rect,
-.packet[data-group='meta'] rect {
+.packet[data-group='meta'] .packetLabel rect {
   stroke: var(--meta);
 }
 
-.packet[data-group='meta'] text {
+.packet[data-group='meta'] .packetLabel text,
+.packet[data-group='meta'] .dot {
   fill: var(--meta);
 }
 

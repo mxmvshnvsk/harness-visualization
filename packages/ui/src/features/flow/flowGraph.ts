@@ -82,3 +82,33 @@ export const FLOW_EDGES: readonly [FlowNodeId, FlowNodeId][] = [
   ['harness', 'tools'],
   ['tools', 'network'],
 ];
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+// Точка на краю узла в сторону другого узла: пакет вылетает из края и прилетает к краю,
+// а не к центру — там название узла.
+export function boundaryPoint(node: FlowNode, toward: FlowNode): Point {
+  const dx = toward.x - node.x;
+  const dy = toward.y - node.y;
+  if (dx === 0 && dy === 0) {
+    return { x: node.x, y: node.y };
+  }
+  const scale = Math.min(
+    dx === 0 ? Number.POSITIVE_INFINITY : node.width / 2 / Math.abs(dx),
+    dy === 0 ? Number.POSITIVE_INFINITY : node.height / 2 / Math.abs(dy),
+  );
+  return { x: node.x + dx * scale, y: node.y + dy * scale };
+}
+
+// Где стоит подпись пакета: посередине между краями узлов; у события внутри узла — над ним.
+export function labelAnchor(from: FlowNode, to: FlowNode): Point {
+  if (from.id === to.id) {
+    return { x: from.x, y: from.y - from.height / 2 - 22 };
+  }
+  const start = boundaryPoint(from, to);
+  const end = boundaryPoint(to, from);
+  return { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
+}

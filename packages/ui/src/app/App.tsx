@@ -10,13 +10,15 @@ import { useServerList } from '../api/useServerList';
 import { EmptyState } from '../components/EmptyState';
 import { Segmented } from '../components/Segmented';
 import { EventList } from '../features/EventList';
-import { FlowView } from '../features/flow/FlowView';
+import { eventToPacket } from '../features/flow/eventToPacket';
+import { FlowView, useFlowContext } from '../features/flow/FlowView';
 import { InspectorView } from '../features/inspector/InspectorView';
 import { TokenomicsLine } from '../features/TokenomicsLine';
 import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
 import { PlayerBar } from '../player/PlayerBar';
+import { isNotService, type IsShown } from '../player/playback';
 import { usePlayer } from '../player/usePlayer';
 import { projectSession } from '../projections/projectSession';
 import styles from './App.module.css';
@@ -97,14 +99,23 @@ interface StreamViewsProps {
 // Оба вида строятся из событий до курсора плеера — повтор и перемотка работают в обоих.
 function StreamViews({ events, live }: StreamViewsProps): ReactElement {
   const [viewName, setViewName] = useState<ViewName>('flow');
-  const player = usePlayer(events);
+  const flowContext = useFlowContext(events);
+  // Что видно в виде, задаёт темп плеера: на «Потоке» — события с пакетом на схеме.
+  const isShown = useMemo<IsShown>(
+    () =>
+      viewName === 'flow' ? (event) => eventToPacket(event, flowContext) !== null : isNotService,
+    [viewName, flowContext],
+  );
+  const player = usePlayer(events, isShown);
   const shown = useMemo(() => events.slice(0, player.cursor), [events, player.cursor]);
   // Проекция — чистая функция событий: пересчитываем, только когда изменился срез.
   const view = useMemo(() => projectSession(shown), [shown]);
   return (
     <div className={styles.views}>
       <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
-      {viewName === 'flow' && <FlowView events={shown} speed={player.speed} />}
+      {viewName === 'flow' && (
+        <FlowView events={shown} context={flowContext} speed={player.speed} />
+      )}
       {viewName === 'inspector' && <InspectorView view={view} />}
       {viewName === 'events' && <EventList events={shown} />}
       <div className={styles.dock}>

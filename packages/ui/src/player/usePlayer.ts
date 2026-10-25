@@ -7,7 +7,7 @@
 
 import type { HarnessEvent } from '@harness-visualization/harness';
 import { useEffect, useState } from 'react';
-import { delayBefore, stepCursor, type Speed } from './playback';
+import { delayBefore, isNotService, stepCursor, type IsShown, type Speed } from './playback';
 
 export interface Player {
   // Сколько событий показано.
@@ -31,7 +31,11 @@ interface PlayerState {
   speed: Speed;
 }
 
-export function usePlayer(events: readonly HarnessEvent[]): Player {
+// isShown — что видно в текущем виде: от этого зависят темп воспроизведения и шаги кнопками.
+export function usePlayer(
+  events: readonly HarnessEvent[],
+  isShown: IsShown = isNotService,
+): Player {
   const [state, setState] = useState<PlayerState>(initialState);
   const total = events.length;
   const cursor = state.following ? total : Math.min(state.cursor, total);
@@ -51,16 +55,14 @@ export function usePlayer(events: readonly HarnessEvent[]): Player {
             : { ...current, cursor: cursor + 1 },
         );
       },
-      delayBefore(events, cursor, state.speed),
+      delayBefore(events, cursor, state.speed, isShown),
     );
     return () => {
       clearTimeout(timer);
     };
-  }, [playing, cursor, total, events, state.speed]);
+  }, [playing, cursor, total, events, state.speed, isShown]);
 
-  useEffect(() => {
-    writeAtParam(state.following ? null : cursor);
-  }, [state.following, cursor]);
+  useAtParam(state.following ? null : cursor);
 
   const stopAt = (next: number): void => {
     setState((current) => ({ ...current, playing: false, following: false, cursor: next }));
@@ -85,7 +87,7 @@ export function usePlayer(events: readonly HarnessEvent[]): Player {
       stopAt(cursor);
     },
     step: (direction) => {
-      stopAt(stepCursor(events, cursor, direction));
+      stopAt(stepCursor(events, cursor, direction, isShown));
     },
     seek: stopAt,
     follow: () => {
@@ -95,6 +97,13 @@ export function usePlayer(events: readonly HarnessEvent[]): Player {
       setState((current) => ({ ...current, speed }));
     },
   };
+}
+
+// Позиция — в адресе (?at=), пока курсор не следует за последним событием.
+function useAtParam(cursor: number | null): void {
+  useEffect(() => {
+    writeAtParam(cursor);
+  }, [cursor]);
 }
 
 function initialState(): PlayerState {

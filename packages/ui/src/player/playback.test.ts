@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { EventLog, sessionStarted } from '../projections/testEvents';
-import { delayBefore, elapsedAt, MAX_DELAY_MS, MIN_DELAY_MS, stepCursor } from './playback';
+import { delayBefore, elapsedAt, MAX_SHOWN_MS, MIN_SHOWN_MS, stepCursor } from './playback';
 
 // В фабрике событий между соседними событиями 100 мс.
 function log(): EventLog {
@@ -20,17 +20,28 @@ function log(): EventLog {
 }
 
 describe('delayBefore', () => {
-  it('пауза как в записи, делённая на скорость', () => {
-    expect(delayBefore(log().events, 1, 1)).toBe(100);
-    expect(delayBefore(log().events, 1, 0.5)).toBe(200);
+  it('видимое событие — пауза как в записи, но не короче минимума, делённая на скорость', () => {
+    // Между user_message и assistant_message в записи 100 мс — меньше минимума.
+    expect(delayBefore(log().events, 4, 1)).toBe(MIN_SHOWN_MS);
+    expect(delayBefore(log().events, 4, 2)).toBe(MIN_SHOWN_MS / 2);
   });
 
-  it('не короче минимума и не длиннее максимума', () => {
-    expect(delayBefore(log().events, 1, 4)).toBe(MIN_DELAY_MS);
+  it('невидимое событие проходит сразу', () => {
+    // Следующее после session_started — mcp_server_log, служебное.
+    expect(delayBefore(log().events, 1, 1)).toBe(0);
+  });
+
+  it('долгая пауза в записи сжимается до максимума', () => {
     const slow = log().events.map((event, index) =>
-      index === 1 ? { ...event, timestamp: '2026-10-25T10:00:00.000Z' } : event,
+      index === 4 ? { ...event, timestamp: '2026-10-25T10:00:00.000Z' } : event,
     );
-    expect(delayBefore(slow, 1, 1)).toBe(MAX_DELAY_MS);
+    expect(delayBefore(slow, 4, 1)).toBe(MAX_SHOWN_MS);
+  });
+
+  it('что видно, решает вид', () => {
+    const everything = (): boolean => true;
+    expect(delayBefore(log().events, 1, 1, everything)).toBe(MIN_SHOWN_MS);
+    expect(stepCursor(log().events, 1, 'forward', everything)).toBe(2);
   });
 });
 
