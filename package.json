@@ -23,7 +23,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm run typecheck && pnpm run lint && pnpm run format:check"
+    "test": "pnpm --filter @harness-visualization/harness... run build && pnpm --filter @harness-visualization/ui run test",
+    "check": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run test"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

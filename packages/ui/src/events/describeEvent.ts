@@ -2,8 +2,7 @@
 // Термины индустрии — по-английски (docs/code-style.md, «Термины в терминале и интерфейсе»).
 
 import type { HarnessEvent, HarnessEventType, TokenUsage } from '@harness-visualization/harness';
-
-type EventOfType<Type extends HarnessEventType> = Extract<HarnessEvent, { type: Type }>;
+import type { EventOfType } from './eventTypes';
 
 // Для каждого типа — своя функция, и tsc знает поля события этого типа.
 type Describers = { [Type in HarnessEventType]: (event: EventOfType<Type>) => string };

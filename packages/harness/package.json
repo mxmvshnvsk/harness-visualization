@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./tokenomics": {
+      "types": "./dist/tokenomics/browserSafe.d.ts",
+      "default": "./dist/tokenomics/browserSafe.js"
     }
   },
   "scripts": {

@@ -8,7 +8,7 @@
 
 import type { TokenUsage } from '../model/chatTypes.js';
 
-const WARM_SHARE_THRESHOLD = 0.1;
+export const WARM_SHARE_THRESHOLD = 0.1;
 
 export type CacheWarmth = 'cold' | 'warm';
 
