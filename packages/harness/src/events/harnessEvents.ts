@@ -13,6 +13,7 @@ import type { NetworkRequestInfo } from '../network/NetworkRouter.js';
 import type { PromptBudget } from '../context/promptBudget.js';
 import type { RetrievalMode } from '../settings/settingsSchema.js';
 import type { MemoryCommand } from '../memory/MemoryStore.js';
+import type { StepStatus } from '../progress/ProgressTracker.js';
 import type { SkillMode, SkillProblem, SkillTrigger } from '../skills/skillTypes.js';
 import type {
   RequestCost,
@@ -395,6 +396,16 @@ export interface MemoryUpdatedPayload {
   newPath: string | null;
 }
 
+// Модель прислала план тулом update_progress, харнесс записал его в progress.md (этап 6b).
+export interface ProgressUpdatedPayload {
+  type: 'progress_updated';
+  path: string;
+  // Какая это версия плана в сессии, с 1.
+  version: number;
+  goal: string;
+  steps: { title: string; status: StepStatus; note: string | null }[];
+}
+
 export interface AwaitingQuestionPayload {
   type: 'awaiting_question';
   // Сколько ходов диалога уже было.
@@ -455,6 +466,7 @@ export type HarnessEventPayload =
   | SkillLoadedPayload
   | MemoryLoadedPayload
   | MemoryUpdatedPayload
+  | ProgressUpdatedPayload
   | SessionFinishedPayload
   | ErrorPayload;
 

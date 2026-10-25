@@ -36,6 +36,8 @@ import type { SessionMemory } from '../agent/agentDependencies.js';
 import { createMemoryTool } from '../memory/createMemoryTool.js';
 import { MemoryStore } from '../memory/MemoryStore.js';
 import { MEMO_PATH, MEMORY_DIRECTORY } from '../memory/memoryPaths.js';
+import { createProgressTool } from '../progress/createProgressTool.js';
+import { ProgressTracker } from '../progress/ProgressTracker.js';
 import { createSkillTools } from '../skills/createSkillTools.js';
 import { loadSkills } from '../skills/loadSkills.js';
 import { SkillLibrary } from '../skills/SkillLibrary.js';
@@ -192,6 +194,9 @@ async function prepareSession(
   const workspace = new Workspace(workspaceDirectory);
   const skills = await prepareSkills(input, events);
   const memory = await prepareMemory(workspace, events);
+  // План прошлой сессии — не план этой: харнесс убирает progress.md до первого шага.
+  const progress = new ProgressTracker(workspace, events);
+  await progress.reset();
   const mcpServers = await connectMcpServers(settings.mcpServers, {
     projectRoot: input.projectRoot,
     events,
@@ -203,6 +208,7 @@ async function prepareSession(
     fetchImpl,
     skills,
     memory,
+    progress,
   });
   return { dependencies, mcpServers };
 }
@@ -269,6 +275,7 @@ interface SessionResources {
   fetchImpl: RoutedFetch;
   skills: SkillLibrary;
   memory: SessionMemory;
+  progress: ProgressTracker;
 }
 
 function createAgentDependencies(
@@ -288,6 +295,7 @@ function createAgentDependencies(
   const ownTools = [
     ...createFileTools(),
     createMemoryTool(resources.memory.store),
+    createProgressTool(resources.progress),
     ...createSkillTools(resources.skills),
     ...webTools,
   ];
@@ -321,6 +329,7 @@ function createAgentDependencies(
     mcpServerInstructions: resources.mcpServers.instructions,
     skills: resources.skills,
     memory: resources.memory,
+    progress: resources.progress,
     budget: budgetSettings(settings.context),
   };
 }

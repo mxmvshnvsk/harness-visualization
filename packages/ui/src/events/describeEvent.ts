@@ -77,6 +77,8 @@ const DESCRIBERS: Describers = {
       : `${event.memoPath} в system prompt: ${String(event.memoCharacters)} симв., файлов памяти ${String(event.files.length)}`,
   memory_updated: (event) =>
     `память: ${event.command} ${event.path}${event.newPath === null ? '' : ` → ${event.newPath}`}`,
+  progress_updated: (event) =>
+    `план v${String(event.version)}: ${event.goal} — сделано ${String(event.steps.filter((step) => step.status === 'done').length)} из ${String(event.steps.length)}`,
   awaiting_question: (event) => `ход ${String(event.turn)} закончен, ждём следующий вопрос`,
   session_finished: (event) =>
     [

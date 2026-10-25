@@ -10,6 +10,7 @@ import type { ModelPrices, PermissionsSettings } from '../settings/settingsSchem
 import type { ToolRegistry } from '../tools/ToolRegistry.js';
 import type { ToolContext } from '../tools/toolTypes.js';
 import type { MemoryStore } from '../memory/MemoryStore.js';
+import type { ProgressTracker } from '../progress/ProgressTracker.js';
 import type { SkillLibrary } from '../skills/SkillLibrary.js';
 import type { McpServerInstructions } from './systemPrompt.js';
 
@@ -52,6 +53,8 @@ export interface AgentDependencies {
   skills: SkillLibrary;
   // Память между сессиями (этап 6b): тул memory и memo.md в system prompt.
   memory: SessionMemory;
+  // План сессии из update_progress (этап 6b).
+  progress: ProgressTracker;
   // Сколько харнесс отводит prompt и как оценивает его размер (этап 6.2).
   budget: BudgetSettings;
   // Кто сжимает историю в сводку (этап 6.5): та же модель или указанная в context.compactionModel.

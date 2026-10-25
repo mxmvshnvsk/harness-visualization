@@ -30,6 +30,13 @@ const SKILL_TRIGGERS: Record<EventOfType<'skill_loaded'>['trigger'], string> = {
   user: 'пользователь командой /имя',
 };
 
+const PROGRESS_MARKS: Record<EventOfType<'progress_updated'>['steps'][number]['status'], string> = {
+  pending: '[ ]',
+  in_progress: '[~]',
+  done: '[x]',
+  blocked: '[!]',
+};
+
 const SKILL_MODES: Record<EventOfType<'skill_catalog'>['skills'][number]['mode'], string> = {
   always: 'always',
   on_demand: 'по выбору модели',
@@ -179,6 +186,18 @@ const EVENT_DESCRIBERS: EventDescribers = {
     styleText(
       'cyan',
       `    Память изменена: ${event.command} ${event.path}${event.newPath === null ? '' : ` → ${event.newPath}`}`,
+    ),
+  ],
+  progress_updated: (event) => [
+    styleText(
+      'cyan',
+      `    План v${String(event.version)} → ${event.path}: ${event.goal} — сделано ${String(event.steps.filter((step) => step.status === 'done').length)} из ${String(event.steps.length)}`,
+    ),
+    ...event.steps.map((step) =>
+      styleText(
+        'dim',
+        `      ${PROGRESS_MARKS[step.status]} ${step.title}${step.note === null ? '' : ` — ${step.note}`}`,
+      ),
     ),
   ],
   awaiting_question: (event) => [
