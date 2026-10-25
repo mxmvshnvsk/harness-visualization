@@ -17,6 +17,7 @@ import type {
 import type { AgentDependencies } from './agentDependencies.js';
 import { clearOldToolResults } from '../context/clearOldToolResults.js';
 import { compactHistory } from '../context/compactHistory.js';
+import { restoreAfterCompaction } from '../context/restoreAfterCompaction.js';
 import { estimatePromptBudget } from '../context/promptBudget.js';
 import { executeToolCall } from './executeToolCall.js';
 import { requestModel } from './requestModel.js';
@@ -194,9 +195,12 @@ async function compact(
       provider: compactionProvider,
     });
     if (compaction !== null) {
+      // Сводка — пересказ; инструкции скиллов, план и свежую память харнесс дописывает сам.
+      const restored = await restoreAfterCompaction(messages, dependencies);
       events.emit({
         type: 'history_compacted',
         ...compaction,
+        restored,
         beforeTokens,
         afterTokens: estimateTotal(),
         thresholdTokens,

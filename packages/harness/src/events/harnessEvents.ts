@@ -12,6 +12,7 @@ import type {
 import type { NetworkRequestInfo } from '../network/NetworkRouter.js';
 import type { PromptBudget } from '../context/promptBudget.js';
 import type { RetrievalMode } from '../settings/settingsSchema.js';
+import type { RestoredContext } from '../context/restoreAfterCompaction.js';
 import type { MemoryCommand } from '../memory/MemoryStore.js';
 import type { StepStatus } from '../progress/ProgressTracker.js';
 import type { SkillMode, SkillProblem, SkillTrigger } from '../skills/skillTypes.js';
@@ -345,6 +346,8 @@ export interface HistoryCompactedPayload {
   afterTokens: number;
   thresholdTokens: number;
   preset: string;
+  // Что харнесс дописал к сводке как есть (этап 6b.4); нет — трейс до 6b.
+  restored?: RestoredContext;
 }
 
 // Каталог скиллов при старте сессии (этап 6b): что модель увидит и в каком режиме.

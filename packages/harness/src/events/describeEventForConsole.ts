@@ -43,6 +43,20 @@ const SKILL_MODES: Record<EventOfType<'skill_catalog'>['skills'][number]['mode']
   manual: 'по команде /имя',
 };
 
+function describeRestored(restored: EventOfType<'history_compacted'>['restored']): string[] {
+  if (restored === undefined) {
+    return [];
+  }
+  const parts = [
+    ...(restored.memo ? ['текущий memo.md'] : []),
+    ...(restored.progress ? ['план'] : []),
+    ...restored.skills.map((name) => `скилл ${name}`),
+  ];
+  return parts.length === 0
+    ? []
+    : [styleText('yellow', `    к сводке дописано как есть: ${parts.join(', ')}`)];
+}
+
 function describeSkillCatalog(event: EventOfType<'skill_catalog'>): string[] {
   if (event.skills.length === 0 && event.problems.length === 0) {
     return [styleText('dim', `Скиллов нет (папка ${event.directory}).`)];
@@ -163,6 +177,7 @@ const EVENT_DESCRIBERS: EventDescribers = {
       `Харнесс сжал прошлые ходы в сводку: ${String(event.replacedMessages)} сообщений → 1, prompt ≈${formatNumber(event.beforeTokens)} → ≈${formatNumber(event.afterTokens)} токенов (порог ${formatNumber(event.thresholdTokens)}, ${event.preset})`,
     ),
     styleText('dim', `    сводка: ${shortenForPreview(event.summary)}`),
+    ...describeRestored(event.restored),
   ],
   skill_catalog: describeSkillCatalog,
   skill_loaded: (event) => [
