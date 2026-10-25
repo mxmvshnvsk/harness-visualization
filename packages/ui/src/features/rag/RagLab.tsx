@@ -9,6 +9,7 @@ import { Button } from '../../components/Button';
 import { Segmented } from '../../components/Segmented';
 import { COURSE_STEPS } from './course/courseContent';
 import { StepCheck } from './course/StepCheck';
+import { CourseNav } from './course/StepShell';
 import { StepChunks } from './course/StepChunks';
 import { StepClose } from './course/StepClose';
 import { StepMethods } from './course/StepMethods';
@@ -58,7 +59,7 @@ export function RagLab({ onBack }: { onBack: () => void }): ReactElement {
       )}
       {base.status === 'ready' && tab === 'course' && (
         <>
-          <StepNav current={step} onStep={go} />
+          <CourseNav steps={COURSE_STEPS} current={step} onStep={go} />
           <div className={styles.card}>
             <CourseStep index={step} base={base.value} onStep={go} />
           </div>
@@ -66,33 +67,6 @@ export function RagLab({ onBack }: { onBack: () => void }): ReactElement {
       )}
       {base.status === 'ready' && tab === 'data' && <DataTab base={base.value} />}
     </div>
-  );
-}
-
-function StepNav({
-  current,
-  onStep,
-}: {
-  current: number;
-  onStep: (index: number) => void;
-}): ReactElement {
-  return (
-    <ol className={styles.steps} aria-label="Шаги маршрута">
-      {COURSE_STEPS.map((step, index) => (
-        <li key={step.id}>
-          <button
-            type="button"
-            aria-current={index === current ? 'step' : undefined}
-            onClick={() => {
-              onStep(index);
-            }}
-          >
-            <small>шаг {index + 1}</small>
-            <span>{step.title}</span>
-          </button>
-        </li>
-      ))}
-    </ol>
   );
 }
 

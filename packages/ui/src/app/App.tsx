@@ -29,6 +29,7 @@ import { DialogPanel } from '../features/dialog/DialogPanel';
 import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
+import { McpLab } from '../features/mcp/McpLab';
 import { RagLab } from '../features/rag/RagLab';
 import { RetrievalView } from '../features/rag/session/RetrievalView';
 import { PlayerBar } from '../player/PlayerBar';
@@ -40,7 +41,7 @@ import { useTimeline } from '../timeline/useTimeline';
 import styles from './App.module.css';
 import { Sidebar } from './Sidebar';
 import { ThemeSwitch } from './ThemeSwitch';
-import { useSelection, type Selection } from './useSelection';
+import { useSelection, type LabName, type Selection } from './useSelection';
 
 export function App(): ReactElement {
   const [selection, select] = useSelection();
@@ -58,7 +59,7 @@ export function App(): ReactElement {
     <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} />
   );
   if (selection?.kind === 'lab') {
-    return <RagLab onBack={closeLab} />;
+    return <LabScreen lab={selection.lab} onBack={closeLab} />;
   }
   if (selection === null) {
     return <StartScreen onOpenLab={openLab}>{sources}</StartScreen>;
@@ -116,14 +117,21 @@ function useDrawer(select: (next: Selection | null) => void) {
   return { drawerOpen, setDrawerOpen, closeDrawer, pick };
 }
 
+function LabScreen({ lab, onBack }: { lab: LabName; onBack: () => void }): ReactElement {
+  return lab === 'rag' ? <RagLab onBack={onBack} /> : <McpLab onBack={onBack} />;
+}
+
 // Лаборатория RAG открывается со стартового экрана и из шапки, «назад» ведёт на старт.
 function useLabNavigation(pick: (next: Selection | null) => void): {
-  openLab: () => void;
+  openLab: (lab: LabName) => void;
   closeLab: () => void;
 } {
-  const openLab = useCallback(() => {
-    pick({ kind: 'lab' });
-  }, [pick]);
+  const openLab = useCallback(
+    (lab: LabName) => {
+      pick({ kind: 'lab', lab });
+    },
+    [pick],
+  );
   const closeLab = useCallback(() => {
     pick(null);
   }, [pick]);
@@ -150,7 +158,7 @@ interface TopbarProps {
   synthetic: boolean;
   stream: EventStream<StreamEnd>;
   onOpenSources: () => void;
-  onOpenLab: () => void;
+  onOpenLab: (lab: LabName) => void;
 }
 
 // Шапка: что открыто, и кнопки, открывающие панель с сессиями, трейсами и запуском.
@@ -160,8 +168,21 @@ function Topbar({ onOpenSources, onOpenLab, ...header }: TopbarProps): ReactElem
       <StreamHeader {...header} />
       <div className={styles.toolbar}>
         <ThemeSwitch />
-        <Button variant="quiet" onClick={onOpenLab}>
+        <Button
+          variant="quiet"
+          onClick={() => {
+            onOpenLab('rag');
+          }}
+        >
           Лаборатория RAG
+        </Button>
+        <Button
+          variant="quiet"
+          onClick={() => {
+            onOpenLab('mcp');
+          }}
+        >
+          Лаборатория MCP
         </Button>
         <Button variant="quiet" onClick={onOpenSources}>
           Сессии и трейсы
@@ -174,8 +195,24 @@ function Topbar({ onOpenSources, onOpenLab, ...header }: TopbarProps): ReactElem
   );
 }
 
+const LAB_ENTRIES: readonly { lab: LabName; title: string; text: string }[] = [
+  {
+    lab: 'rag',
+    title: 'Лаборатория RAG',
+    text: 'Как агент ищет в базе знаний, что такое векторы и почему найденное не гарантирует верный ответ.',
+  },
+  {
+    lab: 'mcp',
+    title: 'Лаборатория MCP',
+    text: 'Что такое тул для модели, как харнесс говорит с MCP-сервером, сколько стоят тулы и можно ли верить серверу.',
+  },
+];
+
 // Пока ничего не открыто — вопрос агенту и списки прямо на экране, без панели.
-function StartScreen(props: { children: ReactNode; onOpenLab: () => void }): ReactElement {
+function StartScreen(props: {
+  children: ReactNode;
+  onOpenLab: (lab: LabName) => void;
+}): ReactElement {
   return (
     <div className={styles.start}>
       <div className={styles.startIntro}>
@@ -189,13 +226,21 @@ function StartScreen(props: { children: ReactNode; onOpenLab: () => void }): Rea
           модель, политика, тулы, ответ.
         </p>
       </div>
-      <button type="button" className={styles.labEntry} onClick={props.onOpenLab}>
-        <b>Лаборатория RAG →</b>
-        <span>
-          Учебный маршрут: как агент ищет в базе знаний, что такое векторы и почему найденное не
-          гарантирует верный ответ.
-        </span>
-      </button>
+      <div className={styles.labs}>
+        {LAB_ENTRIES.map((entry) => (
+          <button
+            key={entry.lab}
+            type="button"
+            className={styles.labEntry}
+            onClick={() => {
+              props.onOpenLab(entry.lab);
+            }}
+          >
+            <b>{entry.title} →</b>
+            <span>{entry.text}</span>
+          </button>
+        ))}
+      </div>
       {props.children}
     </div>
   );

@@ -9,6 +9,7 @@ import type {
   StartSessionResponse,
   TraceSummary,
   GroundingReportResponse,
+  McpCourseResponse,
 } from '@harness-visualization/server';
 
 export async function listSessions(): Promise<SessionSummary[]> {
@@ -59,6 +60,11 @@ export function traceEventsUrl(file: string): string {
 // Лаборатория RAG (этап 8b). Модели эмбеддингов нет — ServerError с кодом 503.
 export async function getRagBase(): Promise<LabBase> {
   return getJson('/api/rag/base');
+}
+
+// События записанной сессии курса MCP (examples/traces).
+export async function getMcpCourse(): Promise<McpCourseResponse> {
+  return getJson('/api/mcp/course');
 }
 
 export async function getRagIndex(): Promise<LabIndex> {

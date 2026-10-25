@@ -1,11 +1,16 @@
-// Что открыто: живая сессия сервера, записанный трейс или лаборатория RAG. Хранится в адресе
-// (?session=…, ?trace=… или ?lab=rag), поэтому ссылкой можно поделиться, а «назад» работает.
+// Что открыто: живая сессия сервера, записанный трейс или лаборатория (RAG, MCP). Хранится в адресе
+// (?session=…, ?trace=… или ?lab=rag | mcp), поэтому ссылкой можно поделиться, а «назад» работает.
 // null — ничего не открыто: стартовый экран.
 
 import { useCallback, useEffect, useState } from 'react';
 
+export type LabName = 'rag' | 'mcp';
+const LABS: readonly LabName[] = ['rag', 'mcp'];
+
 export type Selection =
-  { kind: 'session'; sessionId: string } | { kind: 'trace'; file: string } | { kind: 'lab' };
+  | { kind: 'session'; sessionId: string }
+  | { kind: 'trace'; file: string }
+  | { kind: 'lab'; lab: LabName };
 
 export function useSelection(): [Selection | null, (selection: Selection | null) => void] {
   const [selection, setSelection] = useState(readSelection);
@@ -36,15 +41,16 @@ function queryOf(selection: Selection): string {
   } else if (selection.kind === 'trace') {
     params.set('trace', selection.file);
   } else {
-    params.set('lab', 'rag');
+    params.set('lab', selection.lab);
   }
   return params.toString();
 }
 
 function readSelection(): Selection | null {
   const params = new URLSearchParams(window.location.search);
-  if (params.get('lab') === 'rag') {
-    return { kind: 'lab' };
+  const lab = LABS.find((name) => name === params.get('lab'));
+  if (lab !== undefined) {
+    return { kind: 'lab', lab };
   }
   const sessionId = params.get('session');
   if (sessionId !== null) {
