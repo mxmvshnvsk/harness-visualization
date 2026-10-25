@@ -348,6 +348,20 @@ const HANDLERS: Handlers = {
       },
     );
   },
+  history_compacted: (builder, event, at) => {
+    addInside(
+      builder,
+      { event, at },
+      {
+        node: 'context',
+        group: 'model',
+        out: `сводка: ${String(event.replacedMessages)} → 1 · ≈${String(event.beforeTokens)} → ≈${String(event.afterTokens)}`,
+        what: 'Харнесс заменил прошлые ходы сводкой',
+        detail:
+          'история с начала изменилась — кэш prompt после system и описаний тулов не совпадёт',
+      },
+    );
+  },
   network_request: (builder, event, at) => {
     if (event.host === builder.context.modelHost) {
       return;
@@ -557,6 +571,18 @@ function describeModelRequest(event: EventOfType<'model_request'>): ExchangeStar
         out: 'вопрос судье',
         what: 'Судья оценивает claim ответа',
         detail: 'служебный запрос харнесса, не шаг агента',
+      };
+    case 'compaction':
+      // Сводку заказывает часть «Контекст и prompt» — через тот же клиент модели, что у цикла.
+      return {
+        ...base,
+        route: ['context', 'loop', 'model'],
+        busy: 'пишет сводку…',
+        group: 'model',
+        out: 'сжать историю',
+        what: 'Модель сжимает прошлые ходы в сводку',
+        detail:
+          'служебный запрос харнесса: prompt дорос до порога, а очистки результатов тулов не хватило',
       };
   }
 }

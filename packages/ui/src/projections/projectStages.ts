@@ -93,6 +93,10 @@ const DESCRIBE: Describers = {
     code: null,
     text: `харнесс убрал старые результаты тулов (${String(event.cleared.length)}: ${event.cleared.map((item) => item.toolName).join(', ')}): prompt ≈${format(event.beforeTokens)} → ≈${format(event.afterTokens)}, порог ${format(event.thresholdTokens)}; начало prompt изменилось — кэш дальше не совпадёт`,
   }),
+  history_compacted: (event) => ({
+    code: null,
+    text: `харнесс заменил прошлые ходы сводкой (${String(event.replacedMessages)} сообщений → 1): prompt ≈${format(event.beforeTokens)} → ≈${format(event.afterTokens)}; история с начала изменилась — кэш не совпадёт`,
+  }),
   assistant_message: (event) => ({ code: null, text: shorten(event.text) }),
   awaiting_question: (event) => ({
     code: null,
@@ -116,27 +120,47 @@ export function projectStages(events: readonly HarnessEvent[]): Stage[] {
       names.set(event.toolCallId, event.toolName);
     }
     openStageFor(stages, event, index);
-    const describe = DESCRIBE[event.type] as
-      | ((
-          event: HarnessEvent,
-          names: Map<string, string>,
-        ) => Pick<StageRow, 'code' | 'text'> | null)
-      | undefined;
-    const row = describe?.(event, names);
     const stage = stages.at(-1);
-    if (row && stage !== undefined) {
-      stage.rows.push({ ...row, index, at: Date.parse(event.timestamp) - startedAt });
-      stage.lastIndex = index;
-    }
-    if (event.type === 'model_response' && stage?.requestId === event.requestId) {
-      stage.badge =
-        event.reply.toolCalls.length > 0
-          ? `tool_calls: ${String(event.reply.toolCalls.length)}`
-          : 'текст';
+    if (stage !== undefined) {
+      addRow(stage, event, { index, at: Date.parse(event.timestamp) - startedAt, names });
+      noteRequest(stage, event);
     }
   });
   // Подготовка без строк — например, у трейса без запуска MCP — не показываем.
   return stages.filter((stage) => stage.rows.length > 0);
+}
+
+interface RowPlace {
+  index: number;
+  at: number;
+  names: Map<string, string>;
+}
+
+function addRow(stage: Stage, event: HarnessEvent, { index, at, names }: RowPlace): void {
+  const describe = DESCRIBE[event.type] as
+    | ((event: HarnessEvent, names: Map<string, string>) => Pick<StageRow, 'code' | 'text'> | null)
+    | undefined;
+  const row = describe?.(event, names);
+  if (row) {
+    stage.rows.push({ ...row, index, at });
+    stage.lastIndex = index;
+  }
+}
+
+// Запрос, который раскрывает «Подробнее»: у шага — свой; у подготовки и вопроса — первый
+// служебный (переформулировка, сводка). Пометка шага — что ответила модель.
+function noteRequest(stage: Stage, event: HarnessEvent): void {
+  if (event.type === 'model_request' && event.purpose !== 'agentStep' && stage.requestId === null) {
+    stage.requestId = event.requestId;
+  }
+  if (
+    event.type === 'model_response' &&
+    stage.kind === 'agent' &&
+    stage.requestId === event.requestId
+  ) {
+    const calls = event.reply.toolCalls.length;
+    stage.badge = calls > 0 ? `tool_calls: ${String(calls)}` : 'текст';
+  }
 }
 
 // Шаг агента начинается запросом к модели, ответ пользователю — своим этапом, следующий вопрос
@@ -206,6 +230,7 @@ const PURPOSES: Record<EventOfType<'model_request'>['purpose'], string> = {
   agentStep: '',
   queryRewrite: ': переформулировать вопрос в поисковый query',
   groundingJudge: ': судья оценивает claim',
+  compaction: ': сжать прошлые ходы в сводку',
 };
 
 // Бюджет — оценка до ответа: «prompt ≈ 4 600 из 12 000».

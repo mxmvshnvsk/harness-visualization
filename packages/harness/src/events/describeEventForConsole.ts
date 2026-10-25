@@ -120,6 +120,13 @@ const EVENT_DESCRIBERS: EventDescribers = {
       `    убраны: ${event.cleared.map((item) => `${item.toolName} ≈${formatNumber(item.tokens)}`).join(', ')} — начало prompt изменилось, кэш с этого места не совпадёт`,
     ),
   ],
+  history_compacted: (event) => [
+    styleText(
+      'yellow',
+      `Харнесс сжал прошлые ходы в сводку: ${String(event.replacedMessages)} сообщений → 1, prompt ≈${formatNumber(event.beforeTokens)} → ≈${formatNumber(event.afterTokens)} токенов (порог ${formatNumber(event.thresholdTokens)}, ${event.preset})`,
+    ),
+    styleText('dim', `    сводка: ${shortenForPreview(event.summary)}`),
+  ],
   awaiting_question: (event) => [
     styleText(
       'dim',
@@ -196,6 +203,15 @@ function describePromptAssembled(event: EventOfType<'prompt_assembled'>): string
 
 function describeModelRequest(event: EventOfType<'model_request'>): string[] {
   const target = `${event.method} ${event.url} · effort ${event.reasoningEffort}`;
+  if (event.purpose === 'compaction') {
+    return [
+      styleText(
+        'cyan',
+        `Харнесс → модель (служебный запрос: сжать прошлые ходы в сводку, без тулов): ${target}`,
+      ),
+      ...describeBudget(event.budget),
+    ];
+  }
   if (event.purpose === 'groundingJudge') {
     return [styleText('cyan', `Харнесс → модель (судья: оценить claim, без тулов): ${target}`)];
   }

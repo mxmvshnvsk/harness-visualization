@@ -101,6 +101,8 @@ const contextSettingsSchema = z.object({
   // До какой доли лимита чистить старые результаты тулов, если порог пройден (этап 6.4):
   // сразу пачкой, чтобы кэш prompt ломался реже.
   clearTargetPercent: z.number().min(5).max(100).default(60),
+  // Модель для компакции истории (этап 6.5); null — та же, что у агента.
+  compactionModel: z.string().min(1).nullable().default(null),
   // Символов на токен в оценке разбивки (context/promptBudget.ts): подобрано по трейсам.
   charsPerToken: z.number().positive().default(3.24),
 });
@@ -290,6 +292,7 @@ export const harnessSettingsSchema = z.object({
     toolResultLimits: { demo: 1500, stress: 800, real: 25000 },
     thresholdPercent: 80,
     clearTargetPercent: 60,
+    compactionModel: null,
     charsPerToken: 3.24,
   }),
   workspace: workspaceSettingsSchema,

@@ -165,6 +165,8 @@ function describePurpose(call: ModelCall): string {
       return 'Переформулировка запроса · queryRewrite';
     case 'groundingJudge':
       return 'Вопрос судье · groundingJudge';
+    case 'compaction':
+      return 'Сводка истории · compaction';
   }
 }
 

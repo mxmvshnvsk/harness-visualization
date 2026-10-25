@@ -193,7 +193,8 @@ export interface PromptAssembledPayload {
 // Зачем харнесс обращается к модели: шаг цикла агента или служебный запрос харнесса —
 // переформулировать вопрос пользователя в поисковый запрос (retrieval rewrite)
 // или оценить claim ответа как судья (check-grounding --judge, этап 5b.3).
-export type ModelRequestPurpose = 'agentStep' | 'queryRewrite' | 'groundingJudge';
+// compaction — сжать прошлые ходы диалога в сводку (этап 6.5).
+export type ModelRequestPurpose = 'agentStep' | 'queryRewrite' | 'groundingJudge' | 'compaction';
 
 export interface ModelRequestPayload {
   type: 'model_request';
@@ -328,6 +329,21 @@ export interface ToolResultsClearedPayload {
   preset: string;
 }
 
+// Харнесс сжал прошлые ходы диалога в сводку (этап 6.5): сама сводка — ответ на служебный
+// запрос requestId (purpose: compaction). История с начала изменилась — кэш провайдера после
+// system prompt и описаний тулов не совпадёт.
+export interface HistoryCompactedPayload {
+  type: 'history_compacted';
+  requestId: string;
+  replacedMessages: number;
+  summary: string;
+  // Оценка prompt до и после, порог, ≈ токенов.
+  beforeTokens: number;
+  afterTokens: number;
+  thresholdTokens: number;
+  preset: string;
+}
+
 export interface AwaitingQuestionPayload {
   type: 'awaiting_question';
   // Сколько ходов диалога уже было.
@@ -383,6 +399,7 @@ export type HarnessEventPayload =
   | AwaitingQuestionPayload
   | ToolResultTruncatedPayload
   | ToolResultsClearedPayload
+  | HistoryCompactedPayload
   | SessionFinishedPayload
   | ErrorPayload;
 

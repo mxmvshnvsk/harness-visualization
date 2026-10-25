@@ -241,8 +241,18 @@ function createAgentDependencies(
     harnessOnlyTools.register(tool);
   }
 
+  const provider = new OpenAiCompatibleProvider(settings.model, modelApiKey, resources.fetchImpl);
+  const { compactionModel } = settings.context;
   return {
-    provider: new OpenAiCompatibleProvider(settings.model, modelApiKey, resources.fetchImpl),
+    provider,
+    compactionProvider:
+      compactionModel === null
+        ? provider
+        : new OpenAiCompatibleProvider(
+            { ...settings.model, model: compactionModel },
+            modelApiKey,
+            resources.fetchImpl,
+          ),
     events,
     prices: settings.prices,
     tools,

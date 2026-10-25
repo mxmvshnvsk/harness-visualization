@@ -16,6 +16,7 @@ import type {
 } from '../model/chatTypes.js';
 import type { AgentDependencies } from './agentDependencies.js';
 import { clearOldToolResults } from '../context/clearOldToolResults.js';
+import { compactHistory } from '../context/compactHistory.js';
 import { estimatePromptBudget } from '../context/promptBudget.js';
 import { executeToolCall } from './executeToolCall.js';
 import { requestModel } from './requestModel.js';
@@ -53,7 +54,7 @@ export async function runAgentTurn(
   events.emit({ type: 'prompt_assembled', messages: [...messages], toolNames: tools.names() });
 
   for (let iteration = 1; iteration <= options.maxIterations; iteration += 1) {
-    freeContextSpace(messages, dependencies, options.reasoningEffort);
+    await freeContextSpace(messages, dependencies, options.reasoningEffort);
     const { reply } = await requestModel(
       { messages, tools: tools.definitions(), reasoningEffort: options.reasoningEffort },
       dependencies,
@@ -110,12 +111,13 @@ function systemMessage(mcpInstructions: McpServerInstructions[]): ChatMessage {
   return { role: 'system', content: buildSystemPrompt(new Date(), mcpInstructions) };
 }
 
-// Перед запросом к модели: prompt дорос до порога — убрать старые результаты тулов (этап 6.4).
-function freeContextSpace(
+// Перед запросом к модели: prompt дорос до порога — сначала убрать старые результаты тулов
+// (этап 6.4), не хватило — сжать прошлые ходы в сводку (этап 6.5).
+async function freeContextSpace(
   messages: ChatMessage[],
   dependencies: AgentDependencies,
   reasoningEffort: ReasoningEffort,
-): void {
+): Promise<void> {
   const { budget, provider, tools, events } = dependencies;
   // Оценка — по телу запроса, как его соберёт провайдер: той же формулой, что бюджет.
   const estimateTotal = (): number =>
@@ -138,6 +140,43 @@ function freeContextSpace(
       targetTokens,
       preset: budget.preset,
     });
+  }
+  const beforeTokens = estimateTotal();
+  if (beforeTokens > thresholdTokens) {
+    await compact(messages, dependencies, { beforeTokens, thresholdTokens, estimateTotal });
+  }
+}
+
+interface CompactionContext {
+  beforeTokens: number;
+  thresholdTokens: number;
+  estimateTotal: () => number;
+}
+
+// Сводка — служебный запрос; не удался — продолжаем без неё: ошибка уже в model_error.
+async function compact(
+  messages: ChatMessage[],
+  dependencies: AgentDependencies,
+  { beforeTokens, thresholdTokens, estimateTotal }: CompactionContext,
+): Promise<void> {
+  const { events, budget, compactionProvider } = dependencies;
+  try {
+    const compaction = await compactHistory(messages, {
+      ...dependencies,
+      provider: compactionProvider,
+    });
+    if (compaction !== null) {
+      events.emit({
+        type: 'history_compacted',
+        ...compaction,
+        beforeTokens,
+        afterTokens: estimateTotal(),
+        thresholdTokens,
+        preset: budget.preset,
+      });
+    }
+  } catch {
+    // Пусть запрос уйдёт как есть: бюджет — учебный лимит харнесса, а не окно модели.
   }
 }
 

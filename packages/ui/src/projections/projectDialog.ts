@@ -89,10 +89,7 @@ const STATUSES: Partial<Record<HarnessEvent['type'], (event: HarnessEvent) => st
   prompt_assembled: () => 'харнесс собирает prompt',
   query_rewritten: () => 'харнесс ищет в базе знаний',
   context_retrieved: () => 'харнесс подмешивает найденное',
-  model_request: (event) =>
-    event.type === 'model_request' && event.purpose === 'agentStep'
-      ? `модель думает · шаг ${String(event.iteration ?? '?')}`
-      : 'служебный запрос к модели',
+  model_request: describeRequest,
   model_response: () => 'модель ответила — харнесс разбирает ответ',
   permission_evaluated: () => 'политика проверяет вызов',
   permission_requested: () => 'ждёт вашего разрешения',
@@ -101,4 +98,20 @@ const STATUSES: Partial<Record<HarnessEvent['type'], (event: HarnessEvent) => st
   tool_result: () => 'результат тула — в историю',
   tool_result_truncated: () => 'харнесс обрезает большой результат тула',
   tool_results_cleared: () => 'харнесс освобождает место в контексте',
+  history_compacted: () => 'харнесс заменил прошлые ходы сводкой',
 };
+
+function describeRequest(event: HarnessEvent): string {
+  if (event.type !== 'model_request') {
+    return 'запрос к модели';
+  }
+  switch (event.purpose) {
+    case 'agentStep':
+      return `модель думает · шаг ${String(event.iteration ?? '?')}`;
+    case 'compaction':
+      return 'харнесс сжимает историю в сводку';
+    case 'queryRewrite':
+    case 'groundingJudge':
+      return 'служебный запрос к модели';
+  }
+}

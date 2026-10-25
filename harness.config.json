@@ -85,6 +85,7 @@
     "toolResultLimits": { "demo": 1500, "stress": 800, "real": 25000 },
     "thresholdPercent": 80,
     "clearTargetPercent": 60,
+    "compactionModel": null,
     "charsPerToken": 3.24
   },
   "workspace": {

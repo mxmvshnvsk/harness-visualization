@@ -34,6 +34,7 @@ const EVENT_GROUPS: Record<HarnessEventType, EventGroup> = {
   awaiting_question: 'dialog',
   tool_result_truncated: 'model',
   tool_results_cleared: 'model',
+  history_compacted: 'model',
   session_finished: 'meta',
   error: 'error',
 };

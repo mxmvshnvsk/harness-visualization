@@ -42,4 +42,6 @@ export interface AgentDependencies {
   mcpServerInstructions: McpServerInstructions[];
   // Сколько харнесс отводит prompt и как оценивает его размер (этап 6.2).
   budget: BudgetSettings;
+  // Кто сжимает историю в сводку (этап 6.5): та же модель или указанная в context.compactionModel.
+  compactionProvider: ModelProvider;
 }
