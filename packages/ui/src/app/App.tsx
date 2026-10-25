@@ -14,6 +14,8 @@ import { InspectorView } from '../features/inspector/InspectorView';
 import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
+import { PlayerBar } from '../player/PlayerBar';
+import { usePlayer } from '../player/usePlayer';
 import { projectSession } from '../projections/projectSession';
 import styles from './App.module.css';
 import { Sidebar } from './Sidebar';
@@ -64,7 +66,11 @@ export function App(): ReactElement {
                 stream={stream}
               />
               {/* key: другая сессия или трейс — выбор в инспекторе начинается заново. */}
-              <StreamViews key={streamUrl(selection)} events={stream.events} />
+              <StreamViews
+                key={streamUrl(selection)}
+                events={stream.events}
+                live={selection.kind === 'session' && stream.state !== 'ended'}
+              />
             </section>
           )}
         </div>
@@ -80,14 +86,23 @@ const VIEWS = [
 
 type ViewName = (typeof VIEWS)[number]['value'];
 
-function StreamViews({ events }: { events: HarnessEvent[] }): ReactElement {
+interface StreamViewsProps {
+  events: HarnessEvent[];
+  live: boolean;
+}
+
+// Оба вида строятся из событий до курсора плеера — повтор и перемотка работают в обоих.
+function StreamViews({ events, live }: StreamViewsProps): ReactElement {
   const [viewName, setViewName] = useState<ViewName>('inspector');
-  // Проекция — чистая функция событий: пересчитываем, только когда пришли новые.
-  const view = useMemo(() => projectSession(events), [events]);
+  const player = usePlayer(events);
+  const shown = useMemo(() => events.slice(0, player.cursor), [events, player.cursor]);
+  // Проекция — чистая функция событий: пересчитываем, только когда изменился срез.
+  const view = useMemo(() => projectSession(shown), [shown]);
   return (
     <div className={styles.views}>
       <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
-      {viewName === 'inspector' ? <InspectorView view={view} /> : <EventList events={events} />}
+      {viewName === 'inspector' ? <InspectorView view={view} /> : <EventList events={shown} />}
+      <PlayerBar player={player} events={events} live={live} />
     </div>
   );
 }
