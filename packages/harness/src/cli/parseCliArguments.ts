@@ -3,6 +3,7 @@
 //   pnpm chat --effort off "вопрос"   — уровень рассуждений: off, low, high, max
 //   pnpm chat --search yandex "вопрос" — поисковый провайдер: tavily или yandex
 //   pnpm chat --retrieval auto "вопрос" — кто ищет в базе знаний: tool (модель) или auto (харнесс)
+//   pnpm chat --retrieval auto --retrieval-tool kedr__hybrid_search "вопрос" — каким тулом ищет харнесс
 //   pnpm chat --fresh "вопрос"        — начать с чистой рабочей папки (пересоздать из примеров)
 //   pnpm chat --verbose "вопрос"      — печатать и полные события в JSON
 
@@ -24,6 +25,8 @@ export interface CliOptions {
   searchProvider: SearchProviderName | null;
   // null — флаг не передан, берём режим из harness.config.json.
   retrievalMode: RetrievalMode | null;
+  // null — тул поиска харнесса из harness.config.json (retrieval.toolName).
+  retrievalToolName: string | null;
   freshWorkspace: boolean;
   verbose: boolean;
 }
@@ -36,6 +39,7 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
       effort: { type: 'string' },
       search: { type: 'string' },
       retrieval: { type: 'string' },
+      'retrieval-tool': { type: 'string' },
       fresh: { type: 'boolean', default: false },
       verbose: { type: 'boolean', default: false },
     },
@@ -46,6 +50,7 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
     reasoningEffort: values.effort === undefined ? null : parseReasoningEffort(values.effort),
     searchProvider: values.search === undefined ? null : parseSearchProvider(values.search),
     retrievalMode: values.retrieval === undefined ? null : parseRetrievalMode(values.retrieval),
+    retrievalToolName: values['retrieval-tool'] ?? null,
     freshWorkspace: values.fresh,
     verbose: values.verbose,
   };

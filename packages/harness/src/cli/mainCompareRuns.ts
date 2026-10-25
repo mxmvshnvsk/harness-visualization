@@ -1,11 +1,14 @@
-// Точка входа pnpm compare-runs: одни и те же вопросы по нескольку раз в каждом режиме поиска
-// (модель ищет сама — tool, харнесс подмешивает найденное — auto) и сводка с разбросом.
-//   pnpm compare-runs                — все вопросы, по 3 прогона на режим
-//   pnpm compare-runs --runs 5       — по 5 прогонов
-//   pnpm compare-runs --question 2   — только второй вопрос
+// Точка входа pnpm compare-runs: одни и те же вопросы по нескольку раз в каждом варианте поиска
+// и сводка с разбросом. Варианты — в runComparison/comparisonVariants.ts:
+// tool (модель ищет сама), auto (харнесс подмешивает поиск по смыслу),
+// hybrid (харнесс подмешивает гибридный поиск).
+//   pnpm compare-runs                       — все вопросы и варианты, по 3 прогона
+//   pnpm compare-runs --runs 5              — по 5 прогонов
+//   pnpm compare-runs --question 2          — только второй вопрос
+//   pnpm compare-runs --variants tool,hybrid — только эти варианты
 //
-// Каждый прогон — обычная сессия со своим трейсом в traces/. Режимы чередуются
-// (tool, auto, tool, …): кэш промпта, прогретый предыдущей сессией, достаётся обоим поровну.
+// Каждый прогон — обычная сессия со своим трейсом в traces/. Варианты чередуются
+// (tool, auto, hybrid, tool, …): кэш промпта, прогретый предыдущей сессией, достаётся всем.
 // Рабочая папка у каждого прогона своя, временная, из примеров: заметки одного прогона
 // не должны влиять на другие. Действия, требующие разрешения, запрещаются — спросить некого.
 
@@ -20,17 +23,16 @@ import {
   COMPARISON_QUESTIONS,
   type ComparisonQuestion,
 } from '../runComparison/comparisonQuestions.js';
+import { RUN_VARIANTS, type RunVariant } from '../runComparison/comparisonVariants.js';
 import { summarizeRun, type RunSummary } from '../runComparison/summarizeRun.js';
 import { loadSettings, type LoadedSettings } from '../settings/loadSettings.js';
-import type { RetrievalMode } from '../settings/settingsSchema.js';
 import { runCliSession } from './runCliSession.js';
 
-const MODES: RetrievalMode[] = ['tool', 'auto'];
 const DEFAULT_RUNS = 3;
 const MAX_RUNS = 10;
 const COLUMN_WIDTHS = [8, 11, 10, 22, 15, 15, 11, 10, 10, 12];
 const COLUMN_TITLES = [
-  'режим',
+  'вариант',
   'запросов',
   'тулов',
   'вход, токенов',
@@ -45,6 +47,7 @@ const COLUMN_TITLES = [
 interface CompareRunsOptions {
   runs: number;
   questions: ComparisonQuestion[];
+  variants: RunVariant[];
 }
 
 interface ComparisonContext {
@@ -56,29 +59,15 @@ interface ComparisonContext {
   startedSessions: number;
 }
 
-type RunsByMode = Record<RetrievalMode, RunSummary[]>;
+// Имя варианта → итоги его прогонов.
+type RunsByVariant = Map<string, RunSummary[]>;
 
 async function main(): Promise<void> {
   const options = parseOptions(process.argv.slice(2));
   const projectRoot = process.cwd();
   const loadedSettings = await loadSettings(projectRoot);
-  const { model } = loadedSettings.settings;
-  const totalSessions = options.questions.length * MODES.length * options.runs;
-  console.log(
-    styleText(
-      'bold',
-      `Повторные прогоны: ${options.questions.length} вопр. × ${MODES.length} режима × ` +
-        `${options.runs} = ${totalSessions} сессий · ${model.model} · effort ${model.defaultReasoningEffort}`,
-    ),
-  );
-  console.log(
-    styleText(
-      'dim',
-      '«Прогрет к 1-му» — в скольких прогонах кэш промпта был прогрет уже к первому запросу: ' +
-        'начало запроса недавно отправляла предыдущая сессия или другая программа с тем же ключом. ' +
-        'Такой прогон дешевле не из-за режима.',
-    ),
-  );
+  const totalSessions = options.questions.length * options.variants.length * options.runs;
+  printIntroduction(options, loadedSettings, totalSessions);
   const context: ComparisonContext = {
     loadedSettings,
     projectRoot,
@@ -86,16 +75,17 @@ async function main(): Promise<void> {
     totalSessions,
     startedSessions: 0,
   };
-  const allRuns: RunsByMode = { tool: [], auto: [] };
+  const allRuns: RunsByVariant = new Map(options.variants.map((variant) => [variant.name, []]));
   try {
     for (const [index, question] of options.questions.entries()) {
       console.log(`\n${styleText('bold', `${index + 1}. «${question.query}»`)}`);
       console.log(styleText('dim', `   нужный документ: ${question.expectedDocumentId}`));
-      const runs = await runQuestion(question, options.runs, context);
+      const runs = await runQuestion(question, options, context);
       printTable(runs);
       printDocumentsRead(runs);
-      allRuns.tool.push(...runs.tool);
-      allRuns.auto.push(...runs.auto);
+      for (const [name, summaries] of runs) {
+        allRuns.get(name)?.push(...summaries);
+      }
     }
     console.log(`\n${styleText('bold', 'Все вопросы вместе')}`);
     printTable(allRuns);
@@ -108,32 +98,88 @@ async function main(): Promise<void> {
 function parseOptions(argumentList: string[]): CompareRunsOptions {
   const { values } = parseArgs({
     args: argumentList,
-    options: { runs: { type: 'string' }, question: { type: 'string' } },
+    options: {
+      runs: { type: 'string' },
+      question: { type: 'string' },
+      variants: { type: 'string' },
+    },
   });
-  const runs = values.runs === undefined ? DEFAULT_RUNS : Number(values.runs);
+  return {
+    runs: parseRuns(values.runs),
+    questions: parseQuestions(values.question),
+    variants: parseVariants(values.variants),
+  };
+}
+
+function parseRuns(value: string | undefined): number {
+  const runs = value === undefined ? DEFAULT_RUNS : Number(value);
   if (!Number.isInteger(runs) || runs < 1 || runs > MAX_RUNS) {
     throw new Error(`--runs: целое число от 1 до ${MAX_RUNS}`);
   }
-  if (values.question === undefined) {
-    return { runs, questions: COMPARISON_QUESTIONS };
+  return runs;
+}
+
+function parseQuestions(value: string | undefined): ComparisonQuestion[] {
+  if (value === undefined) {
+    return COMPARISON_QUESTIONS;
   }
-  const question = COMPARISON_QUESTIONS[Number(values.question) - 1];
+  const question = COMPARISON_QUESTIONS[Number(value) - 1];
   if (question === undefined) {
     throw new Error(`--question: номер от 1 до ${COMPARISON_QUESTIONS.length}`);
   }
-  return { runs, questions: [question] };
+  return [question];
 }
 
-// Режимы чередуются внутри каждого повтора, а не идут блоками.
+function parseVariants(value: string | undefined): RunVariant[] {
+  if (value === undefined) {
+    return RUN_VARIANTS;
+  }
+  return value.split(',').map((name) => {
+    const variant = RUN_VARIANTS.find((candidate) => candidate.name === name.trim());
+    if (variant === undefined) {
+      const known = RUN_VARIANTS.map((candidate) => candidate.name).join(', ');
+      throw new Error(`--variants: неизвестный вариант «${name}». Допустимые: ${known}`);
+    }
+    return variant;
+  });
+}
+
+function printIntroduction(
+  options: CompareRunsOptions,
+  loadedSettings: LoadedSettings,
+  totalSessions: number,
+): void {
+  const { model } = loadedSettings.settings;
+  console.log(
+    styleText(
+      'bold',
+      `Повторные прогоны: ${options.questions.length} вопр. × ${options.variants.length} вар. × ` +
+        `${options.runs} = ${totalSessions} сессий · ${model.model} · effort ${model.defaultReasoningEffort}`,
+    ),
+  );
+  for (const variant of options.variants) {
+    console.log(styleText('dim', `${variant.name} — ${variant.description}`));
+  }
+  console.log(
+    styleText(
+      'dim',
+      '«Прогрет к 1-му» — в скольких прогонах кэш промпта был прогрет уже к первому запросу: ' +
+        'начало запроса недавно отправляла предыдущая сессия или другая программа с тем же ключом. ' +
+        'Такой прогон дешевле не из-за варианта.',
+    ),
+  );
+}
+
+// Варианты чередуются внутри каждого повтора, а не идут блоками.
 async function runQuestion(
   question: ComparisonQuestion,
-  runs: number,
+  options: CompareRunsOptions,
   context: ComparisonContext,
-): Promise<RunsByMode> {
-  const results: RunsByMode = { tool: [], auto: [] };
-  for (let run = 1; run <= runs; run += 1) {
-    for (const mode of MODES) {
-      results[mode].push(await runOnce(question, mode, context));
+): Promise<RunsByVariant> {
+  const results: RunsByVariant = new Map(options.variants.map((variant) => [variant.name, []]));
+  for (let run = 1; run <= options.runs; run += 1) {
+    for (const variant of options.variants) {
+      results.get(variant.name)?.push(await runOnce(question, variant, context));
     }
   }
   return results;
@@ -141,7 +187,7 @@ async function runQuestion(
 
 async function runOnce(
   question: ComparisonQuestion,
-  mode: RetrievalMode,
+  variant: RunVariant,
   context: ComparisonContext,
 ): Promise<RunSummary> {
   context.startedSessions += 1;
@@ -152,7 +198,8 @@ async function runOnce(
     question: question.query,
     reasoningEffort: loadedSettings.settings.model.defaultReasoningEffort,
     searchProvider: null,
-    retrievalMode: mode,
+    retrievalMode: variant.retrievalMode,
+    retrievalToolName: variant.retrievalToolName,
     freshWorkspace: false,
     workspaceDirectory: join(context.temporaryRoot, `session-${context.startedSessions}`),
     verbose: false,
@@ -160,17 +207,17 @@ async function runOnce(
   });
   const events = await readTrace(join(projectRoot, result.tracePath));
   const summary = summarizeRun(events, question, result.failed);
-  console.log(styleText('dim', describeProgress(summary, mode, context, result.tracePath)));
+  console.log(styleText('dim', describeProgress(summary, variant, context, result.tracePath)));
   return summary;
 }
 
 function describeProgress(
   summary: RunSummary,
-  mode: RetrievalMode,
+  variant: RunVariant,
   context: ComparisonContext,
   tracePath: string,
 ): string {
-  const head = `   [${context.startedSessions}/${context.totalSessions}] ${mode}`;
+  const head = `   [${context.startedSessions}/${context.totalSessions}] ${variant.name}`;
   if (summary.failed) {
     return `${head}: ошибка — ${tracePath}`;
   }
@@ -184,17 +231,18 @@ function describeProgress(
   );
 }
 
-function printTable(runs: RunsByMode): void {
+function printTable(runs: RunsByVariant): void {
   console.log(styleText('dim', formatRow(COLUMN_TITLES)));
-  for (const mode of MODES) {
-    console.log(formatRow(describeAggregate(mode, aggregateRuns(runs[mode]))));
+  for (const [name, summaries] of runs) {
+    console.log(formatRow(describeAggregate(name, aggregateRuns(summaries))));
   }
 }
 
-function describeAggregate(mode: RetrievalMode, aggregate: RunsAggregate): string[] {
+// ✗2 у варианта — две сессии из прогонов прервались ошибкой; их трейсы — в строках хода работы.
+function describeAggregate(name: string, aggregate: RunsAggregate): string[] {
   const ofRuns = (count: number): string => `${count} из ${aggregate.runs}`;
   return [
-    aggregate.failed > 0 ? `${mode} ✗${aggregate.failed}` : mode,
+    aggregate.failed > 0 ? `${name} ✗${aggregate.failed}` : name,
     describeSpread(aggregate.modelRequests, formatNumber),
     describeSpread(aggregate.toolCalls, formatNumber),
     describeSpread(aggregate.inputTokens, formatTokens),
@@ -209,10 +257,6 @@ function describeAggregate(mode: RetrievalMode, aggregate: RunsAggregate): strin
   ];
 }
 
-// «Прогрет к 1-му» — кэш промпта прогрет уже к первому запросу сессии, то есть
-// предыдущей сессией или другой программой с тем же ключом, а не этой сессией.
-// Такой прогон дешевле не из-за режима — это нужно видеть, сравнивая стоимость.
-// ✗2 у режима — две сессии из прогонов прервались ошибкой; их трейсы — в строках хода работы.
 // «2» — если все прогоны совпали, иначе «2 (2–3)»: медиана и разброс.
 function describeSpread(spread: Spread, format: (value: number) => string): string {
   const median = format(spread.median);
@@ -232,26 +276,23 @@ function formatPercent(share: number): string {
 }
 
 function formatRow(cells: string[]): string {
-  return `   ${cells.map((cell, index) => cell.padEnd(COLUMN_WIDTHS[index] ?? 0)).join(' ')}`.trimEnd();
+  const padded = cells.map((cell, index) => cell.padEnd(COLUMN_WIDTHS[index] ?? 0));
+  return `   ${padded.join(' ')}`.trimEnd();
 }
 
-function printDocumentsRead(runs: RunsByMode): void {
-  for (const mode of MODES) {
-    const counts = aggregateRuns(runs[mode]).documentsRead;
+function printDocumentsRead(runs: RunsByVariant): void {
+  for (const [name, summaries] of runs) {
+    const counts = aggregateRuns(summaries).documentsRead;
     const described = [...counts.entries()].map(([documentId, count]) => `${documentId} ×${count}`);
-    console.log(
-      styleText(
-        'dim',
-        `   ${mode} читал целиком: ${described.length === 0 ? 'ничего' : described.join(', ')}`,
-      ),
-    );
+    const text = described.length === 0 ? 'ничего' : described.join(', ');
+    console.log(styleText('dim', `   ${name} читал целиком: ${text}`));
   }
 }
 
-function printTotalCost(runs: RunsByMode): void {
-  const parts = MODES.map((mode) => {
-    const total = aggregateRuns(runs[mode]).costUsdTotal;
-    return `${mode} ${total === null ? '?' : total.toFixed(6)} USD`;
+function printTotalCost(runs: RunsByVariant): void {
+  const parts = [...runs].map(([name, summaries]) => {
+    const total = aggregateRuns(summaries).costUsdTotal;
+    return `${name} ${total === null ? '?' : total.toFixed(6)} USD`;
   });
   console.log(`   всего потрачено: ${parts.join(' · ')}`);
 }

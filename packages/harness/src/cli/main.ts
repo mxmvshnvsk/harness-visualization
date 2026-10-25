@@ -23,6 +23,7 @@ async function main(): Promise<void> {
       cliOptions.reasoningEffort ?? loadedSettings.settings.model.defaultReasoningEffort,
     searchProvider: cliOptions.searchProvider,
     retrievalMode: cliOptions.retrievalMode ?? loadedSettings.settings.retrieval.mode,
+    retrievalToolName: cliOptions.retrievalToolName,
     freshWorkspace: cliOptions.freshWorkspace,
     workspaceDirectory: null,
     verbose: cliOptions.verbose,

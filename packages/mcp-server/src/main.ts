@@ -8,12 +8,14 @@ import { loadKnowledgeBase } from './knowledgeBase/loadKnowledgeBase.js';
 import { redirectConsoleToStderr } from './redirectConsoleToStderr.js';
 import { SemanticIndex } from './semanticSearch/SemanticIndex.js';
 import { DATA_DIRECTORY, MODEL_DIRECTORY, VECTOR_CACHE_PATH } from './serverPaths.js';
+import { registerHybridSearchTool } from './tools/registerHybridSearchTool.js';
 import { registerKnowledgeBaseTools } from './tools/registerKnowledgeBaseTools.js';
 import { registerSemanticSearchTool } from './tools/registerSemanticSearchTool.js';
 
 const SERVER_INSTRUCTIONS =
-  'База знаний вымышленной компании «Кедр Софт». Ищи документы по словам через search ' +
-  'или по смыслу через semantic_search, читай целиком через read_document. ' +
+  'База знаний вымышленной компании «Кедр Софт». Ищи документы по словам через search, ' +
+  'по смыслу через semantic_search или сразу обоими через hybrid_search, ' +
+  'читай целиком через read_document. ' +
   'Если документы противоречат друг другу, опирайся на более свежий.';
 
 async function main(): Promise<void> {
@@ -32,11 +34,12 @@ async function main(): Promise<void> {
 
   serveStdio(() => {
     const server = new McpServer(
-      { name: 'kedr-knowledge-base', version: '0.2.0' },
+      { name: 'kedr-knowledge-base', version: '0.3.0' },
       { capabilities: { tools: {} }, instructions: SERVER_INSTRUCTIONS },
     );
     registerKnowledgeBaseTools(server, documents);
     registerSemanticSearchTool(server, semanticIndex);
+    registerHybridSearchTool(server, { documents, semanticIndex });
     return server;
   });
 

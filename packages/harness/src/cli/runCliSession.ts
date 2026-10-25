@@ -41,6 +41,8 @@ export interface CliSessionInput {
   searchProvider: SearchProviderName | null;
   // Кто ищет в базе знаний: модель (tool) или харнесс до запроса (auto).
   retrievalMode: RetrievalMode;
+  // null — тул поиска харнесса из harness.config.json; иначе другой (флаг --retrieval-tool).
+  retrievalToolName: string | null;
   // true — пересоздать рабочую папку из примеров (флаг --fresh).
   freshWorkspace: boolean;
   // null — рабочая папка из harness.config.json; иначе своя папка сессии
@@ -178,7 +180,7 @@ function createRetrievalOptions(input: CliSessionInput): RetrievalOptions | null
     return null;
   }
   const { retrieval } = input.loadedSettings.settings;
-  return { toolName: retrieval.toolName, limit: retrieval.limit };
+  return { toolName: input.retrievalToolName ?? retrieval.toolName, limit: retrieval.limit };
 }
 
 // В тихой сессии спросить некого, а молчание — не согласие.

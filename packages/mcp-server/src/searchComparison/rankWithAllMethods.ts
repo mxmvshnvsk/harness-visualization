@@ -3,10 +3,12 @@
 // даже если в первую пятёрку он не попал.
 
 import { fuseByReciprocalRank, type RankedDocument } from '../hybridSearch/fuseByReciprocalRank.js';
-import type { KnowledgeDocument } from '../knowledgeBase/documentTypes.js';
-import { searchDocuments } from '../knowledgeBase/searchDocuments.js';
-import { rankDocumentsByBestChunk } from '../semanticSearch/rankDocumentsByBestChunk.js';
-import type { SemanticIndex } from '../semanticSearch/SemanticIndex.js';
+import {
+  rankByWordsAndMeaning,
+  type SearchSources,
+} from '../hybridSearch/rankByWordsAndMeaning.js';
+
+export type { SearchSources };
 
 export type SearchMethod = 'words' | 'meaning' | 'hybrid';
 
@@ -20,22 +22,11 @@ export const SEARCH_METHOD_TITLES: Record<SearchMethod, string> = {
 
 export type SearchRankings = Record<SearchMethod, RankedDocument[]>;
 
-export interface SearchSources {
-  documents: KnowledgeDocument[];
-  semanticIndex: SemanticIndex;
-}
-
 export async function rankWithAllMethods(
   query: string,
   sources: SearchSources,
 ): Promise<SearchRankings> {
-  const words = searchDocuments(sources.documents, query, sources.documents.length).map((hit) => ({
-    documentId: hit.document.id,
-    score: hit.score,
-  }));
-  // Без ограничения: нужны все фрагменты, чтобы у каждого документа было место в выдаче.
-  const chunkHits = await sources.semanticIndex.search(query, Number.POSITIVE_INFINITY);
-  const meaning = rankDocumentsByBestChunk(chunkHits);
+  const { words, meaning } = await rankByWordsAndMeaning(query, sources);
   const hybrid = fuseByReciprocalRank([words, meaning]);
   return { words, meaning, hybrid };
 }
