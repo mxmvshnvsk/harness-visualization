@@ -57,6 +57,8 @@ export interface AgentDependencies {
   progress: ProgressTracker;
   // Сколько харнесс отводит prompt и как оценивает его размер (этап 6.2).
   budget: BudgetSettings;
+  // false — сессия без демо-проекта: короткий system prompt без «Кедр Софт».
+  demoProject: boolean;
   // Несколько delegate_task в одном шаге — одновременно (subagents.parallel, этап 6c).
   parallelDelegation: boolean;
   // Кто сжимает историю в сводку (этап 6.5): та же модель или указанная в context.compactionModel.

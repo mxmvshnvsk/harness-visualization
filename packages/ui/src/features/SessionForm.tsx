@@ -92,11 +92,24 @@ function Toggles({ state }: { state: ChoicesState }): ReactElement {
   return (
     <div className={styles.row}>
       <span className={styles.key}>Включить</span>
+      <TogglePill
+        label="Без демо-проекта"
+        hint="Агент без «Кедр Софт»: ни базы знаний, ни MCP, ни скиллов, ни памяти, ни слова о компании в system prompt. Своя пустая песочница, тулы файлов и веба — видно, как модель ведёт себя сама."
+        pressed={!choices.demoProject}
+        onChange={(pressed) => {
+          change({ demoProject: !pressed });
+        }}
+      />
       {hasSubagents && (
         <TogglePill
           label="Субагенты"
-          hint="Агент сможет поручить чтение субагенту-исследователю: у того своя история, вернётся короткий отчёт."
+          hint={
+            choices.demoProject
+              ? 'Агент сможет поручить чтение субагенту-исследователю: у того своя история, вернётся короткий отчёт.'
+              : 'Без демо-проекта субагентов нет: им нечего исследовать.'
+          }
           pressed={choices.subagents}
+          disabled={!choices.demoProject}
           onChange={(subagents) => {
             change({ subagents });
           }}
@@ -135,7 +148,14 @@ function Choices({ state }: { state: ChoicesState }): ReactElement {
         label="Кто ищет в базе знаний"
         shape="small"
         align="left"
-        trigger={<>в базе знаний {RETRIEVAL[choices.retrievalMode].label} ▾</>}
+        disabled={!choices.demoProject}
+        trigger={
+          choices.demoProject ? (
+            <>в базе знаний {RETRIEVAL[choices.retrievalMode].label} ▾</>
+          ) : (
+            <>без базы знаний</>
+          )
+        }
         sections={[
           {
             items: RETRIEVAL_ORDER.map((mode) => ({
@@ -164,6 +184,9 @@ function Choices({ state }: { state: ChoicesState }): ReactElement {
 
 // Цена опции до запуска: delegate_task уходит модели в каждом запросе.
 function describeCost({ choices, options }: ChoicesState): string {
+  if (!choices.demoProject) {
+    return 'без «Кедр Софт»: своя пустая песочница, тулы файлов и веба';
+  }
   const tokens = options?.subagents.delegateToolTokens ?? null;
   if (choices.subagents && tokens !== null) {
     return `delegate_task добавит ≈${tokens.toLocaleString('ru-RU')} токенов в каждый запрос к модели`;

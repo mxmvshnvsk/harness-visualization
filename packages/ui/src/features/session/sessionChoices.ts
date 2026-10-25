@@ -10,17 +10,22 @@ export type RetrievalChoice = NonNullable<StartSessionRequest['retrievalMode']>;
 export type EffortChoice = NonNullable<StartSessionRequest['reasoningEffort']>;
 
 export interface SessionChoices {
+  // false — агент без демо-проекта «Кедр Софт».
+  demoProject: boolean;
   subagents: boolean;
   cleanWorkspace: boolean;
   retrievalMode: RetrievalChoice;
   reasoningEffort: EffortChoice;
 }
 
-type Saved = Partial<Pick<SessionChoices, 'subagents' | 'retrievalMode' | 'reasoningEffort'>>;
+type Saved = Partial<
+  Pick<SessionChoices, 'demoProject' | 'subagents' | 'retrievalMode' | 'reasoningEffort'>
+>;
 
 const STORAGE_KEY = 'hv-session-choices';
 
 const FALLBACK: SessionChoices = {
+  demoProject: true,
   subagents: false,
   cleanWorkspace: false,
   retrievalMode: 'tool',
@@ -64,12 +69,17 @@ export function useSessionChoices(): ChoicesState {
 }
 
 export function toStartRequest(question: string, choices: SessionChoices): StartSessionRequest {
+  const clean = choices.cleanWorkspace ? { freshWorkspace: true } : {};
+  // Без демо-проекта ни поиска в базе, ни субагентов — харнесс их и не включит.
+  if (!choices.demoProject) {
+    return { question, reasoningEffort: choices.reasoningEffort, demoProject: false, ...clean };
+  }
   return {
     question,
     retrievalMode: choices.retrievalMode,
     reasoningEffort: choices.reasoningEffort,
     subagents: choices.subagents,
-    ...(choices.cleanWorkspace ? { freshWorkspace: true } : {}),
+    ...clean,
   };
 }
 
@@ -91,11 +101,11 @@ function readSaved(): Saved {
   }
 }
 
-function save({ subagents, retrievalMode, reasoningEffort }: SessionChoices): void {
+function save({ demoProject, subagents, retrievalMode, reasoningEffort }: SessionChoices): void {
   try {
     localStorage.setItem(
       STORAGE_KEY,
-      JSON.stringify({ subagents, retrievalMode, reasoningEffort }),
+      JSON.stringify({ demoProject, subagents, retrievalMode, reasoningEffort }),
     );
   } catch {
     // Не запомнили — в следующий раз начнём со значений из настроек.

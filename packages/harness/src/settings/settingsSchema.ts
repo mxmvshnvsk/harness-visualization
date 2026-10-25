@@ -112,6 +112,8 @@ const workspaceSettingsSchema = z.object({
   directory: z.string().min(1),
   // Откуда взять файлы, если песочницы ещё нет.
   seedDirectory: z.string().min(1),
+  // Песочница сессии без демо-проекта: в начале пустая, документов «Кедр Софт» в ней нет.
+  blankDirectory: z.string().min(1).default('workspace-blank'),
 });
 
 const webFetchSettingsSchema = z.object({

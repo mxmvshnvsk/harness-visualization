@@ -25,6 +25,8 @@ interface MenuProps {
   shape?: 'pill' | 'icon' | 'small';
   // К какому краю кнопки прижато меню.
   align?: 'left' | 'right';
+  // Выбор сейчас не действует — кнопка видна, но не открывается.
+  disabled?: boolean;
 }
 
 export function Menu(props: MenuProps): ReactElement {
@@ -62,6 +64,7 @@ export function Menu(props: MenuProps): ReactElement {
         aria-expanded={open}
         aria-label={label}
         title={shape === 'icon' ? label : undefined}
+        disabled={props.disabled}
         onClick={() => {
           setOpen(!open);
         }}

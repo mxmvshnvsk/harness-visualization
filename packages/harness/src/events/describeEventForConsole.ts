@@ -92,7 +92,12 @@ const EVENT_DESCRIBERS: EventDescribers = {
         : `Сеть: прокси для маршрута proxy — ${event.networkProxy}`,
     ),
     styleText('dim', `Поиск: ${event.searchProvider ?? 'выключен'}`),
-    styleText('dim', `База знаний: ${RETRIEVAL_MODE_DESCRIPTIONS[event.retrievalMode]}`),
+    styleText(
+      'dim',
+      event.demoProject === false
+        ? 'Без демо-проекта: ни «Кедр Софт», ни MCP, ни базы знаний — пустая песочница, файлы и веб'
+        : `База знаний: ${RETRIEVAL_MODE_DESCRIPTIONS[event.retrievalMode]}`,
+    ),
     styleText(
       'dim',
       event.subagents === undefined || event.subagents === null

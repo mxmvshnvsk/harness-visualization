@@ -10,7 +10,8 @@ import { isAbsolute, relative, resolve, sep } from 'node:path';
 export interface WorkspacePreparationRequest {
   projectRoot: string;
   workspaceDirectory: string;
-  seedDirectory: string;
+  // null — примеров нет: папка создаётся пустой (сессия без демо-проекта).
+  seedDirectory: string | null;
   reset: boolean;
 }
 
@@ -32,7 +33,7 @@ export async function prepareWorkspace(
   if (existsSync(request.workspaceDirectory)) {
     return { createdFromSeed: false, wasReset };
   }
-  if (existsSync(request.seedDirectory)) {
+  if (request.seedDirectory !== null && existsSync(request.seedDirectory)) {
     await cp(request.seedDirectory, request.workspaceDirectory, { recursive: true });
     return { createdFromSeed: true, wasReset };
   }

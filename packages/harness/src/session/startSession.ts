@@ -63,6 +63,9 @@ export interface SessionInput {
   freshWorkspace: boolean;
   // Дать ли модели субагентов (этап 6c); null — как в harness.config.json (subagents.enabled).
   subagents: boolean | null;
+  // false — сессия без демо-проекта: без «Кедр Софт», MCP, поиска в базе, скиллов, памяти,
+  // плана и субагентов; своя пустая песочница, тулы файлов и веба.
+  demoProject: boolean;
   // null — рабочая папка из harness.config.json; иначе своя папка сессии
   // (у pnpm compare-runs — временная, чтобы заметки одного прогона не влияли на другие).
   workspaceDirectory: string | null;
@@ -177,14 +180,7 @@ async function prepareSession(
   fetchImpl: RoutedFetch,
 ): Promise<PreparedSession> {
   const { settings } = input.loadedSettings;
-  const workspaceSetting = input.workspaceDirectory ?? settings.workspace.directory;
-  const workspaceDirectory = resolve(input.projectRoot, workspaceSetting);
-  const preparedWorkspace = await prepareWorkspace({
-    projectRoot: input.projectRoot,
-    workspaceDirectory,
-    seedDirectory: join(input.projectRoot, settings.workspace.seedDirectory),
-    reset: input.freshWorkspace,
-  });
+  const { workspaceSetting, preparedWorkspace } = await prepareSessionWorkspace(input);
   const searchProvider = await prepareSearchProvider(input, hooks, fetchImpl);
   announceSession(events, {
     settings,
@@ -192,16 +188,18 @@ async function prepareSession(
     workspaceDirectory: workspaceSetting,
     preparedWorkspace,
     searchProviderName: searchProvider?.name ?? null,
-    retrievalMode: input.retrievalMode,
+    retrievalMode: input.demoProject ? input.retrievalMode : 'tool',
     subagents: subagentsOf(input),
+    demoProject: input.demoProject,
   });
-  const workspace = new Workspace(workspaceDirectory);
+  const workspace = new Workspace(resolve(input.projectRoot, workspaceSetting));
   const skills = await prepareSkills(input, events);
-  const memory = await prepareMemory(workspace, events);
+  const memory = await prepareMemory(workspace, events, input.demoProject);
   // План прошлой сессии — не план этой: харнесс убирает progress.md до первого шага.
   const progress = new ProgressTracker(workspace, events);
   await progress.reset();
-  const mcpServers = await connectMcpServers(settings.mcpServers, {
+  // Без демо-проекта MCP-серверы не запускаются: база знаний «Кедр Софт» — часть демо.
+  const mcpServers = await connectMcpServers(input.demoProject ? settings.mcpServers : [], {
     projectRoot: input.projectRoot,
     events,
   });
@@ -217,9 +215,27 @@ async function prepareSession(
   return { dependencies, mcpServers };
 }
 
+// Песочница: у демо-проекта — из примеров «Кедр Софт», без него — своя, в начале пустая.
+async function prepareSessionWorkspace(input: SessionInput) {
+  const { workspace } = input.loadedSettings.settings;
+  const workspaceSetting =
+    input.workspaceDirectory ??
+    (input.demoProject ? workspace.directory : workspace.blankDirectory);
+  const preparedWorkspace = await prepareWorkspace({
+    projectRoot: input.projectRoot,
+    workspaceDirectory: resolve(input.projectRoot, workspaceSetting),
+    seedDirectory: input.demoProject ? join(input.projectRoot, workspace.seedDirectory) : null,
+    reset: input.freshWorkspace,
+  });
+  return { workspaceSetting, preparedWorkspace };
+}
+
 // Каталог скиллов — событием skill_catalog; скиллы always загружаются сразу: их инструкции
-// будут в system prompt с первого запроса.
+// будут в system prompt с первого запроса. Без демо-проекта скиллов нет: они про «Кедр Софт».
 async function prepareSkills(input: SessionInput, events: EventStream): Promise<SkillLibrary> {
+  if (!input.demoProject) {
+    return new SkillLibrary({ skills: [], problems: [] }, events);
+  }
   const settings = input.loadedSettings.settings.skills;
   const catalog = await loadSkills(resolve(input.projectRoot, settings.directory), settings);
   events.emit({
@@ -242,8 +258,16 @@ async function prepareSkills(input: SessionInput, events: EventStream): Promise<
 }
 
 // memo.md на начало сессии — в system prompt; событие memory_loaded показывает, что было в памяти.
-async function prepareMemory(workspace: Workspace, events: EventStream): Promise<SessionMemory> {
+async function prepareMemory(
+  workspace: Workspace,
+  events: EventStream,
+  demoProject: boolean,
+): Promise<SessionMemory> {
   const store = new MemoryStore(workspace, events);
+  // Без демо-проекта памяти нет: модель начинает без заметок прошлых сессий.
+  if (!demoProject) {
+    return { store, memoAtStart: null };
+  }
   const memoAtStart = await store.readOrNull(MEMO_PATH);
   events.emit({
     type: 'memory_loaded',
@@ -296,13 +320,16 @@ function createAgentDependencies(
     fetchImpl: resources.fetchImpl,
   });
   const tools = new ToolRegistry();
-  const ownTools = [
-    ...createFileTools(),
-    createMemoryTool(resources.memory.store),
-    createProgressTool(resources.progress),
-    ...createSkillTools(resources.skills),
-    ...webTools,
-  ];
+  // Без демо-проекта — только песочница и веб: память, план и скиллы — часть демо.
+  const ownTools = input.demoProject
+    ? [
+        ...createFileTools(),
+        createMemoryTool(resources.memory.store),
+        createProgressTool(resources.progress),
+        ...createSkillTools(resources.skills),
+        ...webTools,
+      ]
+    : [...createFileTools(), ...webTools];
   for (const tool of [...ownTools, ...resources.mcpServers.tools]) {
     tools.register(tool);
   }
@@ -336,6 +363,7 @@ function createAgentDependencies(
     progress: resources.progress,
     budget: budgetSettings(settings.context),
     parallelDelegation: settings.subagents.parallel,
+    demoProject: input.demoProject,
   };
   registerDelegateTool(input, dependencies);
   return dependencies;
@@ -355,6 +383,9 @@ function registerDelegateTool(input: SessionInput, dependencies: AgentDependenci
 
 // Субагенты этой сессии: включены флагом или галочкой, иначе — как в настройках.
 function subagentsOf(input: SessionInput): { agents: string[]; parallel: boolean } | null {
+  if (!input.demoProject) {
+    return null;
+  }
   const settings = input.loadedSettings.settings.subagents;
   const agents = Object.keys(settings.agents);
   const enabled = input.subagents ?? settings.enabled;
@@ -374,7 +405,8 @@ function budgetSettings(context: ContextSettings): BudgetSettings {
 
 // null — модель ищет сама; иначе харнесс ищет до запроса тулом из раздела retrieval.
 function createRetrievalOptions(input: SessionInput): RetrievalOptions | null {
-  if (input.retrievalMode === 'tool') {
+  // Без демо-проекта искать харнессу негде: базы знаний нет.
+  if (input.retrievalMode === 'tool' || !input.demoProject) {
     return null;
   }
   const { retrieval } = input.loadedSettings.settings;

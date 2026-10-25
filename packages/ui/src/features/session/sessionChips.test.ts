@@ -29,4 +29,16 @@ describe('sessionChips', () => {
       'effort high',
     ]);
   });
+
+  it('без демо-проекта — чип режима, без поиска', () => {
+    const started = sessionStarted('tool');
+    const log = new EventLog().add(
+      started.type === 'session_started' ? { ...started, demoProject: false } : started,
+    );
+
+    expect(sessionChips(log.events).map((chip) => chip.label)).toEqual([
+      'без демо-проекта',
+      'effort high',
+    ]);
+  });
 });

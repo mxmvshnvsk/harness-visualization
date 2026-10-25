@@ -22,15 +22,34 @@ export function sessionChips(events: readonly HarnessEvent[]): SessionChip[] {
     return [];
   }
   const workspace = events.find((event) => event.type === 'workspace_prepared');
+  const cleaned = workspace?.type === 'workspace_prepared' && workspace.wasReset;
+  return [
+    ...switchedOn(started, cleaned),
+    ...searchChip(started),
+    { label: `effort ${started.reasoningEffort}`, on: false },
+  ];
+}
+
+type Started = Extract<HarnessEvent, { type: 'session_started' }>;
+
+// Что включали отдельно: без демо-проекта, субагенты, Clean Workspace.
+function switchedOn(started: Started, cleaned: boolean): SessionChip[] {
   const subagents = started.subagents ?? null;
   return [
+    ...(started.demoProject === false ? [{ label: 'без демо-проекта', on: true }] : []),
     ...(subagents === null
       ? []
       : [{ label: `субагенты: ${subagents.agents.join(', ')}`, on: true }]),
-    ...(workspace?.type === 'workspace_prepared' && workspace.wasReset
-      ? [{ label: 'clean workspace', on: true }]
-      : []),
+    ...(cleaned ? [{ label: 'clean workspace', on: true }] : []),
+  ];
+}
+
+// Без демо-проекта базы знаний нет — и чипа поиска нет.
+function searchChip(started: Started): SessionChip[] {
+  if (started.demoProject === false) {
+    return [];
+  }
+  return [
     { label: RETRIEVAL[started.retrievalMode] ?? `поиск: ${started.retrievalMode}`, on: false },
-    { label: `effort ${started.reasoningEffort}`, on: false },
   ];
 }

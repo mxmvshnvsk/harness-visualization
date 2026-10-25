@@ -90,7 +90,8 @@
   },
   "workspace": {
     "directory": "workspace",
-    "seedDirectory": "examples/workspace"
+    "seedDirectory": "examples/workspace",
+    "blankDirectory": "workspace-blank"
   },
   "permissions": {
     "defaultDecision": "ask",

@@ -155,3 +155,5 @@ vite.config.ts.timestamp-*
 /traces/
 # Песочница агента: создаётся из examples/workspace при первом запуске
 /workspace/
+# Песочница сессий без демо-проекта: создаётся пустой
+/workspace-blank/

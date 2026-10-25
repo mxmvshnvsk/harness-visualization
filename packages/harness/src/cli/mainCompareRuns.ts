@@ -211,6 +211,7 @@ async function runOnce(
     retrievalToolName: variant.retrievalToolName,
     freshWorkspace: false,
     subagents: null,
+    demoProject: true,
     workspaceDirectory: join(context.temporaryRoot, `session-${context.startedSessions}`),
     verbose: false,
     quiet: true,

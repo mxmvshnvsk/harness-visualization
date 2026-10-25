@@ -7,6 +7,8 @@
 //   pnpm chat --retrieval auto --retrieval-tool kedr__hybrid_search "вопрос" — каким тулом ищет харнесс
 //   pnpm chat --fresh "вопрос"        — начать с чистой рабочей папки (пересоздать из примеров)
 //   pnpm chat --subagents "вопрос"    — дать модели субагентов (этап 6c), даже если в настройках выключены
+//   pnpm chat --no-demo "вопрос"      — агент без демо-проекта: без «Кедр Софт», MCP, базы знаний,
+//                                       скиллов и памяти; пустая песочница, файлы и веб
 //   pnpm chat --verbose "вопрос"      — печатать и полные события в JSON
 
 import { parseArgs } from 'node:util';
@@ -32,6 +34,8 @@ export interface CliOptions {
   freshWorkspace: boolean;
   // true — флаг --subagents; null — как в harness.config.json.
   subagents: true | null;
+  // false — флаг --no-demo.
+  demoProject: boolean;
   verbose: boolean;
 }
 
@@ -46,6 +50,7 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
       'retrieval-tool': { type: 'string' },
       fresh: { type: 'boolean', default: false },
       subagents: { type: 'boolean', default: false },
+      'no-demo': { type: 'boolean', default: false },
       verbose: { type: 'boolean', default: false },
     },
   });
@@ -58,6 +63,7 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
     retrievalToolName: values['retrieval-tool'] ?? null,
     freshWorkspace: values.fresh,
     subagents: values.subagents ? true : null,
+    demoProject: !values['no-demo'],
     verbose: values.verbose,
   };
 }

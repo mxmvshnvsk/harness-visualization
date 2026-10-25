@@ -32,6 +32,22 @@ export interface SystemPromptParts {
   memory: string[];
 }
 
+// Сессия без демо-проекта: ничего о «Кедр Софт» и о правилах проекта — только песочница, веб
+// и дата. Так видно, как модель ведёт себя сама, без нашей установки.
+const BLANK_INSTRUCTIONS = [
+  'Ты — ассистент. Отвечай на языке пользователя.',
+  'У тебя есть рабочая папка — песочница этой сессии, в начале она пустая. Файлы в ней можно читать и создавать тулами.',
+];
+
+// Про веб — только то, что есть: веб-поиск выключен без ключа, и звать его модели незачем.
+export function buildBlankSystemPrompt(now: Date, toolNames: readonly string[]): string {
+  const web = [
+    ...(toolNames.includes('web_search') ? ['Для сведений из интернета есть web_search.'] : []),
+    ...(toolNames.includes('fetch_url') ? ['Прочитать страницу по адресу — fetch_url.'] : []),
+  ];
+  return [...BLANK_INSTRUCTIONS, ...web, describeToday(now)].join('\n');
+}
+
 export function buildSystemPrompt(now: Date, parts: SystemPromptParts): string {
   return [
     ...BASE_INSTRUCTIONS,

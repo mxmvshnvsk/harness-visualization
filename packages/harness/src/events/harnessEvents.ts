@@ -50,6 +50,9 @@ export interface SessionStartedPayload {
   // Субагенты сессии (этап 6c): кому модель может поручать задачи; null — выключены.
   // В трейсах до этого поля нет — субагентов там не было.
   subagents?: { agents: string[]; parallel: boolean } | null;
+  // false — сессия без демо-проекта: без «Кедр Софт» в system prompt, MCP, поиска в базе,
+  // скиллов и памяти, с пустой песочницей. Нет поля — демо-проект (трейсы до этого режима).
+  demoProject?: boolean;
 }
 
 export interface WorkspacePreparedPayload {

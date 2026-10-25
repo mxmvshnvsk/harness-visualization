@@ -17,6 +17,7 @@ export interface SessionAnnouncement {
   retrievalMode: RetrievalMode;
   // null — субагенты выключены.
   subagents: { agents: string[]; parallel: boolean } | null;
+  demoProject: boolean;
 }
 
 export function announceSession(events: EventStream, announcement: SessionAnnouncement): void {
@@ -31,6 +32,7 @@ export function announceSession(events: EventStream, announcement: SessionAnnoun
     searchProvider: announcement.searchProviderName,
     retrievalMode: announcement.retrievalMode,
     subagents: announcement.subagents,
+    demoProject: announcement.demoProject,
   });
   events.emit({
     type: 'workspace_prepared',

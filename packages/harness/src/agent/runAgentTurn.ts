@@ -19,7 +19,7 @@ import {
 import { rewriteSearchQuery } from './rewriteSearchQuery.js';
 import { describeMemory } from '../memory/memoryPrompt.js';
 import { describeSkills, parseSkillCommand, withSkillInstructions } from '../skills/skillPrompt.js';
-import { buildSystemPrompt } from './systemPrompt.js';
+import { buildBlankSystemPrompt, buildSystemPrompt } from './systemPrompt.js';
 
 export interface TurnOptions {
   reasoningEffort: ReasoningEffort;
@@ -86,6 +86,12 @@ async function prepareRetrievalQuery(
 
 // Модель не помнит прошлых запросов: всё, что она должна знать, харнесс кладёт в начало истории.
 function systemMessage(dependencies: AgentDependencies): ChatMessage {
+  if (!dependencies.demoProject) {
+    return {
+      role: 'system',
+      content: buildBlankSystemPrompt(new Date(), dependencies.tools.names()),
+    };
+  }
   return {
     role: 'system',
     content: buildSystemPrompt(new Date(), {
