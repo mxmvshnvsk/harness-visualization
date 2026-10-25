@@ -2,6 +2,7 @@
 // над tools/call — просьба модели и решение политики; строки stderr сервера между ними.
 
 import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { AgentChip } from '../../agents/AgentChip';
 import { sameSearch, type SearchLink } from '../../../app/viewLinks';
 import { ChainLinks, hasVector } from '../../ChainLinks';
 import type { McpJournalItem, McpPair } from '../../../projections/projectMcp';
@@ -127,8 +128,9 @@ function Cause({ pair }: { pair: McpPair }): ReactElement {
       )}
       {pair.call !== null && (
         <span className={styles.cause}>
-          модель попросила <b className={styles.mono}>{pair.call.toolName}</b> → политика:{' '}
-          {pair.call.reason ?? '—'} →{' '}
+          <AgentChip agentId={pair.call.agentId} /> модель попросила{' '}
+          <b className={styles.mono}>{pair.call.toolName}</b> → политика: {pair.call.reason ?? '—'}{' '}
+          →{' '}
           <span className={styles.decision} data-decision={pair.call.decision}>
             {pair.call.decision ?? '—'}
           </span>{' '}

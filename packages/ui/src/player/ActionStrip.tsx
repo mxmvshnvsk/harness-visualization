@@ -3,6 +3,7 @@
 // в какой момент сессии попадёшь и что там происходит. Бегунок движется по кадрам часов.
 
 import { useEffect, useRef, type KeyboardEvent, type PointerEvent, type ReactElement } from 'react';
+import { useAgentLabels, type AgentLabels } from '../features/agents/agentLabels';
 import { realAt, type Schedule } from '../timeline/schedule';
 import type { TimelineClock } from '../timeline/TimelineClock';
 import styles from './PlayerBar.module.css';
@@ -14,6 +15,8 @@ interface Segment {
   group: string;
   waiting: boolean;
   title: string;
+  // Цвет субагента, чьё это действие (этап 6c); null — главный агент или обычная сессия.
+  agent: string | null;
 }
 
 export function ActionStrip({
@@ -25,6 +28,7 @@ export function ActionStrip({
 }): ReactElement {
   const total = Math.max(1, schedule.total);
   const { stripRef, headRef, handlers } = useStripControls(clock, schedule, total);
+  const labels = useAgentLabels();
   return (
     <div
       ref={stripRef}
@@ -36,11 +40,12 @@ export function ActionStrip({
       aria-valuemax={100}
       {...handlers}
     >
-      {segmentsOf(schedule).map((segment) => (
+      {segmentsOf(schedule, labels).map((segment) => (
         <div
           key={segment.key}
           className={segment.waiting ? `${styles.segment} ${styles.waiting}` : styles.segment}
           data-group={segment.group}
+          data-agent={segment.agent ?? undefined}
           data-from={segment.from}
           title={segment.title}
           style={{
@@ -156,11 +161,12 @@ function questionMarks(schedule: Schedule): number[] {
   return marks.sort((left, right) => left - right);
 }
 
-function segmentsOf(schedule: Schedule): Segment[] {
+function segmentsOf(schedule: Schedule, labels: AgentLabels): Segment[] {
   const segments: Segment[] = [];
   for (const item of schedule.actions) {
     const { action } = item;
-    const base = { group: action.group, waiting: false };
+    const agent = labels.enabled && action.agentId !== null ? labels.colorOf(action.agentId) : null;
+    const base = { group: action.group, waiting: false, agent };
     segments.push({
       ...base,
       key: `${action.id}:out`,

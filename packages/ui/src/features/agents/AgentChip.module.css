@@ -1,0 +1,34 @@
+.chip {
+  --agent: var(--agent-other);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border: 1px solid color-mix(in srgb, var(--agent) 55%, var(--line));
+  border-radius: var(--radius-pill);
+  font: 11.5px var(--font-mono);
+  color: var(--text);
+  white-space: nowrap;
+  vertical-align: 1px;
+}
+
+.chip::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--agent);
+}
+
+.chip[data-color='main'] {
+  --agent: var(--agent-main);
+}
+
+.chip[data-color='one'] {
+  --agent: var(--agent-one);
+}
+
+.chip[data-color='two'] {
+  --agent: var(--agent-two);
+}

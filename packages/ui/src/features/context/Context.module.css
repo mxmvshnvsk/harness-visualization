@@ -413,3 +413,9 @@
   white-space: pre-wrap;
   word-break: break-word;
 }
+
+.agentsNote {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--muted);
+}

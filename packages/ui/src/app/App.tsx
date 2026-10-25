@@ -35,6 +35,7 @@ import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
 import { AgentsView } from '../features/agents/AgentsView';
+import { AgentLabelsContext, useAgentLabelsOf } from '../features/agents/agentLabels';
 import { McpLab } from '../features/mcp/McpLab';
 import { McpSessionView } from '../features/mcp/session/McpSessionView';
 import { RagLab } from '../features/rag/RagLab';
@@ -377,49 +378,52 @@ function OpenStream(props: OpenStreamProps): ReactElement {
     setDialogOpen(true);
   }, []);
   const dialog = { events, shown: cursor, sessionId, live };
+  const agentLabels = useAgentLabelsOf(events);
   return (
-    <OpenDialogContext.Provider value={dialogOpen ? null : openDialog}>
-      <div
-        className={styles.shell}
-        data-dialog={dialogOpen ? 'open' : 'closed'}
-        data-player={playerCollapsed ? 'collapsed' : 'open'}
-      >
-        <div className={styles.page}>
-          {header}
-          {/* Колонка свёрнута — вопрос о разрешении над видами, чтобы его не пропустить. */}
-          {!dialogOpen && prompt}
-          <ViewSwitch
-            events={events}
-            replay={replay}
-            liveStartedAt={liveStartedAt}
-            traceFile={props.traceFile}
-          />
-        </div>
-        {/* Колонка и полоса живут обе: колонка раздвигается и сдвигается плавно, а текст в ней
+    <AgentLabelsContext.Provider value={agentLabels}>
+      <OpenDialogContext.Provider value={dialogOpen ? null : openDialog}>
+        <div
+          className={styles.shell}
+          data-dialog={dialogOpen ? 'open' : 'closed'}
+          data-player={playerCollapsed ? 'collapsed' : 'open'}
+        >
+          <div className={styles.page}>
+            {header}
+            {/* Колонка свёрнута — вопрос о разрешении над видами, чтобы его не пропустить. */}
+            {!dialogOpen && prompt}
+            <ViewSwitch
+              events={events}
+              replay={replay}
+              liveStartedAt={liveStartedAt}
+              traceFile={props.traceFile}
+            />
+          </div>
+          {/* Колонка и полоса живут обе: колонка раздвигается и сдвигается плавно, а текст в ней
             остаётся на месте и не прокручивается заново при каждом открытии. */}
-        <div className={styles.dialogSlot}>
-          <DialogPanel
-            {...dialog}
-            open={dialogOpen}
+          <div className={styles.dialogSlot}>
+            <DialogPanel
+              {...dialog}
+              open={dialogOpen}
+              clock={clock}
+              schedule={schedule}
+              request={dialogOpen ? prompt : null}
+              onCollapse={() => {
+                setDialogOpen(false);
+              }}
+            />
+            <DialogRail {...dialog} hidden={dialogOpen} onExpand={openDialog} />
+          </div>
+          <PlayerDock
+            view={view}
             clock={clock}
             schedule={schedule}
-            request={dialogOpen ? prompt : null}
-            onCollapse={() => {
-              setDialogOpen(false);
-            }}
+            live={live}
+            collapsed={playerCollapsed}
+            onToggle={togglePlayer}
           />
-          <DialogRail {...dialog} hidden={dialogOpen} onExpand={openDialog} />
         </div>
-        <PlayerDock
-          view={view}
-          clock={clock}
-          schedule={schedule}
-          live={live}
-          collapsed={playerCollapsed}
-          onToggle={togglePlayer}
-        />
-      </div>
-    </OpenDialogContext.Provider>
+      </OpenDialogContext.Provider>
+    </AgentLabelsContext.Provider>
   );
 }
 

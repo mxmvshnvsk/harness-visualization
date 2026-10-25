@@ -29,6 +29,8 @@ interface ActionBase {
   turn: number;
   // Шаг модели в ходе; null — харнесс искал до первого шага.
   step: number | null;
+  // Кто искал: null — главный агент (или харнесс до модели), иначе id субагента (этап 6c).
+  agentId: string | null;
   chars: number;
   failed: boolean;
 }
@@ -85,6 +87,7 @@ export function projectRetrieval(events: readonly HarnessEvent[]): RetrievalView
       at: Date.parse(event.timestamp) - cursor.startedAt,
       turn: cursor.turn,
       step: cursor.step,
+      agentId: event.agentId ?? null,
     });
     advance(cursor, event);
     const action = actionOf(event, cursor, base);

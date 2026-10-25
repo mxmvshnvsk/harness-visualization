@@ -3,6 +3,8 @@
 // будущие запросы бледные, текущий выделен, клик по столбику перематывает к запросу.
 
 import type { HarnessEvent } from '@harness-visualization/harness';
+import { AgentChip } from '../agents/AgentChip';
+import { useAgentLabels } from '../agents/agentLabels';
 import { useMemo, useState, type ReactElement } from 'react';
 import { Segmented } from '../../components/Segmented';
 import { Term } from '../../help/HelpLinks';
@@ -49,6 +51,7 @@ export function ContextView({ events, shown, clock, schedule }: ContextViewProps
   const selectedId = choice.selected?.requestId ?? null;
   return (
     <section className={styles.view}>
+      <AgentsNote />
       <div className={styles.head}>
         <Summary request={first} count={requests.length} />
         <Segmented
@@ -171,5 +174,19 @@ function previousOf(requests: readonly ContextRequest[], position: number): Cont
       .slice(0, Math.max(0, position))
       .filter((request) => request.purpose === 'agentStep')
       .at(-1) ?? null
+  );
+}
+
+// В сессии с субагентами здесь — только главный агент: у каждого субагента своя история.
+function AgentsNote(): ReactElement | null {
+  const labels = useAgentLabels();
+  if (!labels.enabled) {
+    return null;
+  }
+  return (
+    <p className={styles.agentsNote}>
+      <AgentChip agentId={null} /> Контекст главного агента. У субагентов своя история — их самый
+      большой prompt во вкладке «Агенты».
+    </p>
   );
 }

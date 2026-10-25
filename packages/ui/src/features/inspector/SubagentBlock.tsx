@@ -51,6 +51,7 @@ export function SubagentBlock(props: SubagentBlockProps): ReactElement | null {
               shown={shown}
               active={stage.id === active?.id}
               nested
+              agentId={subagentId}
               cardRef={noRef}
               onSeek={onSeek}
             />

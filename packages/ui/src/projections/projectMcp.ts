@@ -34,6 +34,8 @@ export interface McpServerView {
 }
 
 export interface McpCall {
+  // Кто попросил: null — главный агент, иначе id субагента (этап 6c).
+  agentId: string | null;
   toolCallId: string;
   toolName: string;
   arguments: unknown;
@@ -172,6 +174,7 @@ function collectCall(builder: Builder, event: HarnessEvent, moment: Moment): voi
   if (event.type === 'tool_call' && event.toolName.includes('__')) {
     const call = {
       index: moment.index,
+      agentId: event.agentId ?? null,
       toolCallId: event.toolCallId,
       toolName: event.toolName,
       arguments: event.arguments,

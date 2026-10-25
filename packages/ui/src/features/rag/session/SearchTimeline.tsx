@@ -2,6 +2,7 @@
 
 import type { ReactElement } from 'react';
 import type { RetrievalAction } from '../../../projections/projectRetrieval';
+import { AgentChip } from '../../agents/AgentChip';
 import { actionLabel, placeOf } from './retrievalLabels';
 import styles from './Retrieval.module.css';
 
@@ -35,7 +36,7 @@ export function SearchTimeline(props: SearchTimelineProps): ReactElement {
             >
               <span className={styles.letter}>{label.letter}</span>
               <span className={styles.who}>
-                {label.name} ·{' '}
+                <AgentChip agentId={action.agentId} /> {label.name} ·{' '}
                 {action.kind === 'read'
                   ? `${String(action.chars)} симв.`
                   : `${String(action.documents.length)} док.`}

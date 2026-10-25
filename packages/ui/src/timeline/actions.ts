@@ -35,6 +35,8 @@ export interface FlowAction {
   out: string;
   back: string | null;
   busy: string | null;
+  // Чьё действие: null — главного агента (или харнесса), иначе id субагента (этап 6c).
+  agentId: string | null;
   // Подпись под схемой: что происходит в начале действия и в конце.
   what: string;
   detail: string;
@@ -498,6 +500,7 @@ function markAgent(actions: FlowAction[], from: number, agentId: string | undefi
     return;
   }
   for (const action of actions.slice(from)) {
+    action.agentId = agentId;
     action.what = `Субагент ${agentId}: ${action.what}`;
   }
 }
@@ -578,6 +581,7 @@ function addAction(
     from: spec.route[0] ?? 'loop',
     to: spec.route.at(-1) ?? 'loop',
     backRoute: null,
+    agentId: null,
     id: id ?? `${spec.kind}:${String(event.sequence)}`,
     start: at,
     end: null,

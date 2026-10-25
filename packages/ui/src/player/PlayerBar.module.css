@@ -228,3 +228,27 @@
   white-space: nowrap;
   pointer-events: none;
 }
+
+/* Действие субагента (этап 6c) — полоска его цвета под отрезком. */
+.segment[data-agent] {
+  --agent: var(--agent-other);
+}
+
+.segment[data-agent='one'] {
+  --agent: var(--agent-one);
+}
+
+.segment[data-agent='two'] {
+  --agent: var(--agent-two);
+}
+
+.segment[data-agent]::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -5px;
+  left: 0;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--agent);
+}

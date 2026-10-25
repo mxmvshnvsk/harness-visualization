@@ -7,6 +7,7 @@ import type { SessionView } from '../../projections/sessionView';
 import { hasRetrieval, type Focus } from './focus';
 import { FocusedPanel } from './FocusedPanel';
 import { SubagentBlock } from './SubagentBlock';
+import { AgentChip } from '../agents/AgentChip';
 import { useSubagentSteps } from './subagentSteps';
 import styles from './Stages.module.css';
 
@@ -17,8 +18,9 @@ interface StageCardProps {
   active: boolean;
   // Пришли по ссылке из другого вида: раскрыть «Подробнее» на этом вызове.
   focus?: Focus | null;
-  // Этап субагента внутри карточки главного агента (этап 6c).
+  // Этап субагента внутри карточки главного агента (этап 6c): id субагента — метка в заголовке.
   nested?: boolean;
+  agentId?: string;
   cardRef: (element: HTMLElement | null) => void;
   onSeek: (at: number) => void;
 }
@@ -30,6 +32,7 @@ export function StageCard({
   active,
   focus,
   nested = false,
+  agentId,
   cardRef,
   onSeek,
 }: StageCardProps): ReactElement {
@@ -48,6 +51,7 @@ export function StageCard({
         <span className={styles.icon} aria-hidden="true">
           <StageIcon kind={stage.kind} />
         </span>
+        {nested && <AgentChip agentId={agentId} />}
         <h2 className={styles.title}>{stage.title}</h2>
         {showBadge(stage, started, reached) && <span className={styles.badge}>{stage.badge}</span>}
         <span className={styles.when}>{statusOf(stage, started, active, reached)}</span>

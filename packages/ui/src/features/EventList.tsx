@@ -5,20 +5,42 @@ import type { HarnessEvent } from '@harness-visualization/harness';
 import { useState, type ReactElement } from 'react';
 import { describeEvent } from '../events/describeEvent';
 import { eventGroup, SERVICE_EVENT_TYPES } from '../events/eventGroups';
+import { Segmented } from '../components/Segmented';
+import { AgentChip } from './agents/AgentChip';
+import { useAgentLabels } from './agents/agentLabels';
 import styles from './EventList.module.css';
 
 interface EventListProps {
   events: HarnessEvent[];
 }
 
+// Чьё событие для фильтра: '' — все, 'main' — главного агента, иначе id субагента.
+const ALL = '';
+const MAIN = 'main';
+
 export function EventList({ events }: EventListProps): ReactElement {
   const [showService, setShowService] = useState(false);
+  const [agent, setAgent] = useState(ALL);
+  const labels = useAgentLabels();
   const startedAt = events.length === 0 ? 0 : Date.parse(events[0]?.timestamp ?? '');
-  const visible = showService
-    ? events
-    : events.filter((event) => !SERVICE_EVENT_TYPES.has(event.type));
+  const visible = events.filter(
+    (event) => (showService || !SERVICE_EVENT_TYPES.has(event.type)) && ofAgent(event, agent),
+  );
   return (
     <div className={styles.list}>
+      {labels.enabled && (
+        <Segmented
+          label="Чьи события"
+          size="small"
+          options={[
+            { value: ALL, label: 'все' },
+            { value: MAIN, label: 'главный' },
+            ...labels.subagents.map((id) => ({ value: id, label: id })),
+          ]}
+          value={agent}
+          onChange={setAgent}
+        />
+      )}
       <label className={styles.toggle}>
         <input
           type="checkbox"
@@ -34,6 +56,13 @@ export function EventList({ events }: EventListProps): ReactElement {
       ))}
     </div>
   );
+}
+
+function ofAgent(event: HarnessEvent, agent: string): boolean {
+  if (agent === ALL) {
+    return true;
+  }
+  return agent === MAIN ? event.agentId === undefined : event.agentId === agent;
 }
 
 interface EventRowProps {
@@ -55,7 +84,9 @@ function EventRow({ event, startedAt }: EventRowProps): ReactElement {
       <summary className={styles.summary}>
         <span className={styles.number}>{event.sequence}</span>
         <span className={styles.time}>+{offsetSeconds.toFixed(2)} с</span>
-        <span className={styles.type}>{event.type}</span>
+        <span className={styles.type}>
+          {event.type} <AgentChip agentId={event.agentId} />
+        </span>
         <span className={styles.text}>{describeEvent(event)}</span>
       </summary>
       {/* JSON строится только у раскрытой строки: в model_request весь prompt. */}
