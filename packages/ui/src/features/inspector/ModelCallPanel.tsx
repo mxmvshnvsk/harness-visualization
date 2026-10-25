@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import { Badge } from '../../components/Badge';
 import { StatCard } from '../../components/StatCard';
 import type { ModelCall } from '../../projections/sessionView';
+import { BudgetBlock } from './BudgetBlock';
 import { explainCache, type CacheExplanation } from './explainCache';
 import type { Focus } from './focus';
 import styles from './Inspector.module.css';
@@ -32,12 +33,24 @@ export function ModelCallPanel({ call, onFocus }: ModelCallPanelProps): ReactEle
       {call.response !== null && (
         <CallStats response={call.response} share={call.cache?.share ?? 0} />
       )}
+      <CallBudget call={call} />
       <CallNotes call={call} cacheText={cache?.text ?? null} />
       <div className={styles.columns}>
         <MessageList body={call.request.body} />
         <Reply call={call} onFocus={onFocus} />
       </div>
     </article>
+  );
+}
+
+// Бюджет prompt — у запросов, записанных начиная с этапа 6.2.
+function CallBudget({ call }: { call: ModelCall }): ReactElement | null {
+  const { budget } = call.request;
+  if (budget === undefined || budget === null) {
+    return null;
+  }
+  return (
+    <BudgetBlock budget={budget} exactTokens={call.response?.reply.usage.inputTokens ?? null} />
   );
 }
 

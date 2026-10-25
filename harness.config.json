@@ -79,6 +79,12 @@
   "agent": {
     "maxIterations": 10
   },
+  "context": {
+    "preset": "demo",
+    "limits": { "demo": 12000, "stress": 6000, "real": 1000000 },
+    "thresholdPercent": 80,
+    "charsPerToken": 3.24
+  },
   "workspace": {
     "directory": "workspace",
     "seedDirectory": "examples/workspace"

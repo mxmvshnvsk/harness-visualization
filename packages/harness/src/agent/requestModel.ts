@@ -8,12 +8,15 @@ import type { RawHttpResponse } from '../model/modelProvider.js';
 import { maskSecretHeaders } from '../model/maskSecretHeaders.js';
 import { ModelProviderError } from '../model/ModelProviderError.js';
 import type { ModelRequestPurpose } from '../events/harnessEvents.js';
+import { estimatePromptBudget } from '../context/promptBudget.js';
 import { calculateCost } from '../tokenomics/calculateCost.js';
 import type { AgentDependencies } from './agentDependencies.js';
 
 // Запросу к модели нужны только провайдер, поток событий и цены — так его может вызывать
 // не только цикл агента, но и, например, судья в check-grounding (этап 5b.3).
-export type ModelRequestDependencies = Pick<AgentDependencies, 'provider' | 'events' | 'prices'>;
+// Бюджет prompt — по желанию: у судьи его нет.
+export type ModelRequestDependencies = Pick<AgentDependencies, 'provider' | 'events' | 'prices'> &
+  Partial<Pick<AgentDependencies, 'budget'>>;
 
 // Шаг цикла агента или служебный запрос харнесса — это видно в событии model_request.
 export type ModelRequestStep =
@@ -43,6 +46,10 @@ export async function requestModel(
     url: preparedRequest.url,
     headers: maskSecretHeaders(preparedRequest.headers),
     body: preparedRequest.body,
+    budget:
+      dependencies.budget === undefined
+        ? null
+        : estimatePromptBudget(preparedRequest.body, dependencies.budget),
   });
 
   const requestedAt = new Date();

@@ -20,7 +20,9 @@ import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
 import { NetworkRouter, type RoutedFetch } from '../network/NetworkRouter.js';
 import { readProxyUrl } from '../network/proxyFromEnvironment.js';
 import type { LoadedSettings } from '../settings/loadSettings.js';
+import type { BudgetSettings } from '../context/promptBudget.js';
 import type {
+  ContextSettings,
   RetrievalMode,
   SearchProviderName,
   SearchSettings,
@@ -249,6 +251,16 @@ function createAgentDependencies(
     confirmAction: hooks.confirmAction,
     permissionPolicy: settings.permissions,
     mcpServerInstructions: resources.mcpServers.instructions,
+    budget: budgetSettings(settings.context),
+  };
+}
+
+function budgetSettings(context: ContextSettings): BudgetSettings {
+  return {
+    preset: context.preset,
+    limitTokens: context.limits[context.preset],
+    thresholdPercent: context.thresholdPercent,
+    charsPerToken: context.charsPerToken,
   };
 }
 

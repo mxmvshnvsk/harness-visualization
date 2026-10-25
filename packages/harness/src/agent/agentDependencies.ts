@@ -2,6 +2,7 @@
 // чтобы агент не знал, откуда берутся провайдер, тулы, события, цены
 // и как именно пользователь подтверждает действия (консоль или интерфейс).
 
+import type { BudgetSettings } from '../context/promptBudget.js';
 import type { EventStream } from '../events/EventStream.js';
 import type { ModelProvider } from '../model/modelProvider.js';
 import type { PermissionAnswerSource } from '../permissions/permissionTypes.js';
@@ -39,4 +40,6 @@ export interface AgentDependencies {
   permissionPolicy: PermissionsSettings;
   // Инструкции подключённых MCP-серверов — попадут в системный промпт.
   mcpServerInstructions: McpServerInstructions[];
+  // Сколько харнесс отводит prompt и как оценивает его размер (этап 6.2).
+  budget: BudgetSettings;
 }

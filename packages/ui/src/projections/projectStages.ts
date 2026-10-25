@@ -65,7 +65,7 @@ const DESCRIBE: Describers = {
   }),
   model_request: (event) => ({
     code: null,
-    text: `запрос к модели ушёл${PURPOSES[event.purpose]}`,
+    text: `запрос к модели ушёл${PURPOSES[event.purpose]}${describeBudget(event.budget)}`,
   }),
   model_response: (event) => ({ code: null, text: describeResponse(event) }),
   model_error: (event) => ({ code: null, text: `модель ответила ошибкой: ${event.message}` }),
@@ -199,6 +199,15 @@ const PURPOSES: Record<EventOfType<'model_request'>['purpose'], string> = {
   queryRewrite: ': переформулировать вопрос в поисковый query',
   groundingJudge: ': судья оценивает claim',
 };
+
+// Бюджет — оценка до ответа: «prompt ≈ 4 600 из 12 000».
+function describeBudget(budget: EventOfType<'model_request'>['budget']): string {
+  if (budget === undefined || budget === null) {
+    return '';
+  }
+  const share = Math.round((budget.estimate.total / budget.limitTokens) * 100);
+  return ` · prompt ≈ ${budget.estimate.total.toLocaleString('ru-RU')} из ${budget.limitTokens.toLocaleString('ru-RU')} (${String(share)} %)`;
+}
 
 function describeResponse(event: EventOfType<'model_response'>): string {
   const { usage, toolCalls } = event.reply;

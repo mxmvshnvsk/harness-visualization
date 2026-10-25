@@ -72,6 +72,26 @@ const agentSettingsSchema = z.object({
   maxIterations: z.number().int().positive().default(10),
 });
 
+// Контекст (этап 6): сколько харнесс отводит prompt. Лимит задаёт харнесс, а не провайдер —
+// чтобы обрезка и компакция были видны на коротких учебных сессиях.
+const contextSettingsSchema = z.object({
+  preset: z.enum(['demo', 'stress', 'real']).default('demo'),
+  // Лимиты пресетов, в токенах: demo — компакция на 3–4-м вопросе диалога, stress — обрезка уже
+  // на первом вопросе с поиском, real — окно модели (deepseek-flash — 1M токенов по странице
+  // цен DeepSeek, проверено 25.10.2026). Числа — по трейсам автора, docs/plan.md, этап 6.
+  limits: z
+    .object({
+      demo: z.number().int().positive(),
+      stress: z.number().int().positive(),
+      real: z.number().int().positive(),
+    })
+    .default({ demo: 12000, stress: 6000, real: 1000000 }),
+  // Порог — доля лимита, с которой харнесс начнёт освобождать место (этапы 6.4–6.5).
+  thresholdPercent: z.number().min(10).max(100).default(80),
+  // Символов на токен в оценке разбивки (context/promptBudget.ts): подобрано по трейсам.
+  charsPerToken: z.number().positive().default(3.24),
+});
+
 const workspaceSettingsSchema = z.object({
   // Песочница, в которой работают файловые тулы.
   directory: z.string().min(1),
@@ -251,6 +271,12 @@ const groundingSettingsSchema = z.object({
 export const harnessSettingsSchema = z.object({
   model: modelSettingsSchema,
   agent: agentSettingsSchema,
+  context: contextSettingsSchema.default({
+    preset: 'demo',
+    limits: { demo: 12000, stress: 6000, real: 1000000 },
+    thresholdPercent: 80,
+    charsPerToken: 3.24,
+  }),
   workspace: workspaceSettingsSchema,
   permissions: permissionsSchema,
   webFetch: webFetchSettingsSchema,
@@ -278,6 +304,7 @@ export const harnessSettingsSchema = z.object({
 
 export type HarnessSettings = z.infer<typeof harnessSettingsSchema>;
 export type ModelSettings = z.infer<typeof modelSettingsSchema>;
+export type ContextSettings = z.infer<typeof contextSettingsSchema>;
 export type ReasoningStyle = ModelSettings['reasoningStyle'];
 export type ModelPrices = z.infer<typeof modelPricesSchema>;
 export type Tariff = z.infer<typeof tariffSchema>;

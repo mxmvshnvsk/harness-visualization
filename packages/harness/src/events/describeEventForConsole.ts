@@ -191,7 +191,26 @@ function describeModelRequest(event: EventOfType<'model_request'>): string[] {
       ),
     ];
   }
-  return [styleText('cyan', `Харнесс → модель (шаг ${event.iteration ?? '?'}): ${target}`)];
+  return [
+    styleText('cyan', `Харнесс → модель (шаг ${event.iteration ?? '?'}): ${target}`),
+    ...describeBudget(event.budget),
+  ];
+}
+
+// Оценка размера prompt — до ответа модели; точное число придёт в usage ответа.
+function describeBudget(budget: EventOfType<'model_request'>['budget']): string[] {
+  if (budget === null || budget === undefined) {
+    return [];
+  }
+  const { estimate, limitTokens, preset } = budget;
+  const share = Math.round((estimate.total / limitTokens) * 100);
+  const parts = `system ≈${formatNumber(estimate.system)}, тулы ≈${formatNumber(estimate.tools)}, диалог ≈${formatNumber(estimate.dialog)}, результаты тулов ≈${formatNumber(estimate.toolResults)}`;
+  return [
+    styleText(
+      share >= 100 ? 'red' : 'dim',
+      `    prompt ≈ ${formatNumber(estimate.total)} из ${formatNumber(limitTokens)} токенов (${preset}, ${String(share)} %): ${parts}`,
+    ),
+  ];
 }
 
 function describeQueryRewritten(event: EventOfType<'query_rewritten'>): string[] {

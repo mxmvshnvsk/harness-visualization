@@ -16,6 +16,7 @@ export const HELP_TOPICS = [
   'mcp',
   'retrieval',
   'flow',
+  'context-budget',
 ] as const;
 
 export type HelpTopic = (typeof HELP_TOPICS)[number];

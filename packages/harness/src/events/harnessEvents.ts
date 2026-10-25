@@ -10,6 +10,7 @@ import type {
   ToolEffect,
 } from '../permissions/permissionTypes.js';
 import type { NetworkRequestInfo } from '../network/NetworkRouter.js';
+import type { PromptBudget } from '../context/promptBudget.js';
 import type { RetrievalMode } from '../settings/settingsSchema.js';
 import type {
   RequestCost,
@@ -207,6 +208,9 @@ export interface ModelRequestPayload {
   // Секретные заголовки уже замаскированы.
   headers: Record<string, string>;
   body: Record<string, unknown>;
+  // Бюджет prompt (этап 6.2): оценка по частям, лимит и порог; null — бюджет не считали
+  // (например, у судьи в check-grounding). В трейсах до этапа 6.2 поля нет.
+  budget?: PromptBudget | null;
 }
 
 export interface ModelResponsePayload {
