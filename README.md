@@ -252,13 +252,15 @@ pnpm serve
 
 Сервер слушает только `127.0.0.1` на порту из `harness.config.json` (`server.port`, по умолчанию 4317). Авторизации нет: это локальный учебный стенд, а каждая сессия тратит деньги владельца ключа модели.
 
+`--noproxy '*'` — на случай, если в терминале задан прокси: без флага curl может отправить запрос к `127.0.0.1` через него и получить пустой ответ.
+
 ```bash
 # запустить сессию — ответ приходит сразу, с id сессии
-curl -X POST -H 'content-type: application/json' \
+curl --noproxy '*' -X POST -H 'content-type: application/json' \
   -d '{"question": "удалёнка", "retrievalMode": "auto"}' http://127.0.0.1:4317/api/sessions
 
 # поток её событий (SSE)
-curl -N http://127.0.0.1:4317/api/sessions/<id>/events
+curl --noproxy '*' -N http://127.0.0.1:4317/api/sessions/<id>/events
 ```
 
 | Маршрут                        | Что делает                                                                                                                                                        |
