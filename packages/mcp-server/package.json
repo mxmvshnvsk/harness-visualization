@@ -5,6 +5,12 @@
   "description": "MCP-сервер базы знаний вымышленной компании «Кедр Софт»",
   "license": "MIT",
   "type": "module",
+  "exports": {
+    "./lab": {
+      "types": "./dist/lab/index.d.ts",
+      "default": "./dist/lab/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",

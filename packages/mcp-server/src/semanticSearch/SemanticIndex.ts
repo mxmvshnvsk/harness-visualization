@@ -18,7 +18,7 @@ export interface SemanticIndexOptions {
   log: (message: string) => void;
 }
 
-interface ReadyIndex {
+export interface ReadyIndex {
   embedder: TextEmbedder;
   chunks: IndexedChunk[];
 }
@@ -41,6 +41,12 @@ export class SemanticIndex {
     const index = await this.whenReady();
     const queryVector = await index.embedder.embedQuery(query);
     return rankChunks(index.chunks, queryVector, limit);
+  }
+
+  // Готовый индекс: модель и фрагменты с векторами. Нужен лаборатории RAG (lab/), чтобы
+  // показывать ровно те фрагменты и векторы, по которым ищет сервер.
+  ready(): Promise<ReadyIndex> {
+    return this.whenReady();
   }
 
   private whenReady(): Promise<ReadyIndex> {

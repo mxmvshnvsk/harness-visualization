@@ -89,9 +89,15 @@ importers:
 
   packages/server:
     dependencies:
+      '@harness-visualization/embeddings':
+        specifier: workspace:*
+        version: link:../embeddings
       '@harness-visualization/harness':
         specifier: workspace:*
         version: link:../harness
+      '@harness-visualization/mcp-server':
+        specifier: workspace:*
+        version: link:../mcp-server
       fastify:
         specifier: 5.12.5
         version: 5.12.5

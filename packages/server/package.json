@@ -15,7 +15,9 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@harness-visualization/embeddings": "workspace:*",
     "@harness-visualization/harness": "workspace:*",
+    "@harness-visualization/mcp-server": "workspace:*",
     "fastify": "5.12.5",
     "zod": "4.6.7"
   }

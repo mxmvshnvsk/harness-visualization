@@ -43,6 +43,14 @@ export { checkGrounding } from './grounding/checkGrounding.js';
 export { collectSeenSources, normalizeReference } from './grounding/collectSeenSources.js';
 export { extractReferences } from './grounding/extractReferences.js';
 export { readTrace } from './grounding/readTrace.js';
+export { collectSeenTexts } from './grounding/collectSeenTexts.js';
+export { measureClaimSimilarity } from './grounding/measureClaimSimilarity.js';
+export {
+  CLAIM_SUPPORT_LEVELS,
+  claimSupportLevel,
+  disagreesWithJudge,
+  type ClaimSupportLevel,
+} from './grounding/claimSupportLevel.js';
 export type * from './grounding/claimTypes.js';
 export type * from './grounding/referenceTypes.js';
 export {
