@@ -7,21 +7,33 @@ import type { ModelReply, ModelRequest } from '../model/chatTypes.js';
 import type { RawHttpResponse } from '../model/modelProvider.js';
 import { maskSecretHeaders } from '../model/maskSecretHeaders.js';
 import { ModelProviderError } from '../model/ModelProviderError.js';
+import type { ModelRequestPurpose } from '../events/harnessEvents.js';
 import { calculateCost } from '../tokenomics/calculateCost.js';
 import type { AgentDependencies } from './agentDependencies.js';
+
+// Шаг цикла агента или служебный запрос харнесса — это видно в событии model_request.
+export type ModelRequestStep =
+  | { purpose: 'agentStep'; iteration: number }
+  | { purpose: Exclude<ModelRequestPurpose, 'agentStep'>; iteration: null };
+
+export interface ModelExchange {
+  requestId: string;
+  reply: ModelReply;
+}
 
 export async function requestModel(
   request: ModelRequest,
   dependencies: AgentDependencies,
-  iteration: number,
-): Promise<ModelReply> {
+  step: ModelRequestStep,
+): Promise<ModelExchange> {
   const { provider, events } = dependencies;
   const requestId = randomUUID();
   const preparedRequest = provider.prepareRequest(request);
   events.emit({
     type: 'model_request',
     requestId,
-    iteration,
+    purpose: step.purpose,
+    iteration: step.iteration,
     reasoningEffort: request.reasoningEffort,
     method: preparedRequest.method,
     url: preparedRequest.url,
@@ -44,7 +56,7 @@ export async function requestModel(
     reply,
     cost: calculateCost(reply.usage, dependencies.prices[provider.model], requestedAt),
   });
-  return reply;
+  return { requestId, reply };
 }
 
 async function sendAndReportFailure(

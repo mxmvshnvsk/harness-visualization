@@ -1,14 +1,14 @@
 // Точка входа pnpm compare-runs: одни и те же вопросы по нескольку раз в каждом варианте поиска
 // и сводка с разбросом. Варианты — в runComparison/comparisonVariants.ts:
-// tool (модель ищет сама), auto (харнесс подмешивает поиск по смыслу),
-// hybrid (харнесс подмешивает гибридный поиск).
-//   pnpm compare-runs                       — все вопросы и варианты, по 3 прогона
+// tool (модель ищет сама), auto (харнесс ищет словами пользователя), rewrite (харнесс ищет
+// запросом, который составила модель), hybrid (как auto, но гибридным поиском).
+//   pnpm compare-runs                       — все вопросы, варианты tool, auto, rewrite, по 3 прогона
 //   pnpm compare-runs --runs 5              — по 5 прогонов
 //   pnpm compare-runs --question 2          — только второй вопрос
-//   pnpm compare-runs --variants tool,hybrid — только эти варианты
+//   pnpm compare-runs --variants auto,hybrid — только эти варианты
 //
 // Каждый прогон — обычная сессия со своим трейсом в traces/. Варианты чередуются
-// (tool, auto, hybrid, tool, …): кэш промпта, прогретый предыдущей сессией, достаётся всем.
+// (tool, auto, rewrite, tool, …): кэш промпта, прогретый предыдущей сессией, достаётся всем.
 // Рабочая папка у каждого прогона своя, временная, из примеров: заметки одного прогона
 // не должны влиять на другие. Действия, требующие разрешения, запрещаются — спросить некого.
 
@@ -23,7 +23,11 @@ import {
   COMPARISON_QUESTIONS,
   type ComparisonQuestion,
 } from '../runComparison/comparisonQuestions.js';
-import { RUN_VARIANTS, type RunVariant } from '../runComparison/comparisonVariants.js';
+import {
+  DEFAULT_VARIANT_NAMES,
+  RUN_VARIANTS,
+  type RunVariant,
+} from '../runComparison/comparisonVariants.js';
 import { summarizeRun, type RunSummary } from '../runComparison/summarizeRun.js';
 import { loadSettings, type LoadedSettings } from '../settings/loadSettings.js';
 import { runCliSession } from './runCliSession.js';
@@ -131,10 +135,8 @@ function parseQuestions(value: string | undefined): ComparisonQuestion[] {
 }
 
 function parseVariants(value: string | undefined): RunVariant[] {
-  if (value === undefined) {
-    return RUN_VARIANTS;
-  }
-  return value.split(',').map((name) => {
+  const names = value === undefined ? DEFAULT_VARIANT_NAMES : value.split(',');
+  return names.map((name) => {
     const variant = RUN_VARIANTS.find((candidate) => candidate.name === name.trim());
     if (variant === undefined) {
       const known = RUN_VARIANTS.map((candidate) => candidate.name).join(', ');
@@ -225,9 +227,10 @@ function describeProgress(
     summary.costUsd === null ? 'стоимость неизвестна' : `${summary.costUsd.toFixed(6)} USD`;
   const seconds = (summary.durationMs / 1000).toFixed(1);
   const cache = summary.firstRequestCache === 'warm' ? 'кэш прогрет' : 'кэш холодный';
+  const query = summary.harnessQuery === null ? '' : `, харнесс искал «${summary.harnessQuery}»`;
   return (
     `${head}: запросов ${summary.modelRequests}, вход ${formatNumber(summary.inputTokens)}, ` +
-    `${cost}, ${seconds} с, ${cache} — ${tracePath}`
+    `${cost}, ${seconds} с, ${cache}${query} — ${tracePath}`
   );
 }
 

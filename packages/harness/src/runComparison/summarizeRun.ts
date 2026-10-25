@@ -22,7 +22,9 @@ export interface RunSummary {
   // null — цена хотя бы одного запроса неизвестна.
   costUsd: number | null;
   durationMs: number;
-  // Прогрет ли кэш к первому запросу — то есть чужой сессией, а не этой; null — запросов не было.
+  // По какому запросу искал харнесс до запроса к модели; null — харнесс не искал (вариант tool).
+  harnessQuery: string | null;
+  // Прогрет ли кэш к первому шагу агента — то есть чужой сессией, а не этой; null — шагов не было.
   firstRequestCache: CacheWarmth | null;
   // Сколько тулов попросила модель (без поиска харнессом до запроса).
   toolCalls: number;
@@ -47,6 +49,7 @@ export function summarizeRun(
     failed,
     ...readSessionTotals(events),
     firstRequestCache: readFirstRequestCache(events),
+    harnessQuery: readHarnessQuery(events),
     toolCalls: events.filter((event) => event.type === 'tool_call').length,
     documentsRead: collectDocumentsRead(events),
     expectedSeen: collectSeenSources(events).get(expectedId)?.level ?? 'notSeen',
@@ -81,9 +84,28 @@ function readSessionTotals(events: HarnessEvent[]): SessionTotals {
   };
 }
 
+// Первый шаг агента, а не первый запрос вообще: служебный запрос rewrite короткий,
+// без тулов и с другим началом — его кэш ничего не говорит о прогретости контекста агента.
 function readFirstRequestCache(events: HarnessEvent[]): CacheWarmth | null {
-  const firstResponse = events.find((event) => event.type === 'model_response');
-  return firstResponse === undefined ? null : classifyCacheWarmth(firstResponse.reply.usage);
+  const firstAgentRequest = events.find(
+    (event) => event.type === 'model_request' && event.purpose === 'agentStep',
+  );
+  const firstResponse = events.find(
+    (event) =>
+      event.type === 'model_response' &&
+      firstAgentRequest?.type === 'model_request' &&
+      event.requestId === firstAgentRequest.requestId,
+  );
+  if (firstResponse?.type !== 'model_response') {
+    return null;
+  }
+  return classifyCacheWarmth(firstResponse.reply.usage);
+}
+
+function readHarnessQuery(events: HarnessEvent[]): string | null {
+  const retrieved = events.find((event) => event.type === 'context_retrieved');
+  const query = retrieved?.arguments['query'];
+  return typeof query === 'string' ? query : null;
 }
 
 function findAnswer(events: HarnessEvent[]): string | null {

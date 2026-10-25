@@ -124,10 +124,26 @@ export interface UserMessagePayload {
 
 // Харнесс сам, до запроса к модели, нашёл материал по вопросу пользователя (retrieval.mode: auto).
 // Это не просьба модели, поэтому tool_call и tool_result здесь нет.
+// Модель по просьбе харнесса сформулировала поисковый запрос (retrieval rewrite).
+// Сам запрос к модели — в паре model_request и model_response с purpose: queryRewrite.
+export interface QueryRewrittenPayload {
+  type: 'query_rewritten';
+  requestId: string;
+  userQuestion: string;
+  // Запрос, по которому харнесс будет искать. Если модель вернула пустой ответ — вопрос пользователя.
+  query: string;
+  usedFallback: boolean;
+}
+
+// Кто сформулировал запрос, по которому искал харнесс.
+export type QueryAuthor = 'user' | 'model';
+
 export interface ContextRetrievedPayload {
   type: 'context_retrieved';
   toolName: string;
   arguments: Record<string, unknown>;
+  queryAuthor: QueryAuthor;
+  userQuestion: string;
   status: 'success' | 'error';
   // При успехе — ровно то, что харнесс вставил в контекст; при ошибке — её текст,
   // а модель получает вопрос без найденного.
@@ -142,11 +158,17 @@ export interface PromptAssembledPayload {
   toolNames: string[];
 }
 
+// Зачем харнесс обращается к модели: шаг цикла агента или служебный запрос харнесса —
+// например, переформулировать вопрос пользователя в поисковый запрос (retrieval rewrite).
+export type ModelRequestPurpose = 'agentStep' | 'queryRewrite';
+
 export interface ModelRequestPayload {
   type: 'model_request';
   requestId: string;
-  // Номер шага цикла агента: 1 — первый запрос, дальше — после каждого вызова тулов.
-  iteration: number;
+  purpose: ModelRequestPurpose;
+  // Номер шага цикла агента: 1 — первый запрос, дальше — после каждого вызова тулов;
+  // null — служебный запрос харнесса вне цикла агента.
+  iteration: number | null;
   reasoningEffort: ReasoningEffort;
   method: string;
   url: string;
@@ -268,6 +290,7 @@ export type HarnessEventPayload =
   | McpServerStoppedPayload
   | NetworkRequestPayload
   | UserMessagePayload
+  | QueryRewrittenPayload
   | ContextRetrievedPayload
   | PromptAssembledPayload
   | ModelRequestPayload

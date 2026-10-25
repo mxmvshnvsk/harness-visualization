@@ -39,7 +39,8 @@ export interface CliSessionInput {
   reasoningEffort: ReasoningEffort;
   // null — провайдер поиска из harness.config.json, иначе выбранный флагом --search.
   searchProvider: SearchProviderName | null;
-  // Кто ищет в базе знаний: модель (tool) или харнесс до запроса (auto).
+  // Кто ищет в базе знаний: модель (tool) или харнесс до запроса — словами пользователя (auto)
+  // или запросом, который сформулировала модель (rewrite).
   retrievalMode: RetrievalMode;
   // null — тул поиска харнесса из harness.config.json; иначе другой (флаг --retrieval-tool).
   retrievalToolName: string | null;
@@ -176,11 +177,15 @@ function createAgentDependencies(
 
 // null — модель ищет сама; иначе харнесс ищет до запроса тулом из раздела retrieval.
 function createRetrievalOptions(input: CliSessionInput): RetrievalOptions | null {
-  if (input.retrievalMode !== 'auto') {
+  if (input.retrievalMode === 'tool') {
     return null;
   }
   const { retrieval } = input.loadedSettings.settings;
-  return { toolName: input.retrievalToolName ?? retrieval.toolName, limit: retrieval.limit };
+  return {
+    toolName: input.retrievalToolName ?? retrieval.toolName,
+    limit: retrieval.limit,
+    rewriteQuery: input.retrievalMode === 'rewrite',
+  };
 }
 
 // В тихой сессии спросить некого, а молчание — не согласие.

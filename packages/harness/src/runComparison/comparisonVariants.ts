@@ -23,12 +23,22 @@ export const RUN_VARIANTS: RunVariant[] = [
     name: 'auto',
     retrievalMode: 'auto',
     retrievalToolName: 'kedr__semantic_search',
-    description: 'харнесс подмешивает поиск по смыслу',
+    description: 'харнесс ищет по смыслу словами пользователя и подмешивает',
+  },
+  {
+    name: 'rewrite',
+    retrievalMode: 'rewrite',
+    retrievalToolName: 'kedr__semantic_search',
+    description: 'модель составляет запрос, харнесс ищет по нему по смыслу и подмешивает',
   },
   {
     name: 'hybrid',
     retrievalMode: 'auto',
     retrievalToolName: 'kedr__hybrid_search',
-    description: 'харнесс подмешивает гибридный поиск',
+    description: 'харнесс ищет гибридно словами пользователя и подмешивает',
   },
 ];
+
+// Без флага --variants: урок «кто формулирует запрос» — пользователь, модель по просьбе
+// харнесса или модель сама. hybrid — по запросу: он про поисковый движок, а не про автора запроса.
+export const DEFAULT_VARIANT_NAMES = ['tool', 'auto', 'rewrite'];

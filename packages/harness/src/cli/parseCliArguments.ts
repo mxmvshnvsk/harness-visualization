@@ -2,7 +2,8 @@
 //   pnpm chat "Сколько дней отпуска положено?"
 //   pnpm chat --effort off "вопрос"   — уровень рассуждений: off, low, high, max
 //   pnpm chat --search yandex "вопрос" — поисковый провайдер: tavily или yandex
-//   pnpm chat --retrieval auto "вопрос" — кто ищет в базе знаний: tool (модель) или auto (харнесс)
+//   pnpm chat --retrieval auto "вопрос" — кто ищет в базе знаний: tool (модель), auto (харнесс
+//                                        словами пользователя), rewrite (харнесс запросом модели)
 //   pnpm chat --retrieval auto --retrieval-tool kedr__hybrid_search "вопрос" — каким тулом ищет харнесс
 //   pnpm chat --fresh "вопрос"        — начать с чистой рабочей папки (пересоздать из примеров)
 //   pnpm chat --verbose "вопрос"      — печатать и полные события в JSON

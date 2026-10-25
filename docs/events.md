@@ -15,31 +15,32 @@
 
 ## События
 
-| Тип                    | Когда                                                              | Главные поля                                                                                             |
-| ---------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `session_started`      | сессия началась                                                    | `providerName`, `baseUrl`, `model`, `reasoningEffort`, `networkProxy`, `searchProvider`, `retrievalMode` |
-| `workspace_prepared`   | песочница готова к сессии                                          | `directory`, `createdFromSeed`, `wasReset`                                                               |
-| `mcp_server_starting`  | харнесс запускает MCP-сервер                                       | `serverName`, `command`, `args`, `trustAnnotations`                                                      |
-| `mcp_server_ready`     | рукопожатие прошло, список тулов получен                           | `serverName`, `serverInfo`, `protocolVersion`, `instructions`, `tools`, `durationMs`                     |
-| `mcp_server_failed`    | сервер не запустился, сессия идёт без его тулов                    | `serverName`, `message`                                                                                  |
-| `mcp_message`          | сообщение JSON-RPC между харнессом и MCP-сервером                  | `serverName`, `direction` (`to_server`, `from_server`), `message`                                        |
-| `mcp_server_log`       | строка из stderr сервера                                           | `serverName`, `text`                                                                                     |
-| `mcp_server_stopped`   | харнесс остановил сервер в конце сессии                            | `serverName`                                                                                             |
-| `network_request`      | харнесс отправляет HTTP-запрос: к модели, поисковику или странице  | `host`, `route` (`proxy`, `direct`), `viaProxy`, `rule`, `proxyUrl` (секреты скрыты)                     |
-| `user_message`         | пришёл запрос пользователя                                         | `text`                                                                                                   |
-| `context_retrieved`    | харнесс сам нашёл материал до запроса к модели (retrieval auto)    | `toolName`, `arguments`, `status` (`success`, `error`), `content`, `durationMs`                          |
-| `prompt_assembled`     | харнесс собрал контекст для модели                                 | `messages`, `toolNames`                                                                                  |
-| `model_request`        | HTTP-запрос к модели собран и отправляется                         | `requestId`, `iteration`, `reasoningEffort`, `method`, `url`, `headers` (секреты скрыты), `body`         |
-| `model_response`       | модель ответила                                                    | `requestId`, `status`, `durationMs`, `body`, `reply`, `cost`                                             |
-| `model_error`          | запрос к модели не удался                                          | `requestId`, `status`, `durationMs`, `body`, `message`                                                   |
-| `tool_call`            | модель попросила вызвать тул                                       | `toolCallId`, `toolName`, `argumentsText`, `arguments`                                                   |
-| `permission_evaluated` | политика разрешений приняла решение (на каждом вызове)             | `toolCallId`, `toolName`, `effects`, `targets`, `actionDescription`, `decision`, `reason`, `checks`      |
-| `permission_requested` | тулу нужно разрешение пользователя                                 | `toolCallId`, `toolName`, `actionDescription`                                                            |
-| `permission_resolved`  | пользователь ответил                                               | `toolCallId`, `toolName`, `approved`, `waitedForUserMs`                                                  |
-| `tool_result`          | тул выполнен, не смог, пользователь отказал или политика запретила | `toolCallId`, `toolName`, `status`, `content`, `details`, `cost`, `durationMs`                           |
-| `assistant_message`    | харнесс отдал ответ пользователю                                   | `text`                                                                                                   |
-| `session_finished`     | сессия закончилась                                                 | `durationMs`, `modelRequests`, `usage`, `modelCost`, `toolCosts`                                         |
-| `error`                | ошибка, прервавшая сессию                                          | `message`                                                                                                |
+| Тип                    | Когда                                                                     | Главные поля                                                                                                                     |
+| ---------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `session_started`      | сессия началась                                                           | `providerName`, `baseUrl`, `model`, `reasoningEffort`, `networkProxy`, `searchProvider`, `retrievalMode`                         |
+| `workspace_prepared`   | песочница готова к сессии                                                 | `directory`, `createdFromSeed`, `wasReset`                                                                                       |
+| `mcp_server_starting`  | харнесс запускает MCP-сервер                                              | `serverName`, `command`, `args`, `trustAnnotations`                                                                              |
+| `mcp_server_ready`     | рукопожатие прошло, список тулов получен                                  | `serverName`, `serverInfo`, `protocolVersion`, `instructions`, `tools`, `durationMs`                                             |
+| `mcp_server_failed`    | сервер не запустился, сессия идёт без его тулов                           | `serverName`, `message`                                                                                                          |
+| `mcp_message`          | сообщение JSON-RPC между харнессом и MCP-сервером                         | `serverName`, `direction` (`to_server`, `from_server`), `message`                                                                |
+| `mcp_server_log`       | строка из stderr сервера                                                  | `serverName`, `text`                                                                                                             |
+| `mcp_server_stopped`   | харнесс остановил сервер в конце сессии                                   | `serverName`                                                                                                                     |
+| `network_request`      | харнесс отправляет HTTP-запрос: к модели, поисковику или странице         | `host`, `route` (`proxy`, `direct`), `viaProxy`, `rule`, `proxyUrl` (секреты скрыты)                                             |
+| `user_message`         | пришёл запрос пользователя                                                | `text`                                                                                                                           |
+| `query_rewritten`      | модель по просьбе харнесса составила поисковый запрос (retrieval rewrite) | `requestId`, `userQuestion`, `query`, `usedFallback`                                                                             |
+| `context_retrieved`    | харнесс сам нашёл материал до запроса к модели (retrieval auto, rewrite)  | `toolName`, `arguments`, `queryAuthor` (`user`, `model`), `userQuestion`, `status` (`success`, `error`), `content`, `durationMs` |
+| `prompt_assembled`     | харнесс собрал контекст для модели                                        | `messages`, `toolNames`                                                                                                          |
+| `model_request`        | HTTP-запрос к модели собран и отправляется                                | `requestId`, `purpose`, `iteration`, `reasoningEffort`, `method`, `url`, `headers` (секреты скрыты), `body`                      |
+| `model_response`       | модель ответила                                                           | `requestId`, `status`, `durationMs`, `body`, `reply`, `cost`                                                                     |
+| `model_error`          | запрос к модели не удался                                                 | `requestId`, `status`, `durationMs`, `body`, `message`                                                                           |
+| `tool_call`            | модель попросила вызвать тул                                              | `toolCallId`, `toolName`, `argumentsText`, `arguments`                                                                           |
+| `permission_evaluated` | политика разрешений приняла решение (на каждом вызове)                    | `toolCallId`, `toolName`, `effects`, `targets`, `actionDescription`, `decision`, `reason`, `checks`                              |
+| `permission_requested` | тулу нужно разрешение пользователя                                        | `toolCallId`, `toolName`, `actionDescription`                                                                                    |
+| `permission_resolved`  | пользователь ответил                                                      | `toolCallId`, `toolName`, `approved`, `waitedForUserMs`                                                                          |
+| `tool_result`          | тул выполнен, не смог, пользователь отказал или политика запретила        | `toolCallId`, `toolName`, `status`, `content`, `details`, `cost`, `durationMs`                                                   |
+| `assistant_message`    | харнесс отдал ответ пользователю                                          | `text`                                                                                                                           |
+| `session_finished`     | сессия закончилась                                                        | `durationMs`, `modelRequests`, `usage`, `modelCost`, `toolCosts`                                                                 |
+| `error`                | ошибка, прервавшая сессию                                                 | `message`                                                                                                                        |
 
 `model_request` и `model_response` связаны полем `requestId`, `tool_call` и `tool_result` — полем `toolCallId`. Тот же `toolCallId` стоит в ответе модели (`reply.toolCalls`) и в сообщении с результатом тула, которое уходит модели в следующем запросе.
 
@@ -87,6 +88,15 @@ assistant_message
 ```
 user_message → context_retrieved → prompt_assembled → model_request …
 ```
+
+При `retrieval.mode: rewrite` запрос для поиска сначала составляет модель — служебным запросом без тулов, без рассуждений и без истории:
+
+```
+user_message → model_request (purpose: queryRewrite) → model_response → query_rewritten
+             → context_retrieved (queryAuthor: model) → prompt_assembled → model_request (purpose: agentStep, шаг 1) …
+```
+
+`purpose` у `model_request` — зачем харнесс обращается к модели: `agentStep` — шаг цикла агента (`iteration` — его номер), `queryRewrite` — служебный запрос харнесса (`iteration: null`). Служебный запрос входит в токеномику сессии, как любой другой. Если модель вернула пустой ответ, `query_rewritten` идёт с `usedFallback: true`, и харнесс ищет словами пользователя.
 
 Это не просьба модели, поэтому вместо `tool_call` и `tool_result` — одно событие `context_retrieved`, без `permission_evaluated`: тул поиска выбрал сам пользователь в конфиге. Если тул из MCP-сервера, между событиями видна пара `mcp_message`. Найденное (`content`) попадает в сообщение пользователя с пометкой, что это данные, а не инструкции; в `user_message` остаётся исходный вопрос. При ошибке (`status: error`) модель получает вопрос без найденного. `check-grounding` считает найденное харнессом уровнем «фрагмент». Режим сессии — в поле `retrievalMode` события `session_started`.
 

@@ -3,6 +3,7 @@
 // так легко найти, как печатается конкретное событие, и добавить новое.
 
 import { styleText } from 'node:util';
+import type { RetrievalMode } from '../settings/settingsSchema.js';
 import type { HarnessEvent, HarnessEventType } from './harnessEvents.js';
 import { describeJsonRpcMessage } from '../mcp/describeJsonRpcMessage.js';
 import {
@@ -15,6 +16,13 @@ import {
 } from './formatForConsole.js';
 
 type EventOfType<Type extends HarnessEventType> = Extract<HarnessEvent, { type: Type }>;
+
+const RETRIEVAL_MODE_DESCRIPTIONS: Record<RetrievalMode, string> = {
+  tool: 'модель ищет сама тулами (retrieval tool)',
+  auto: 'харнесс сам ищет словами пользователя и подмешивает найденное (retrieval auto)',
+  rewrite:
+    'модель составляет запрос, харнесс ищет по нему и подмешивает найденное (retrieval rewrite)',
+};
 
 type EventDescribers = {
   [Type in HarnessEventType]: (event: EventOfType<Type>) => string[];
@@ -33,12 +41,7 @@ const EVENT_DESCRIBERS: EventDescribers = {
         : `Сеть: прокси для маршрута proxy — ${event.networkProxy}`,
     ),
     styleText('dim', `Поиск: ${event.searchProvider ?? 'выключен'}`),
-    styleText(
-      'dim',
-      event.retrievalMode === 'auto'
-        ? 'База знаний: харнесс сам подмешивает найденное до запроса (retrieval auto)'
-        : 'База знаний: модель ищет сама тулами (retrieval tool)',
-    ),
+    styleText('dim', `База знаний: ${RETRIEVAL_MODE_DESCRIPTIONS[event.retrievalMode]}`),
   ],
   workspace_prepared: describeWorkspacePrepared,
   mcp_server_starting: (event) => [
@@ -67,12 +70,8 @@ const EVENT_DESCRIBERS: EventDescribers = {
   user_message: (event) => [`Пользователь → харнесс: «${shortenForPreview(event.text)}»`],
   context_retrieved: describeContextRetrieved,
   prompt_assembled: describePromptAssembled,
-  model_request: (event) => [
-    styleText(
-      'cyan',
-      `Харнесс → модель (шаг ${event.iteration}): ${event.method} ${event.url} · effort ${event.reasoningEffort}`,
-    ),
-  ],
+  model_request: describeModelRequest,
+  query_rewritten: describeQueryRewritten,
   model_response: describeModelResponse,
   model_error: (event) => [styleText('red', `Ошибка модели: ${event.message}`)],
   tool_call: (event) => [
@@ -160,10 +159,34 @@ function describePromptAssembled(event: EventOfType<'prompt_assembled'>): string
   return [`Харнесс собрал контекст: ${event.messages.length} сообщ. (${roles}), тулы: ${tools}`];
 }
 
+function describeModelRequest(event: EventOfType<'model_request'>): string[] {
+  const target = `${event.method} ${event.url} · effort ${event.reasoningEffort}`;
+  if (event.purpose === 'queryRewrite') {
+    return [
+      styleText(
+        'cyan',
+        `Харнесс → модель (служебный запрос: переписать вопрос в поисковый, без тулов): ${target}`,
+      ),
+    ];
+  }
+  return [styleText('cyan', `Харнесс → модель (шаг ${event.iteration ?? '?'}): ${target}`)];
+}
+
+function describeQueryRewritten(event: EventOfType<'query_rewritten'>): string[] {
+  if (event.usedFallback) {
+    return [styleText('yellow', 'Модель не дала запрос — харнесс ищет словами пользователя')];
+  }
+  return [
+    styleText('yellow', `Запрос для поиска составила модель: «${event.query}»`),
+    styleText('dim', `    вместо слов пользователя: «${event.userQuestion}»`),
+  ];
+}
+
 function describeContextRetrieved(event: EventOfType<'context_retrieved'>): string[] {
+  const author = event.queryAuthor === 'model' ? 'запросом модели' : 'словами пользователя';
   const request = styleText(
     'yellow',
-    `Харнесс сам → тул ${event.toolName}, до запроса к модели: ${JSON.stringify(event.arguments)}`,
+    `Харнесс сам → тул ${event.toolName}, до запроса к модели, ${author}: ${JSON.stringify(event.arguments)}`,
   );
   if (event.status === 'error') {
     return [

@@ -18,7 +18,9 @@ import {
   combineWithRetrievedContext,
   retrieveContext,
   type RetrievalOptions,
+  type RetrievalQuery,
 } from './retrieveContext.js';
+import { rewriteSearchQuery } from './rewriteSearchQuery.js';
 import { buildSystemPrompt, type McpServerInstructions } from './systemPrompt.js';
 
 export interface TurnOptions {
@@ -41,10 +43,10 @@ export async function runAgentTurn(
   events.emit({ type: 'prompt_assembled', messages: [...messages], toolNames: tools.names() });
 
   for (let iteration = 1; iteration <= options.maxIterations; iteration += 1) {
-    const reply = await requestModel(
+    const { reply } = await requestModel(
       { messages, tools: tools.definitions(), reasoningEffort: options.reasoningEffort },
       dependencies,
-      iteration,
+      { purpose: 'agentStep', iteration },
     );
     messages.push(toAssistantMessage(reply));
 
@@ -71,11 +73,25 @@ async function prepareUserContent(
   if (retrieval === null) {
     return userText;
   }
-  const retrievedText = await retrieveContext(userText, retrieval, dependencies);
+  const search = await prepareRetrievalQuery(userText, dependencies, retrieval);
+  const retrievedText = await retrieveContext(search, retrieval, dependencies);
   if (retrievedText === null) {
     return userText;
   }
-  return combineWithRetrievedContext(userText, retrievedText, retrieval.toolName);
+  return combineWithRetrievedContext(retrievedText, search, retrieval.toolName);
+}
+
+// Кто формулирует запрос для поиска харнесса: сам пользователь (auto) или модель (rewrite).
+async function prepareRetrievalQuery(
+  userText: string,
+  dependencies: AgentDependencies,
+  retrieval: RetrievalOptions,
+): Promise<RetrievalQuery> {
+  if (!retrieval.rewriteQuery) {
+    return { userQuestion: userText, query: userText, queryAuthor: 'user' };
+  }
+  const query = await rewriteSearchQuery(userText, dependencies);
+  return { userQuestion: userText, query, queryAuthor: 'model' };
 }
 
 // Модель не помнит прошлых запросов: всё, что она должна знать, харнесс кладёт сюда.
