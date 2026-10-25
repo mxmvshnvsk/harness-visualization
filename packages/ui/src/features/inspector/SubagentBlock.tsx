@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { activeStage } from '../../projections/projectStages';
 import { runAt } from '../../projections/projectSubagents';
 import type { SessionView } from '../../projections/sessionView';
+import { Term } from '../../help/HelpLinks';
 import { StageCard } from './StageCard';
 import { useFocusedSubagent, useSubagentSteps } from './subagentSteps';
 import styles from './Stages.module.css';
@@ -41,6 +42,9 @@ export function SubagentBlock(props: SubagentBlockProps): ReactElement | null {
       >
         {open ? '▾' : '▸'} шаги субагента {subagentId} · {stepCount} · своя история, свои тулы
       </button>
+      <span className={styles.subagentHelp}>
+        что такое <Term topic="subagents">субагент</Term>
+      </span>
       {open && (
         <div className={styles.subagentStages}>
           {steps.stages.map((stage) => (

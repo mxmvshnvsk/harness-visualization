@@ -9,6 +9,7 @@ import {
   reportTokens,
   type AgentsView as View,
 } from '../../projections/projectAgents';
+import { HelpButton } from '../../help/HelpLinks';
 import { AgentLanes } from './AgentLanes';
 import { BudgetBars } from './BudgetBars';
 import { Handoffs } from './Handoffs';
@@ -31,6 +32,12 @@ export function AgentsView({ events, shown }: AgentsViewProps): ReactElement {
   }
   return (
     <div className={styles.screen}>
+      <div className={styles.screenHead}>
+        <p className={styles.muted}>
+          Главный агент и субагенты, которым он поручал задачи: у каждого своя история.
+        </p>
+        <HelpButton topic="subagents" />
+      </div>
       <Tiles view={view} />
       <AgentLanes view={view} />
       <Handoffs view={view} />
