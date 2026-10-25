@@ -9,6 +9,7 @@ import type {
   RetrievalAction,
   SearchAction,
 } from '../../../projections/projectRetrieval';
+import { InsideServer } from './InsideServer';
 import { formatSimilarity, kindColor, SEARCH_LABELS } from './retrievalLabels';
 import styles from './Retrieval.module.css';
 
@@ -67,6 +68,7 @@ function SearchResult(props: { action: SearchAction } & Omit<DetailProps, 'actio
         {SEARCH_LABELS[action.search].name}
       </h3>
       <QueryChain action={action} />
+      {action.search !== 'words' && !action.failed && <InsideServer action={action} />}
       <div className={styles.meta}>
         <span>
           в выдаче <b>{action.documents.length}</b> док. ({action.chunkCount} фрагм.)
