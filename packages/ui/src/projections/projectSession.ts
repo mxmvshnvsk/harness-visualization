@@ -14,7 +14,8 @@ interface Builder {
   // Какой ответ модели попросил этот тул: toolCallId → запрос.
   toolOwners: Map<string, ModelCall>;
   // input tokens предыдущего шага агента — для объяснения кэша.
-  previousStepInput: number | null;
+  // input прошлого шага — у каждого агента свой: ключ — agentId, у главного пустая строка.
+  previousStepInput: Map<string, number>;
   finishedDurationMs: number | null;
 }
 
@@ -130,13 +131,14 @@ function createBuilder(): Builder {
     calls: new Map(),
     tools: new Map(),
     toolOwners: new Map(),
-    previousStepInput: null,
+    previousStepInput: new Map(),
     finishedDurationMs: null,
   };
 }
 
 function addModelCall(builder: Builder, event: EventOfType<'model_request'>): void {
   const call: ModelCall = {
+    agentId: event.agentId ?? null,
     requestId: event.requestId,
     purpose: event.purpose,
     iteration: event.iteration,
@@ -149,7 +151,8 @@ function addModelCall(builder: Builder, event: EventOfType<'model_request'>): vo
   builder.calls.set(call.requestId, call);
   builder.view.modelCalls.push(call);
   builder.view.totals.modelRequests += 1;
-  if (event.purpose === 'agentStep' && event.iteration !== null) {
+  // Шаги — главного агента: у субагента свои (этап 6c), они в его этапах инспектора.
+  if (event.purpose === 'agentStep' && event.iteration !== null && event.agentId === undefined) {
     builder.view.steps.push({
       iteration: event.iteration,
       call,
@@ -171,9 +174,13 @@ function addModelResponse(builder: Builder, event: EventOfType<'model_response'>
     builder.toolOwners.set(id, call);
   }
   const isAgentStep = call.purpose === 'agentStep';
-  call.cache = describeCache(usage, isAgentStep ? builder.previousStepInput : null);
+  const agent = call.agentId ?? '';
+  call.cache = describeCache(
+    usage,
+    isAgentStep ? (builder.previousStepInput.get(agent) ?? null) : null,
+  );
   if (isAgentStep) {
-    builder.previousStepInput = usage.inputTokens;
+    builder.previousStepInput.set(agent, usage.inputTokens);
     setStepOutcome(builder, call, toolCalls.length > 0 ? 'toolCalls' : 'answer');
   }
   addUsage(builder.view.totals.usage, usage);

@@ -6,6 +6,8 @@ import type { Stage, StageKind, StageRow } from '../../projections/projectStages
 import type { SessionView } from '../../projections/sessionView';
 import { hasRetrieval, type Focus } from './focus';
 import { FocusedPanel } from './FocusedPanel';
+import { SubagentBlock } from './SubagentBlock';
+import { useSubagentSteps } from './subagentSteps';
 import styles from './Stages.module.css';
 
 interface StageCardProps {
@@ -15,6 +17,8 @@ interface StageCardProps {
   active: boolean;
   // Пришли по ссылке из другого вида: раскрыть «Подробнее» на этом вызове.
   focus?: Focus | null;
+  // Этап субагента внутри карточки главного агента (этап 6c).
+  nested?: boolean;
   cardRef: (element: HTMLElement | null) => void;
   onSeek: (at: number) => void;
 }
@@ -25,6 +29,7 @@ export function StageCard({
   shown,
   active,
   focus,
+  nested = false,
   cardRef,
   onSeek,
 }: StageCardProps): ReactElement {
@@ -37,6 +42,7 @@ export function StageCard({
       className={styles.card}
       data-kind={stage.kind}
       data-state={stateOf(started, active)}
+      data-nested={nested}
     >
       <header className={styles.head}>
         <span className={styles.icon} aria-hidden="true">
@@ -51,7 +57,9 @@ export function StageCard({
           <Row
             key={row.index}
             row={row}
-            pending={row.index >= shown}
+            view={view}
+            shown={shown}
+            nested={nested}
             now={row === current}
             onSeek={onSeek}
           />
@@ -64,17 +72,23 @@ export function StageCard({
 
 function Row({
   row,
-  pending,
+  view,
+  shown,
+  nested,
   now,
   onSeek,
 }: {
   row: StageRow;
-  pending: boolean;
+  view: SessionView;
+  shown: number;
+  // В этапах самого субагента строка поручения есть, но шаги там уже раскрыты.
+  nested: boolean;
   now: boolean;
   onSeek: (at: number) => void;
 }): ReactElement {
+  const opensSubagent = row.subagent?.edge === 'start' && !nested;
   return (
-    <li className={styles.row} data-pending={pending} data-now={now}>
+    <li className={styles.row} data-pending={row.index >= shown} data-now={now}>
       <button
         type="button"
         className={styles.rowButton}
@@ -85,10 +99,21 @@ function Row({
       >
         <span className={styles.time}>+{formatSeconds(row.at)}</span>
         <span>
+          {row.subagent !== undefined && <AgentSwatch subagentId={row.subagent.id} />}
           {row.code !== null && <code className={styles.code}>{row.code}</code>} {row.text}
         </span>
       </button>
+      {opensSubagent && row.subagent !== undefined && (
+        <SubagentBlock subagentId={row.subagent.id} view={view} shown={shown} onSeek={onSeek} />
+      )}
     </li>
+  );
+}
+
+function AgentSwatch({ subagentId }: { subagentId: string }): ReactElement | null {
+  const steps = useSubagentSteps(subagentId);
+  return steps === null ? null : (
+    <span className={styles.swatch} data-color={steps.run.color} aria-hidden="true" />
   );
 }
 

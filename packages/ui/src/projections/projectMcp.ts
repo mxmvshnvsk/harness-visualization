@@ -96,7 +96,8 @@ export function projectMcp(events: readonly HarnessEvent[]): McpView {
 function collect(builder: Builder, event: HarnessEvent, moment: Moment): void {
   switch (event.type) {
     case 'model_request':
-      if (event.purpose === 'agentStep') {
+      // Шаги — главного агента: у субагента свои (этап 6c).
+      if (event.purpose === 'agentStep' && event.agentId === undefined) {
         builder.step = event.iteration;
         builder.view.steps.push(moment.index);
       }

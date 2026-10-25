@@ -291,10 +291,8 @@ const HANDLERS: Handlers = {
         route,
         group: 'tool',
         out: event.toolName,
-        busy: 'выполняет…',
-        what: mcp
-          ? `MCP-сервер выполняет ${event.toolName}`
-          : `Харнесс выполняет ${event.toolName}`,
+        busy: delegates(event.toolName) ? 'работает субагент…' : 'выполняет…',
+        what: toolWhat(event.toolName, mcp),
         detail: shorten(event.argumentsText),
       },
     );
@@ -481,6 +479,35 @@ const HANDLERS: Handlers = {
   },
 };
 
+// delegate_task (этап 6c): тул выполняет целый субагент — его запросы к модели и тулы идут
+// своими действиями, подписанными его id.
+function delegates(toolName: string): boolean {
+  return toolName === 'delegate_task';
+}
+
+function toolWhat(toolName: string, mcp: boolean): string {
+  if (delegates(toolName)) {
+    return 'Харнесс запускает субагента — он работает в своей истории';
+  }
+  return mcp ? `MCP-сервер выполняет ${toolName}` : `Харнесс выполняет ${toolName}`;
+}
+
+// Действия субагента — по тем же частям схемы, но подпись говорит, чьи они.
+function markAgent(actions: FlowAction[], from: number, agentId: string | undefined): void {
+  if (agentId === undefined) {
+    return;
+  }
+  for (const action of actions.slice(from)) {
+    action.what = `Субагент ${agentId}: ${action.what}`;
+  }
+}
+
+function markAgentBack(action: FlowAction | undefined, agentId: string | undefined): void {
+  if (action !== undefined && action.whatBack !== null && agentId !== undefined) {
+    action.whatBack = `Субагент ${agentId}: ${action.whatBack}`;
+  }
+}
+
 export function buildActions(
   events: readonly HarnessEvent[],
   context: ActionContext,
@@ -492,10 +519,25 @@ export function buildActions(
     // TypeScript не связывает тип события с ключом таблицы сам — помогаем приведением.
     const handle = HANDLERS[event.type] as
       ((builder: Builder, event: HarnessEvent, at: number) => void) | undefined;
+    const before = builder.actions.length;
+    const closing = closingAction(builder, event);
     handle?.(builder, event, Date.parse(event.timestamp) - startedAt);
+    markAgent(builder.actions, before, event.agentId);
+    markAgentBack(closing, event.agentId);
   }
   settleReading(builder, events.at(-1));
   return builder.actions;
+}
+
+// Обмен, который закроет это событие, — чтобы подписать и его обратную полосу.
+function closingAction(builder: Builder, event: HarnessEvent): FlowAction | undefined {
+  if (event.type === 'model_response' || event.type === 'model_error') {
+    return builder.open.get(`model:${event.requestId}`);
+  }
+  if (event.type === 'tool_result') {
+    return builder.open.get(`tool:${event.toolCallId}`);
+  }
+  return undefined;
 }
 
 // Последний ответ: сессия ждёт вопроса — пользователь «читает» и дальше; иначе вопроса уже

@@ -207,3 +207,75 @@
     margin-left: 0;
   }
 }
+
+/* Субагент (этап 6c): его шаги — под строкой поручения, с полосой его цвета. */
+.subagent {
+  --agent: var(--agent-other);
+
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 10px;
+  padding-left: 14px;
+  border-left: 3px solid var(--agent);
+}
+
+.subagent[data-color='one'],
+.swatch[data-color='one'] {
+  --agent: var(--agent-one);
+}
+
+.subagent[data-color='two'],
+.swatch[data-color='two'] {
+  --agent: var(--agent-two);
+}
+
+.subagentToggle {
+  align-self: flex-start;
+  padding: 5px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.subagentToggle:hover {
+  border-color: var(--agent);
+}
+
+.subagentToggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.subagentStages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card[data-nested='true'] {
+  --c: var(--agent, var(--meta));
+
+  padding: 14px 16px;
+  gap: 10px;
+}
+
+.card[data-nested='true'] .rows {
+  margin-left: 0;
+}
+
+.swatch {
+  --agent: var(--agent-other);
+
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 3px;
+  background: var(--agent);
+  vertical-align: 1px;
+}

@@ -16,6 +16,8 @@ export interface DialogTurn {
   answeredAt: number | null;
   steps: number;
   tools: number;
+  // Поручения субагентам (этап 6c); их шаги и тулы в steps и tools не входят.
+  delegations: number;
   // Сумма input tokens всех запросов к модели в этом ходе.
   inputTokens: number;
 }
@@ -53,11 +55,22 @@ function newTurn(turn: number, question: string, askedIndex: number, askedAt: nu
     answeredAt: null,
     steps: 0,
     tools: 0,
+    delegations: 0,
     inputTokens: 0,
   };
 }
 
+// Шаги и тулы — главного агента; input — всех, включая субагентов: это цена хода.
 function countInto(turn: DialogTurn, event: HarnessEvent): void {
+  if (event.type === 'subagent_started') {
+    turn.delegations += 1;
+  }
+  if (event.agentId !== undefined) {
+    if (event.type === 'model_response') {
+      turn.inputTokens += event.reply.usage.inputTokens;
+    }
+    return;
+  }
   if (event.type === 'model_request' && event.purpose === 'agentStep') {
     turn.steps += 1;
   }
@@ -79,7 +92,8 @@ export function turnStatus(events: readonly HarnessEvent[], shown: number): stri
     }
     const status = STATUSES[event.type]?.(event);
     if (status !== undefined) {
-      return status;
+      // Субагент (этап 6c) работает за главного — строка говорит, кто именно.
+      return event.agentId === undefined ? status : `субагент ${event.agentId}: ${status}`;
     }
   }
   return 'харнесс принял вопрос';
@@ -99,6 +113,14 @@ const STATUSES: Partial<Record<HarnessEvent['type'], (event: HarnessEvent) => st
   tool_result_truncated: () => 'харнесс обрезает большой результат тула',
   tool_results_cleared: () => 'харнесс освобождает место в контексте',
   history_compacted: () => 'харнесс заменил прошлые ходы сводкой',
+  subagent_started: (event) =>
+    event.type === 'subagent_started'
+      ? `поручает задачу субагенту ${event.subagentId}`
+      : 'поручает задачу субагенту',
+  subagent_finished: (event) =>
+    event.type === 'subagent_finished'
+      ? `субагент ${event.subagentId} вернул отчёт`
+      : 'субагент вернул отчёт',
 };
 
 function describeRequest(event: HarnessEvent): string {

@@ -14,6 +14,8 @@ export interface StageRow {
   // Имя тула или другой код — моноширинным перед текстом; null — нет.
   code: string | null;
   text: string;
+  // Строка о субагенте (этап 6c): начало работы — с неё раскрываются его шаги, конец — отчёт.
+  subagent?: { id: string; edge: 'start' | 'end' };
 }
 
 // question — следующий вопрос того же диалога (этап 6.1): у первого вопроса — «Подготовка».
@@ -143,24 +145,38 @@ const DESCRIBE: Describers = {
     code: null,
     text: `ход ${String(event.turn)} закончен — сессия ждёт следующего вопроса, история остаётся`,
   }),
+  subagent_started: (event) => ({
+    code: event.subagentId,
+    text: `поручение субагенту: «${shorten(event.task, 160)}»`,
+  }),
+  subagent_finished: (event) => ({
+    code: event.subagentId,
+    text:
+      event.status === 'done'
+        ? `отчёт главному агенту — ${plural(event.modelRequests, REQUESTS)} к модели, input ${format(event.usage.inputTokens)}, ${seconds(event.durationMs)}`
+        : `без отчёта: ${event.errorMessage ?? 'ошибка'}`,
+  }),
   error: (event) => ({ code: null, text: `ошибка: ${event.message}` }),
 };
 
-export function projectStages(events: readonly HarnessEvent[]): Stage[] {
+// scope — чьи этапы: null — главного агента, иначе id субагента (этап 6c). Номера строк — по
+// всем событиям записи, чтобы повтор отмечал пройденное одинаково у всех.
+export function projectStages(
+  events: readonly HarnessEvent[],
+  scope: string | null = null,
+): Stage[] {
   const first = events[0];
   const startedAt = first === undefined ? 0 : Date.parse(first.timestamp);
   const names = new Map<string, string>();
-  const stages: Stage[] = [
-    newStage(
-      { id: 'prep', kind: 'prep', title: 'Подготовка', badge: 'до модели', requestId: null },
-      0,
-    ),
-  ];
+  const stages: Stage[] = [scope === null ? prepStage() : assignmentStage(events, scope)];
   events.forEach((event, index) => {
+    if (!inScope(event, scope)) {
+      return;
+    }
     if (event.type === 'tool_call') {
       names.set(event.toolCallId, event.toolName);
     }
-    openStageFor(stages, event, index);
+    openStageFor(stages, event, index, scope);
     const stage = stages.at(-1);
     if (stage !== undefined) {
       addRow(stage, event, { index, at: Date.parse(event.timestamp) - startedAt, names });
@@ -169,6 +185,41 @@ export function projectStages(events: readonly HarnessEvent[]): Stage[] {
   });
   // Подготовка без строк — например, у трейса без запуска MCP — не показываем.
   return stages.filter((stage) => stage.rows.length > 0);
+}
+
+function prepStage(): Stage {
+  return newStage(
+    { id: 'prep', kind: 'prep', title: 'Подготовка', badge: 'до модели', requestId: null },
+    0,
+  );
+}
+
+// У субагента вместо подготовки — поручение, вместо ответа пользователю — отчёт главному.
+function assignmentStage(events: readonly HarnessEvent[], scope: string): Stage {
+  const started = events.findIndex(
+    (event) => event.type === 'subagent_started' && event.subagentId === scope,
+  );
+  return newStage(
+    {
+      id: `${scope}-task`,
+      kind: 'prep',
+      title: 'Поручение',
+      badge: 'delegate_task',
+      requestId: null,
+    },
+    Math.max(0, started),
+  );
+}
+
+// Начало и конец работы субагента — события главного агента, но и в его этапах они нужны.
+function inScope(event: HarnessEvent, scope: string | null): boolean {
+  if (scope === null) {
+    return event.agentId === undefined;
+  }
+  if (event.type === 'subagent_started' || event.type === 'subagent_finished') {
+    return event.subagentId === scope;
+  }
+  return event.agentId === scope;
 }
 
 interface RowPlace {
@@ -183,9 +234,19 @@ function addRow(stage: Stage, event: HarnessEvent, { index, at, names }: RowPlac
     | undefined;
   const row = describe?.(event, names);
   if (row) {
-    stage.rows.push({ ...row, index, at });
+    stage.rows.push({ ...row, index, at, ...subagentOf(event) });
     stage.lastIndex = index;
   }
+}
+
+function subagentOf(event: HarnessEvent): Pick<StageRow, 'subagent'> {
+  if (event.type === 'subagent_started') {
+    return { subagent: { id: event.subagentId, edge: 'start' } };
+  }
+  if (event.type === 'subagent_finished') {
+    return { subagent: { id: event.subagentId, edge: 'end' } };
+  }
+  return {};
 }
 
 // Запрос, который раскрывает «Подробнее»: у шага — свой; у подготовки и вопроса — первый
@@ -206,53 +267,84 @@ function noteRequest(stage: Stage, event: HarnessEvent): void {
 
 // Шаг агента начинается запросом к модели, ответ пользователю — своим этапом, следующий вопрос
 // диалога — своим. Номер хода — по числу вопросов: у второго вопроса заголовки «Вопрос 2 · …».
-function openStageFor(stages: Stage[], event: HarnessEvent, index: number): void {
+// У субагента (scope) последний этап — отчёт главному агенту.
+function openStageFor(
+  stages: Stage[],
+  event: HarnessEvent,
+  index: number,
+  scope: string | null,
+): void {
   const turn = stages.filter((stage) => stage.kind === 'question').length + 1;
+  const head = stageHeadFor(event, { stages, turn, scope });
+  if (head !== null) {
+    stages.push(newStage(head, index));
+  }
+}
+
+interface StagePlace {
+  stages: Stage[];
+  turn: number;
+  scope: string | null;
+}
+
+function stageHeadFor(event: HarnessEvent, place: StagePlace): StageHead | null {
+  const { turn, scope } = place;
+  switch (event.type) {
+    case 'subagent_finished':
+      return scope === null ? null : reportHead(scope);
+    case 'user_message':
+      return place.stages.some((stage) => stage.kind === 'answer') ? questionHead(turn + 1) : null;
+    case 'model_request':
+      return event.purpose === 'agentStep' ? stepHead(event, place) : null;
+    case 'assistant_message':
+      return answerHead(turn);
+    default:
+      return null;
+  }
+}
+
+function reportHead(scope: string): StageHead {
+  return {
+    id: `${scope}-report`,
+    kind: 'answer',
+    title: 'Отчёт главному агенту',
+    badge: 'subagent_finished',
+    requestId: null,
+  };
+}
+
+function questionHead(turn: number): StageHead {
+  return {
+    id: `question-${String(turn)}`,
+    kind: 'question',
+    title: `Вопрос ${String(turn)}`,
+    badge: 'user_message',
+    requestId: null,
+  };
+}
+
+function stepHead(event: EventOfType<'model_request'>, place: StagePlace): StageHead {
+  const { turn, scope } = place;
+  const step = String(event.iteration ?? place.stages.length);
   const prefix = turn > 1 ? `Вопрос ${String(turn)} · ` : '';
-  if (event.type === 'user_message' && stages.some((stage) => stage.kind === 'answer')) {
-    const next = turn + 1;
-    stages.push(
-      newStage(
-        {
-          id: `question-${String(next)}`,
-          kind: 'question',
-          title: `Вопрос ${String(next)}`,
-          badge: 'user_message',
-          requestId: null,
-        },
-        index,
-      ),
-    );
-  }
-  if (event.type === 'model_request' && event.purpose === 'agentStep') {
-    const step = String(event.iteration ?? stages.length);
-    stages.push(
-      newStage(
-        {
-          id: `turn-${String(turn)}-step-${step}`,
-          kind: 'agent',
-          title: `${prefix}Шаг ${step} · agentStep`,
-          badge: 'модель думает…',
-          requestId: event.requestId,
-        },
-        index,
-      ),
-    );
-  }
-  if (event.type === 'assistant_message') {
-    stages.push(
-      newStage(
-        {
-          id: `answer-${String(turn)}`,
-          kind: 'answer',
-          title: turn > 1 ? `Ответ на вопрос ${String(turn)}` : 'Ответ пользователю',
-          badge: 'assistant_message',
-          requestId: null,
-        },
-        index,
-      ),
-    );
-  }
+  const idPrefix = scope === null ? '' : `${scope}-`;
+  return {
+    id: `${idPrefix}turn-${String(turn)}-step-${step}`,
+    kind: 'agent',
+    title: `${prefix}Шаг ${step} · agentStep`,
+    badge: 'модель думает…',
+    requestId: event.requestId,
+  };
+}
+
+function answerHead(turn: number): StageHead {
+  return {
+    id: `answer-${String(turn)}`,
+    kind: 'answer',
+    title: turn > 1 ? `Ответ на вопрос ${String(turn)}` : 'Ответ пользователю',
+    badge: 'assistant_message',
+    requestId: null,
+  };
 }
 
 type StageHead = Pick<Stage, 'id' | 'kind' | 'title' | 'badge' | 'requestId'>;
@@ -310,5 +402,10 @@ function shorten(text: string, limit = 220): string {
   return line.length > limit ? `${line.slice(0, limit)}…` : line;
 }
 
+function seconds(ms: number): string {
+  return `${(ms / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} с`;
+}
+
 const TOOLS = { one: 'тул', few: 'тула', many: 'тулов' };
+const REQUESTS = { one: 'запрос', few: 'запроса', many: 'запросов' };
 const MESSAGES = { one: 'message', few: 'messages', many: 'messages' };

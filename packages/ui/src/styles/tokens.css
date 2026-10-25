@@ -52,6 +52,13 @@
   --rag-meeting: #1baf7a;
   --rag-other: #8a8ba3;
 
+  /* Агенты (этап 6c): главный и первые два субагента — проверено validate_palette.js для обеих
+     тем; третий и дальше — нейтральный, их различает подпись с id. */
+  --agent-main: #6250d6;
+  --agent-one: #1baf7a;
+  --agent-two: #eb6834;
+  --agent-other: #8a8ba3;
+
   /* Один акцент — для главного действия. В светлой — перелив от индиго к фиолетовому. */
   --accent: #3647d2;
   --accent-2: #7b5cff;
@@ -118,6 +125,11 @@
   --rag-faq: #d95926;
   --rag-meeting: #199e70;
   --rag-other: #6f7366;
+
+  --agent-main: #9085e9;
+  --agent-one: #199e70;
+  --agent-two: #d95926;
+  --agent-other: #6f7366;
 
   --accent: #e6ff4d;
   --accent-2: #e6ff4d;

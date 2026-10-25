@@ -15,13 +15,15 @@ const STEP_MS = 100;
 export class EventLog {
   readonly events: HarnessEvent[] = [];
 
-  add(payload: HarnessEventPayload): this {
+  // agentId — событие субагента (этап 6c); без него — главного агента.
+  add(payload: HarnessEventPayload, agentId?: string): this {
     const sequence = this.events.length + 1;
     this.events.push({
       ...payload,
       sequence,
       sessionId: SESSION_ID,
       timestamp: new Date(STARTED_AT + sequence * STEP_MS).toISOString(),
+      ...(agentId === undefined ? {} : { agentId }),
     });
     return this;
   }
@@ -168,6 +170,39 @@ export function toolResult(
         ? null
         : { currency: 'RUB', amount: costRub, tariffName: 'day', pricesCheckedAt: '2026-10-24' },
     durationMs: 10,
+  };
+}
+
+export function subagentStarted(subagentId: string, parentToolCallId: string): HarnessEventPayload {
+  return {
+    type: 'subagent_started',
+    subagentId,
+    agent: 'researcher',
+    parentToolCallId,
+    task: `поручение ${subagentId}`,
+    toolNames: ['read_file'],
+    maxIterations: 6,
+    reasoningEffort: 'low',
+  };
+}
+
+export function subagentFinished(
+  subagentId: string,
+  parentToolCallId: string,
+  report: string | null = `отчёт ${subagentId}`,
+): HarnessEventPayload {
+  return {
+    type: 'subagent_finished',
+    subagentId,
+    agent: 'researcher',
+    parentToolCallId,
+    status: report === null ? 'failed' : 'done',
+    report,
+    errorMessage: report === null ? 'лимит шагов' : null,
+    durationMs: 2000,
+    modelRequests: 2,
+    usage: usage(3000, 0, 200),
+    modelCost: null,
   };
 }
 

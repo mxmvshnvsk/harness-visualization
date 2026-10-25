@@ -32,6 +32,8 @@ export interface SessionView {
 }
 
 export interface ModelCall {
+  // Чей запрос: null — главного агента, иначе id субагента (этап 6c).
+  agentId: string | null;
   requestId: string;
   purpose: EventOfType<'model_request'>['purpose'];
   // Номер шага агента; null — служебный запрос харнесса вне цикла агента.

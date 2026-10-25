@@ -39,6 +39,10 @@ export function projectContext(events: readonly HarnessEvent[]): ContextRequest[
   let turn = 0;
   let pending: Pending = { truncated: 0, cleared: 0, compacted: false };
   events.forEach((event, index) => {
+    // Контекст главного агента: у субагента своя история (этап 6c).
+    if (event.agentId !== undefined) {
+      return;
+    }
     if (event.type === 'user_message') {
       turn += 1;
     }

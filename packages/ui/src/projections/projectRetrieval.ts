@@ -106,7 +106,12 @@ function advance(cursor: Cursor, event: HarnessEvent): void {
     cursor.turn += 1;
     cursor.step = null;
   }
-  if (event.type === 'model_request' && event.purpose === 'agentStep') {
+  // Номер шага — главного агента: у субагента свои шаги (этап 6c).
+  if (
+    event.type === 'model_request' &&
+    event.purpose === 'agentStep' &&
+    event.agentId === undefined
+  ) {
     cursor.step = event.iteration;
   }
   if (event.type === 'tool_call') {

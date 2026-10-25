@@ -39,6 +39,7 @@ export function TurnView({
           <div className={styles.meta}>
             <span>шагов {turn.steps}</span>
             <span>тулов {turn.tools}</span>
+            {turn.delegations > 0 && <span>поручений {turn.delegations}</span>}
             <span>input {turn.inputTokens.toLocaleString('ru-RU')}</span>
             <span>{formatSeconds((turn.answeredAt ?? turn.askedAt) - turn.askedAt)}</span>
           </div>
