@@ -10,6 +10,7 @@ import { useServerList } from '../api/useServerList';
 import { EmptyState } from '../components/EmptyState';
 import { Segmented } from '../components/Segmented';
 import { EventList } from '../features/EventList';
+import { FlowView } from '../features/flow/FlowView';
 import { InspectorView } from '../features/inspector/InspectorView';
 import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
@@ -80,6 +81,7 @@ export function App(): ReactElement {
 }
 
 const VIEWS = [
+  { value: 'flow', label: 'Поток' },
   { value: 'inspector', label: 'Инспектор' },
   { value: 'events', label: 'Сырые события' },
 ] as const;
@@ -93,7 +95,7 @@ interface StreamViewsProps {
 
 // Оба вида строятся из событий до курсора плеера — повтор и перемотка работают в обоих.
 function StreamViews({ events, live }: StreamViewsProps): ReactElement {
-  const [viewName, setViewName] = useState<ViewName>('inspector');
+  const [viewName, setViewName] = useState<ViewName>('flow');
   const player = usePlayer(events);
   const shown = useMemo(() => events.slice(0, player.cursor), [events, player.cursor]);
   // Проекция — чистая функция событий: пересчитываем, только когда изменился срез.
@@ -101,7 +103,9 @@ function StreamViews({ events, live }: StreamViewsProps): ReactElement {
   return (
     <div className={styles.views}>
       <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
-      {viewName === 'inspector' ? <InspectorView view={view} /> : <EventList events={shown} />}
+      {viewName === 'flow' && <FlowView events={shown} speed={player.speed} />}
+      {viewName === 'inspector' && <InspectorView view={view} />}
+      {viewName === 'events' && <EventList events={shown} />}
       <PlayerBar player={player} events={events} live={live} />
     </div>
   );

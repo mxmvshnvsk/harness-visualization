@@ -1,0 +1,196 @@
+.flow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.diagram {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-card);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-family: var(--font-text);
+}
+
+.edge {
+  stroke: var(--line);
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+}
+
+.edge[data-active='true'] {
+  stroke: var(--muted);
+  stroke-dasharray: none;
+}
+
+.node rect {
+  fill: var(--surface);
+  stroke: var(--line);
+  stroke-width: 1.5;
+  transition:
+    stroke 0.2s,
+    fill 0.2s;
+}
+
+.node[data-active='true'] rect {
+  fill: var(--raised);
+  stroke-width: 2.5;
+}
+
+.nodeTitle {
+  fill: var(--text);
+  font-size: 16px;
+  font-weight: var(--weight-strong);
+}
+
+.nodeRole,
+.nodeCounter {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.nodeCounter {
+  font-family: var(--font-mono);
+}
+
+.packet rect {
+  fill: var(--raised);
+  stroke-width: 1.5;
+}
+
+.packet text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: var(--weight-medium);
+}
+
+/* Цвет пакета и активного узла — цвет группы события, как во всём интерфейсе. */
+.node[data-group='dialog'] rect,
+.packet[data-group='dialog'] rect {
+  stroke: var(--dialog);
+}
+
+.packet[data-group='dialog'] text {
+  fill: var(--dialog);
+}
+
+.node[data-group='model'] rect,
+.packet[data-group='model'] rect {
+  stroke: var(--model);
+}
+
+.packet[data-group='model'] text {
+  fill: var(--model);
+}
+
+.node[data-group='tool'] rect,
+.packet[data-group='tool'] rect {
+  stroke: var(--tool);
+}
+
+.packet[data-group='tool'] text {
+  fill: var(--tool);
+}
+
+.node[data-group='permission'] rect,
+.packet[data-group='permission'] rect {
+  stroke: var(--permission);
+}
+
+.packet[data-group='permission'] text {
+  fill: var(--permission);
+}
+
+.node[data-group='retrieval'] rect,
+.packet[data-group='retrieval'] rect {
+  stroke: var(--retrieval);
+}
+
+.packet[data-group='retrieval'] text {
+  fill: var(--retrieval);
+}
+
+.node[data-group='judge'] rect,
+.packet[data-group='judge'] rect {
+  stroke: var(--judge);
+}
+
+.packet[data-group='judge'] text {
+  fill: var(--judge);
+}
+
+.node[data-group='error'] rect,
+.packet[data-group='error'] rect {
+  stroke: var(--error);
+}
+
+.packet[data-group='error'] text {
+  fill: var(--error);
+}
+
+.node[data-group='meta'] rect,
+.packet[data-group='meta'] rect {
+  stroke: var(--meta);
+}
+
+.packet[data-group='meta'] text {
+  fill: var(--meta);
+}
+
+.current {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: baseline;
+  min-height: 24px;
+  font-size: 14px;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.type {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: var(--weight-medium);
+}
+
+.type[data-group='dialog'] {
+  color: var(--dialog);
+}
+
+.type[data-group='model'] {
+  color: var(--model);
+}
+
+.type[data-group='tool'] {
+  color: var(--tool);
+}
+
+.type[data-group='permission'] {
+  color: var(--permission);
+}
+
+.type[data-group='retrieval'] {
+  color: var(--retrieval);
+}
+
+.type[data-group='judge'] {
+  color: var(--judge);
+}
+
+.type[data-group='error'] {
+  color: var(--error);
+}
+
+.type[data-group='meta'] {
+  color: var(--meta);
+}
+
+.text {
+  overflow-wrap: anywhere;
+}

@@ -5,6 +5,7 @@ import type { ReactElement, ReactNode } from 'react';
 import type { Selection } from '../app/useSelection';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
+import { plural } from '../text/plural';
 import styles from './SourceList.module.css';
 
 interface SourceSectionProps {
@@ -104,16 +105,8 @@ export function TraceList(props: TraceListProps): ReactElement {
   );
 }
 
-const PLURAL_RULES = new Intl.PluralRules('ru');
-const EVENT_WORDS: Record<string, string> = {
-  one: 'событие',
-  few: 'события',
-  many: 'событий',
-  other: 'события',
-};
-
 export function countEvents(count: number): string {
-  return `${String(count)} ${EVENT_WORDS[PLURAL_RULES.select(count)] ?? 'событий'}`;
+  return plural(count, { one: 'событие', few: 'события', many: 'событий' });
 }
 
 function describeStatus(status: SessionSummary['status']): string {
