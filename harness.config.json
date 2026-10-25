@@ -149,6 +149,11 @@
       }
     }
   },
+  "retrieval": {
+    "mode": "tool",
+    "toolName": "kedr__semantic_search",
+    "limit": 5
+  },
   "mcpServers": [
     {
       "name": "kedr",

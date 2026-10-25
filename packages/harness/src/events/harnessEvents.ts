@@ -9,6 +9,7 @@ import type {
   ToolEffect,
 } from '../permissions/permissionTypes.js';
 import type { NetworkRequestInfo } from '../network/NetworkRouter.js';
+import type { RetrievalMode } from '../settings/settingsSchema.js';
 import type {
   RequestCost,
   SessionCost,
@@ -35,6 +36,8 @@ export interface SessionStartedPayload {
   networkProxy: string | null;
   // Какой поисковый провайдер у тула web_search; null — поиск выключен.
   searchProvider: string | null;
+  // tool — модель ищет в базе знаний сама; auto — харнесс подмешивает найденное до запроса.
+  retrievalMode: RetrievalMode;
 }
 
 export interface WorkspacePreparedPayload {
@@ -117,6 +120,19 @@ export interface NetworkRequestPayload extends NetworkRequestInfo {
 export interface UserMessagePayload {
   type: 'user_message';
   text: string;
+}
+
+// Харнесс сам, до запроса к модели, нашёл материал по вопросу пользователя (retrieval.mode: auto).
+// Это не просьба модели, поэтому tool_call и tool_result здесь нет.
+export interface ContextRetrievedPayload {
+  type: 'context_retrieved';
+  toolName: string;
+  arguments: Record<string, unknown>;
+  status: 'success' | 'error';
+  // При успехе — ровно то, что харнесс вставил в контекст; при ошибке — её текст,
+  // а модель получает вопрос без найденного.
+  content: string;
+  durationMs: number;
 }
 
 export interface PromptAssembledPayload {
@@ -252,6 +268,7 @@ export type HarnessEventPayload =
   | McpServerStoppedPayload
   | NetworkRequestPayload
   | UserMessagePayload
+  | ContextRetrievedPayload
   | PromptAssembledPayload
   | ModelRequestPayload
   | ModelResponsePayload

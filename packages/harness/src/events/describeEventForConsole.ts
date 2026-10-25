@@ -33,6 +33,12 @@ const EVENT_DESCRIBERS: EventDescribers = {
         : `Сеть: прокси для маршрута proxy — ${event.networkProxy}`,
     ),
     styleText('dim', `Поиск: ${event.searchProvider ?? 'выключен'}`),
+    styleText(
+      'dim',
+      event.retrievalMode === 'auto'
+        ? 'База знаний: харнесс сам подмешивает найденное до запроса (retrieval auto)'
+        : 'База знаний: модель ищет сама тулами (retrieval tool)',
+    ),
   ],
   workspace_prepared: describeWorkspacePrepared,
   mcp_server_starting: (event) => [
@@ -59,6 +65,7 @@ const EVENT_DESCRIBERS: EventDescribers = {
   network_request: describeNetworkRequest,
   mcp_server_stopped: (event) => [styleText('dim', `MCP-сервер ${event.serverName} остановлен`)],
   user_message: (event) => [`Пользователь → харнесс: «${shortenForPreview(event.text)}»`],
+  context_retrieved: describeContextRetrieved,
   prompt_assembled: describePromptAssembled,
   model_request: (event) => [
     styleText(
@@ -151,6 +158,27 @@ function describePromptAssembled(event: EventOfType<'prompt_assembled'>): string
   const roles = event.messages.map((message) => message.role).join(', ');
   const tools = event.toolNames.length > 0 ? event.toolNames.join(', ') : 'нет';
   return [`Харнесс собрал контекст: ${event.messages.length} сообщ. (${roles}), тулы: ${tools}`];
+}
+
+function describeContextRetrieved(event: EventOfType<'context_retrieved'>): string[] {
+  const request = styleText(
+    'yellow',
+    `Харнесс сам → тул ${event.toolName}, до запроса к модели: ${JSON.stringify(event.arguments)}`,
+  );
+  if (event.status === 'error') {
+    return [
+      request,
+      styleText('red', `    не нашёл: ${event.content} — модель получит вопрос без найденного`),
+    ];
+  }
+  return [
+    request,
+    styleText(
+      'yellow',
+      `    найдено ${formatNumber(event.content.length)} симв. за ${event.durationMs} мс — в сообщение пользователя`,
+    ),
+    styleText('dim', `    ${shortenForPreview(event.content)}`),
+  ];
 }
 
 function describeModelResponse(event: EventOfType<'model_response'>): string[] {

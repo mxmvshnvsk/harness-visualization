@@ -206,6 +206,21 @@ const networkSettingsSchema = z.object({
   rules: z.array(networkRuleSchema).default([]),
 });
 
+// Как материал из базы знаний попадает к модели (этап 5.3):
+//   tool — модель сама решает, искать ли, и вызывает тул поиска;
+//   auto — харнесс до первого запроса к модели сам ищет по вопросу пользователя
+//          и кладёт найденное в контекст. Тулы поиска у модели остаются.
+export const RETRIEVAL_MODES = ['tool', 'auto'] as const;
+
+const retrievalSettingsSchema = z.object({
+  mode: z.enum(RETRIEVAL_MODES).default('tool'),
+  // Каким тулом ищет харнесс — имя для модели, с префиксом MCP-сервера.
+  // Тул должен принимать аргументы query и limit, как semantic_search.
+  toolName: z.string().min(1).default('kedr__semantic_search'),
+  // Сколько фрагментов подмешать в контекст.
+  limit: z.number().int().min(1).max(20).default(5),
+});
+
 export const harnessSettingsSchema = z.object({
   model: modelSettingsSchema,
   agent: agentSettingsSchema,
@@ -218,6 +233,12 @@ export const harnessSettingsSchema = z.object({
   mcpServers: z.array(mcpServerSettingsSchema).default([]),
   // Маршруты сети. Если раздела нет, все запросы идут по маршруту proxy по умолчанию.
   network: networkSettingsSchema.default({ defaultRoute: 'proxy', rules: [] }),
+  // Если раздела нет, модель ищет сама (mode: tool).
+  retrieval: retrievalSettingsSchema.default({
+    mode: 'tool',
+    toolName: 'kedr__semantic_search',
+    limit: 5,
+  }),
   prices: z.record(z.string(), modelPricesSchema).default({}),
   traces: tracesSettingsSchema,
 });
@@ -240,3 +261,5 @@ export type McpServerSettings = z.infer<typeof mcpServerSettingsSchema>;
 export type NetworkSettings = z.infer<typeof networkSettingsSchema>;
 export type NetworkRule = z.infer<typeof networkRuleSchema>;
 export type NetworkRoute = z.infer<typeof networkRouteSchema>;
+export type RetrievalSettings = z.infer<typeof retrievalSettingsSchema>;
+export type RetrievalMode = RetrievalSettings['mode'];

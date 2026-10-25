@@ -15,7 +15,11 @@ import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
 import { NetworkRouter, type RoutedFetch } from '../network/NetworkRouter.js';
 import { readProxyUrl } from '../network/proxyFromEnvironment.js';
 import type { LoadedSettings } from '../settings/loadSettings.js';
-import type { SearchProviderName, SearchSettings } from '../settings/settingsSchema.js';
+import type {
+  RetrievalMode,
+  SearchProviderName,
+  SearchSettings,
+} from '../settings/settingsSchema.js';
 import { createSearchProvider } from '../search/createSearchProvider.js';
 import type { SearchProvider } from '../search/searchProvider.js';
 import { createFileTools } from '../tools/fileTools/createFileTools.js';
@@ -34,6 +38,8 @@ export interface CliSessionInput {
   reasoningEffort: ReasoningEffort;
   // null — провайдер поиска из harness.config.json, иначе выбранный флагом --search.
   searchProvider: SearchProviderName | null;
+  // Кто ищет в базе знаний: модель (tool) или харнесс до запроса (auto).
+  retrievalMode: RetrievalMode;
   // true — пересоздать рабочую папку из примеров (флаг --fresh).
   freshWorkspace: boolean;
   verbose: boolean;
@@ -67,6 +73,7 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     workspaceDirectory: settings.workspace.directory,
     preparedWorkspace,
     searchProviderName: searchProvider?.name ?? null,
+    retrievalMode: input.retrievalMode,
   });
   const mcpServers = await connectMcpServers(settings.mcpServers, {
     projectRoot: input.projectRoot,
@@ -83,6 +90,10 @@ export async function runCliSession(input: CliSessionInput): Promise<void> {
     await runAgentTurn(input.question, dependencies, {
       reasoningEffort: input.reasoningEffort,
       maxIterations: settings.agent.maxIterations,
+      retrieval:
+        input.retrievalMode === 'auto'
+          ? { toolName: settings.retrieval.toolName, limit: settings.retrieval.limit }
+          : null,
     });
   } catch (error) {
     events.emit({ type: 'error', message: error instanceof Error ? error.message : String(error) });

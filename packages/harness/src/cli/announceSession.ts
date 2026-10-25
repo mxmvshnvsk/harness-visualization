@@ -2,7 +2,7 @@
 
 import type { EventStream } from '../events/EventStream.js';
 import type { ReasoningEffort } from '../model/chatTypes.js';
-import type { HarnessSettings } from '../settings/settingsSchema.js';
+import type { HarnessSettings, RetrievalMode } from '../settings/settingsSchema.js';
 import type { PreparedWorkspace } from '../workspace/prepareWorkspace.js';
 import { maskProxyUrl, readProxyUrl } from '../network/proxyFromEnvironment.js';
 
@@ -14,6 +14,7 @@ export interface SessionAnnouncement {
   preparedWorkspace: PreparedWorkspace;
   // null — веб-поиск выключен.
   searchProviderName: string | null;
+  retrievalMode: RetrievalMode;
 }
 
 export function announceSession(events: EventStream, announcement: SessionAnnouncement): void {
@@ -26,6 +27,7 @@ export function announceSession(events: EventStream, announcement: SessionAnnoun
     reasoningEffort: announcement.reasoningEffort,
     networkProxy: describeNetworkProxy(),
     searchProvider: announcement.searchProviderName,
+    retrievalMode: announcement.retrievalMode,
   });
   events.emit({
     type: 'workspace_prepared',

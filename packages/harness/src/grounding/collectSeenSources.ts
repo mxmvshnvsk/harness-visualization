@@ -3,6 +3,7 @@
 //   - read_document, read_file, fetch_url — источник прочитан целиком (full);
 //   - search, semantic_search, web_search, search_files — виден только фрагментом в выдаче (fragment);
 //   - list_documents, list_files — виден только в каталоге (catalog).
+// Найденное харнессом до запроса (context_retrieved) — тоже фрагменты в выдаче поиска.
 // Побеждает самый сильный уровень: если документ сначала мелькнул в каталоге,
 // а потом был прочитан целиком, останется full.
 
@@ -28,6 +29,11 @@ export function collectSeenSources(events: HarnessEvent[]): SeenSources {
     }
     if (event.type === 'tool_result' && event.status === 'success') {
       recordToolResult(event, argumentsByToolCall.get(event.toolCallId), seen);
+    }
+    if (event.type === 'context_retrieved' && event.status === 'success') {
+      for (const reference of extractListedReferences(event.content)) {
+        remember(seen, reference, 'fragment', event.sequence);
+      }
     }
   }
   return seen;

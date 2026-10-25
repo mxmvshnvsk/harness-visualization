@@ -14,11 +14,18 @@ import type {
 import type { AgentDependencies } from './agentDependencies.js';
 import { executeToolCall } from './executeToolCall.js';
 import { requestModel } from './requestModel.js';
+import {
+  combineWithRetrievedContext,
+  retrieveContext,
+  type RetrievalOptions,
+} from './retrieveContext.js';
 import { buildSystemPrompt, type McpServerInstructions } from './systemPrompt.js';
 
 export interface TurnOptions {
   reasoningEffort: ReasoningEffort;
   maxIterations: number;
+  // null — модель ищет в базе знаний сама; иначе харнесс подмешивает найденное до запроса.
+  retrieval: RetrievalOptions | null;
 }
 
 export async function runAgentTurn(
@@ -29,7 +36,8 @@ export async function runAgentTurn(
   const { events, tools } = dependencies;
   events.emit({ type: 'user_message', text: userText });
 
-  const messages = assembleInitialContext(userText, dependencies.mcpServerInstructions);
+  const userContent = await prepareUserContent(userText, dependencies, options.retrieval);
+  const messages = assembleInitialContext(userContent, dependencies.mcpServerInstructions);
   events.emit({ type: 'prompt_assembled', messages: [...messages], toolNames: tools.names() });
 
   for (let iteration = 1; iteration <= options.maxIterations; iteration += 1) {
@@ -54,14 +62,30 @@ export async function runAgentTurn(
   );
 }
 
+// Текст сообщения пользователя для модели: сам вопрос или вопрос вместе с найденным харнессом.
+async function prepareUserContent(
+  userText: string,
+  dependencies: AgentDependencies,
+  retrieval: RetrievalOptions | null,
+): Promise<string> {
+  if (retrieval === null) {
+    return userText;
+  }
+  const retrievedText = await retrieveContext(userText, retrieval, dependencies);
+  if (retrievedText === null) {
+    return userText;
+  }
+  return combineWithRetrievedContext(userText, retrievedText, retrieval.toolName);
+}
+
 // Модель не помнит прошлых запросов: всё, что она должна знать, харнесс кладёт сюда.
 function assembleInitialContext(
-  userText: string,
+  userContent: string,
   mcpInstructions: McpServerInstructions[],
 ): ChatMessage[] {
   return [
     { role: 'system', content: buildSystemPrompt(new Date(), mcpInstructions) },
-    { role: 'user', content: userText },
+    { role: 'user', content: userContent },
   ];
 }
 

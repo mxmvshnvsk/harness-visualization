@@ -2,12 +2,18 @@
 //   pnpm chat "Сколько дней отпуска положено?"
 //   pnpm chat --effort off "вопрос"   — уровень рассуждений: off, low, high, max
 //   pnpm chat --search yandex "вопрос" — поисковый провайдер: tavily или yandex
+//   pnpm chat --retrieval auto "вопрос" — кто ищет в базе знаний: tool (модель) или auto (харнесс)
 //   pnpm chat --fresh "вопрос"        — начать с чистой рабочей папки (пересоздать из примеров)
 //   pnpm chat --verbose "вопрос"      — печатать и полные события в JSON
 
 import { parseArgs } from 'node:util';
 import { REASONING_EFFORTS, type ReasoningEffort } from '../model/chatTypes.js';
-import { SEARCH_PROVIDER_NAMES, type SearchProviderName } from '../settings/settingsSchema.js';
+import {
+  RETRIEVAL_MODES,
+  SEARCH_PROVIDER_NAMES,
+  type RetrievalMode,
+  type SearchProviderName,
+} from '../settings/settingsSchema.js';
 
 export interface CliOptions {
   // null — вопрос не передан, спросим его интерактивно.
@@ -16,6 +22,8 @@ export interface CliOptions {
   reasoningEffort: ReasoningEffort | null;
   // null — флаг не передан, берём провайдера из harness.config.json.
   searchProvider: SearchProviderName | null;
+  // null — флаг не передан, берём режим из harness.config.json.
+  retrievalMode: RetrievalMode | null;
   freshWorkspace: boolean;
   verbose: boolean;
 }
@@ -27,6 +35,7 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
     options: {
       effort: { type: 'string' },
       search: { type: 'string' },
+      retrieval: { type: 'string' },
       fresh: { type: 'boolean', default: false },
       verbose: { type: 'boolean', default: false },
     },
@@ -36,6 +45,7 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
     question: question === '' ? null : question,
     reasoningEffort: values.effort === undefined ? null : parseReasoningEffort(values.effort),
     searchProvider: values.search === undefined ? null : parseSearchProvider(values.search),
+    retrievalMode: values.retrieval === undefined ? null : parseRetrievalMode(values.retrieval),
     freshWorkspace: values.fresh,
     verbose: values.verbose,
   };
@@ -49,6 +59,16 @@ function parseSearchProvider(value: string): SearchProviderName {
     );
   }
   return matchingProvider;
+}
+
+function parseRetrievalMode(value: string): RetrievalMode {
+  const matchingMode = RETRIEVAL_MODES.find((mode) => mode === value);
+  if (matchingMode === undefined) {
+    throw new Error(
+      `Неизвестный режим поиска «${value}». Допустимые: ${RETRIEVAL_MODES.join(', ')}.`,
+    );
+  }
+  return matchingMode;
 }
 
 function parseReasoningEffort(value: string): ReasoningEffort {
