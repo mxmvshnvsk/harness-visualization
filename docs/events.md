@@ -35,7 +35,7 @@
 | `context_retrieved`       | харнесс сам нашёл материал до запроса к модели (retrieval auto, rewrite)                                      | `toolName`, `arguments`, `queryAuthor` (`user`, `model`), `userQuestion`, `status` (`success`, `error`), `content`, `durationMs`                                                                                                                                                    |
 | `prompt_assembled`        | харнесс собрал контекст для модели                                                                            | `messages`, `toolNames`                                                                                                                                                                                                                                                             |
 | `model_request`           | HTTP-запрос к модели собран и отправляется                                                                    | `requestId`, `purpose`, `iteration`, `reasoningEffort`, `method`, `url`, `headers` (секреты скрыты), `body`, `budget` — оценка prompt по частям и лимит (этап 6.2)                                                                                                                  |
-| `model_response`          | модель ответила                                                                                               | `requestId`, `status`, `durationMs`, `body`, `reply`, `cost`                                                                                                                                                                                                                        |
+| `model_response`          | модель ответила                                                                                               | `requestId`, `status`, `durationMs`, `timing`, `body`, `reply`, `cost`                                                                                                                                                                                                              |
 | `model_error`             | запрос к модели не удался                                                                                     | `requestId`, `status`, `durationMs`, `body`, `message`                                                                                                                                                                                                                              |
 | `tool_call`               | модель попросила вызвать тул                                                                                  | `toolCallId`, `toolName`, `argumentsText`, `arguments`                                                                                                                                                                                                                              |
 | `permission_evaluated`    | политика разрешений приняла решение (на каждом вызове)                                                        | `toolCallId`, `toolName`, `effects`, `targets`, `actionDescription`, `decision`, `reason`, `checks`                                                                                                                                                                                 |
@@ -98,6 +98,15 @@ tool_result delegate_task (call_7) — content: отчёт
 - `reply` — тот же ответ в нашем нейтральном формате: `finishReason`, `text`, `reasoningText`, `usage`.
 
 Так видно, что именно прислал провайдер, а интерфейс работает с одним форматом для любого провайдера.
+
+## Потоковый ответ и фазы инференса
+
+С этапа 8d.2 харнесс просит ответ потоком (`stream: true`, `stream_options.include_usage`): модель присылает его кусками SSE, по мере генерации. Каждый кусок в трейс не пишется, иначе трейс раздуется в сотни строк на запрос. Вместо этого:
+
+- `body` — куски, собранные в тот же объект `chat.completion`, что пришёл бы без потока; поэтому разбор ответа и интерфейс не меняются;
+- `timing` — три момента от отправки запроса, в миллисекундах: `firstTokenMs` — первый кусок с содержимым (сеть, очередь у провайдера и prefill), `firstAnswerTokenMs` — первый кусок ответа или вызова тула (рассуждение кончилось), `lastTokenMs` — последний кусок с содержимым; `chunks` — сколько кусков пришло. Что значат фазы — в справке «Инференс» (`docs/help/inference.md`).
+
+`timing: null` — ответ пришёл целиком: поток выключен (`model.stream: false` в `harness.config.json` — для провайдера, который не присылает usage в потоке) или провайдер ответил ошибкой. В трейсах до 8d.2 поля нет.
 
 ## Результат тула
 

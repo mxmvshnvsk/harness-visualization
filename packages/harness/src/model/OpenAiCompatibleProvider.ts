@@ -12,7 +12,13 @@ import type {
   ToolCall,
   ToolDefinition,
 } from './chatTypes.js';
-import type { ModelProvider, PreparedHttpRequest, RawHttpResponse } from './modelProvider.js';
+import type {
+  DeltaListener,
+  ModelProvider,
+  PreparedHttpRequest,
+  RawHttpResponse,
+} from './modelProvider.js';
+import { readCompletionStream } from './readCompletionStream.js';
 import { ModelProviderError } from './ModelProviderError.js';
 import {
   wireChatCompletionSchema,
@@ -57,19 +63,35 @@ export class OpenAiCompatibleProvider implements ModelProvider {
         messages: toWireMessages(request.messages, this.settings.reasoningStyle),
         ...buildToolsParameter(request.tools, request.toolChoice ?? 'auto'),
         max_tokens: this.settings.maxOutputTokens,
-        stream: false,
+        stream: this.settings.stream,
+        // Без этого в потоке нет usage — не узнаем ни токены, ни стоимость.
+        ...(this.settings.stream ? { stream_options: { include_usage: true } } : {}),
       },
     };
   }
 
-  async send(preparedRequest: PreparedHttpRequest): Promise<RawHttpResponse> {
+  async send(
+    preparedRequest: PreparedHttpRequest,
+    onDelta: DeltaListener = () => undefined,
+  ): Promise<RawHttpResponse> {
     const startedAt = performance.now();
     const response = await this.fetchWithReadableErrors(preparedRequest);
+    // Ошибку провайдер присылает обычным JSON даже в ответ на запрос с потоком.
+    if (isEventStream(response) && response.body !== null) {
+      const assembled = await readCompletionStream(response.body, startedAt, onDelta);
+      return {
+        status: response.status,
+        durationMs: Math.round(performance.now() - startedAt),
+        body: assembled.body,
+        timing: assembled.timing,
+      };
+    }
     const responseText = await response.text();
     return {
       status: response.status,
       durationMs: Math.round(performance.now() - startedAt),
       body: parseJsonOrKeepText(responseText),
+      timing: null,
     };
   }
 
@@ -145,6 +167,10 @@ function fromWireToolCall(wireToolCall: WireToolCall): ToolCall {
     name: wireToolCall.function.name,
     argumentsText: wireToolCall.function.arguments,
   };
+}
+
+function isEventStream(response: Response): boolean {
+  return response.ok && (response.headers.get('content-type') ?? '').includes('text/event-stream');
 }
 
 function buildUrl(baseUrl: string, path: string): string {

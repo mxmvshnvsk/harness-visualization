@@ -1,7 +1,13 @@
 // Типы событий харнесса — это и есть формат трейса.
 // Каждое событие — одна строка JSONL; подробное описание в docs/events.md.
 
-import type { ChatMessage, ModelReply, ReasoningEffort, TokenUsage } from '../model/chatTypes.js';
+import type {
+  ChatMessage,
+  ModelReply,
+  ReasoningEffort,
+  ResponseTiming,
+  TokenUsage,
+} from '../model/chatTypes.js';
 import type {
   ActionTarget,
   PermissionAnswerSource,
@@ -232,7 +238,10 @@ export interface ModelResponsePayload {
   requestId: string;
   status: number;
   durationMs: number;
-  // Сырой ответ провайдера как есть.
+  // Моменты потокового ответа (этап 8d.2); null — ответ пришёл целиком.
+  // В трейсах до 8d.2 поля нет.
+  timing?: ResponseTiming | null;
+  // Сырой ответ провайдера; при потоке — собранный из кусков в том же формате.
   body: unknown;
   // Тот же ответ в нашем нейтральном формате.
   reply: ModelReply;

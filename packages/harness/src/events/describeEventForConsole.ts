@@ -3,6 +3,7 @@
 // так легко найти, как печатается конкретное событие, и добавить новое.
 
 import { styleText } from 'node:util';
+import type { ResponseTiming } from '../model/chatTypes.js';
 import type { RetrievalMode } from '../settings/settingsSchema.js';
 import type { HarnessEvent, HarnessEventType } from './harnessEvents.js';
 import { describeJsonRpcMessage } from '../mcp/describeJsonRpcMessage.js';
@@ -427,6 +428,7 @@ function describeModelResponse(event: EventOfType<'model_response'>): string[] {
       `Модель → харнесс: HTTP ${event.status} за ${formatNumber(event.durationMs)} мс, finish_reason: ${reply.finishReason}`,
     ),
     `    токены: ${formatUsage(reply.usage)}`,
+    ...describeTiming(event.timing ?? null),
     `    стоимость: ${formatMoney(event.cost)}${tariff}`,
   ];
   if (reply.reasoningText !== null && reply.reasoningText !== '') {
@@ -437,6 +439,21 @@ function describeModelResponse(event: EventOfType<'model_response'>): string[] {
     lines.push(styleText('yellow', `    модель просит тулы: ${toolNames}`));
   }
   return lines;
+}
+
+// Фазы потокового ответа: до первого токена — сеть, очередь и prefill; дальше — decode.
+function describeTiming(timing: ResponseTiming | null): string[] {
+  if (timing?.firstTokenMs === null || timing === null) {
+    return [];
+  }
+  const parts = [`первый токен через ${formatNumber(timing.firstTokenMs)} мс`];
+  if (timing.firstAnswerTokenMs !== null && timing.firstAnswerTokenMs > timing.firstTokenMs) {
+    parts.push(`ответ — с ${formatNumber(timing.firstAnswerTokenMs)} мс`);
+  }
+  if (timing.lastTokenMs !== null) {
+    parts.push(`последний — ${formatNumber(timing.lastTokenMs)} мс`);
+  }
+  return [`    поток: ${parts.join(', ')}`];
 }
 
 const TOOL_STATUS_LABELS = {

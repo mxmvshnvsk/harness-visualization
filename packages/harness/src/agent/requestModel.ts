@@ -63,6 +63,7 @@ export async function requestModel(
     requestId,
     status: rawResponse.status,
     durationMs: rawResponse.durationMs,
+    timing: rawResponse.timing,
     body: rawResponse.body,
     reply,
     cost: calculateCost(reply.usage, dependencies.prices[provider.model], requestedAt),

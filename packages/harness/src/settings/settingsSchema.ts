@@ -14,6 +14,9 @@ const modelSettingsSchema = z.object({
   // Имя переменной окружения, в которой лежит ключ (или ссылка keychain:...).
   apiKeyVariable: z.string().min(1),
   requestTimeoutMs: z.number().int().positive(),
+  // Потоковый ответ (этап 8d.2): модель присылает ответ кусками, харнесс замеряет фазы инференса.
+  // false — ответ целиком, как до 8d.2; нужно, если провайдер не умеет stream_options.include_usage.
+  stream: z.boolean().default(true),
   maxOutputTokens: z.number().int().positive(),
   // Как провайдер управляет рассуждениями: deepseek — параметры thinking и reasoning_effort,
   // none — провайдер не умеет регулировать рассуждения, уровень effort не передаётся.
