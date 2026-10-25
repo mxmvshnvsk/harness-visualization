@@ -19,6 +19,7 @@
   },
   "devDependencies": {
     "@harness-visualization/harness": "workspace:*",
+    "@harness-visualization/mcp-server": "workspace:*",
     "@harness-visualization/server": "workspace:*",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

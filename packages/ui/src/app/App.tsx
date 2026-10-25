@@ -29,6 +29,7 @@ import { DialogPanel } from '../features/dialog/DialogPanel';
 import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
+import { RagLab } from '../features/rag/RagLab';
 import { PlayerBar } from '../player/PlayerBar';
 import { projectSession } from '../projections/projectSession';
 import { buildActions, modelHostOf } from '../timeline/actions';
@@ -42,32 +43,24 @@ import { useSelection, type Selection } from './useSelection';
 
 export function App(): ReactElement {
   const [selection, select] = useSelection();
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const { drawerOpen, setDrawerOpen, closeDrawer, pick } = useDrawer(select);
   const sessions = useServerList(listSessions);
   const traces = useServerList(listTraces);
   const stream = useEventStream<StreamEnd>(streamUrl(selection));
   const sessionId = selection?.kind === 'session' ? selection.sessionId : null;
   const pending = usePendingPermission(sessionId, stream.events);
-  const closeDrawer = useCallback(() => {
-    setDrawerOpen(false);
-  }, []);
-  // Выбрали сессию или трейс — панель закрывается: дальше смотрим.
-  const pick = useCallback(
-    (next: Selection) => {
-      select(next);
-      setDrawerOpen(false);
-      window.scrollTo({ top: 0 });
-    },
-    [select],
-  );
 
+  const { openLab, closeLab } = useLabNavigation(pick);
   useReloadOnEnd(stream.state, sessions.reload, traces.reload);
 
   const sources = (
     <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} />
   );
+  if (selection?.kind === 'lab') {
+    return <RagLab onBack={closeLab} />;
+  }
   if (selection === null) {
-    return <StartScreen>{sources}</StartScreen>;
+    return <StartScreen onOpenLab={openLab}>{sources}</StartScreen>;
   }
   return (
     <>
@@ -84,6 +77,7 @@ export function App(): ReactElement {
             onOpenSources={() => {
               setDrawerOpen(true);
             }}
+            onOpenLab={openLab}
           />
         }
         prompt={
@@ -101,6 +95,37 @@ export function App(): ReactElement {
       </Drawer>
     </>
   );
+}
+
+// Панель с сессиями и трейсами. Выбрали что-то — панель закрывается: дальше смотрим.
+function useDrawer(select: (next: Selection | null) => void) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false);
+  }, []);
+  const pick = useCallback(
+    (next: Selection | null) => {
+      select(next);
+      setDrawerOpen(false);
+      window.scrollTo({ top: 0 });
+    },
+    [select],
+  );
+  return { drawerOpen, setDrawerOpen, closeDrawer, pick };
+}
+
+// Лаборатория RAG открывается со стартового экрана и из шапки, «назад» ведёт на старт.
+function useLabNavigation(pick: (next: Selection | null) => void): {
+  openLab: () => void;
+  closeLab: () => void;
+} {
+  const openLab = useCallback(() => {
+    pick({ kind: 'lab' });
+  }, [pick]);
+  const closeLab = useCallback(() => {
+    pick(null);
+  }, [pick]);
+  return { openLab, closeLab };
 }
 
 // Сессия закончилась — её статус в списке поменялся, а в traces/ появился трейс.
@@ -123,15 +148,19 @@ interface TopbarProps {
   synthetic: boolean;
   stream: EventStream<StreamEnd>;
   onOpenSources: () => void;
+  onOpenLab: () => void;
 }
 
 // Шапка: что открыто, и кнопки, открывающие панель с сессиями, трейсами и запуском.
-function Topbar({ onOpenSources, ...header }: TopbarProps): ReactElement {
+function Topbar({ onOpenSources, onOpenLab, ...header }: TopbarProps): ReactElement {
   return (
     <header className={styles.topbar}>
       <StreamHeader {...header} />
       <div className={styles.toolbar}>
         <ThemeSwitch />
+        <Button variant="quiet" onClick={onOpenLab}>
+          Лаборатория RAG
+        </Button>
         <Button variant="quiet" onClick={onOpenSources}>
           Сессии и трейсы
         </Button>
@@ -144,7 +173,7 @@ function Topbar({ onOpenSources, ...header }: TopbarProps): ReactElement {
 }
 
 // Пока ничего не открыто — вопрос агенту и списки прямо на экране, без панели.
-function StartScreen({ children }: { children: ReactNode }): ReactElement {
+function StartScreen(props: { children: ReactNode; onOpenLab: () => void }): ReactElement {
   return (
     <div className={styles.start}>
       <div className={styles.startIntro}>
@@ -158,7 +187,14 @@ function StartScreen({ children }: { children: ReactNode }): ReactElement {
           модель, политика, тулы, ответ.
         </p>
       </div>
-      {children}
+      <button type="button" className={styles.labEntry} onClick={props.onOpenLab}>
+        <b>Лаборатория RAG →</b>
+        <span>
+          Учебный маршрут: как агент ищет в базе знаний, что такое векторы и почему найденное не
+          гарантирует верный ответ.
+        </span>
+      </button>
+      {props.children}
     </div>
   );
 }
@@ -341,7 +377,7 @@ function useReplay(events: HarnessEvent[], live: boolean) {
 }
 
 function streamUrl(selection: Selection | null): string | null {
-  if (selection === null) {
+  if (selection === null || selection.kind === 'lab') {
     return null;
   }
   return selection.kind === 'session'
@@ -350,7 +386,7 @@ function streamUrl(selection: Selection | null): string | null {
 }
 
 function describeSelection(
-  selection: Selection,
+  selection: Exclude<Selection, { kind: 'lab' }>,
   events: HarnessEvent[],
   traces: TraceSummary[],
 ): { title: string; source: string; synthetic: boolean } {

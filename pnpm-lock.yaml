@@ -123,6 +123,9 @@ importers:
       '@harness-visualization/harness':
         specifier: workspace:*
         version: link:../harness
+      '@harness-visualization/mcp-server':
+        specifier: workspace:*
+        version: link:../mcp-server
       '@harness-visualization/server':
         specifier: workspace:*
         version: link:../server

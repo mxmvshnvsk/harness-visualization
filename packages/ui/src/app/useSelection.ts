@@ -1,11 +1,13 @@
-// Что открыто: живая сессия сервера или записанный трейс. Хранится в адресе
-// (?session=… или ?trace=…), поэтому ссылкой можно поделиться, а «назад» в браузере работает.
+// Что открыто: живая сессия сервера, записанный трейс или лаборатория RAG. Хранится в адресе
+// (?session=…, ?trace=… или ?lab=rag), поэтому ссылкой можно поделиться, а «назад» работает.
+// null — ничего не открыто: стартовый экран.
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type Selection = { kind: 'session'; sessionId: string } | { kind: 'trace'; file: string };
+export type Selection =
+  { kind: 'session'; sessionId: string } | { kind: 'trace'; file: string } | { kind: 'lab' };
 
-export function useSelection(): [Selection | null, (selection: Selection) => void] {
+export function useSelection(): [Selection | null, (selection: Selection | null) => void] {
   const [selection, setSelection] = useState(readSelection);
 
   useEffect(() => {
@@ -18,22 +20,32 @@ export function useSelection(): [Selection | null, (selection: Selection) => voi
     };
   }, []);
 
-  const select = useCallback((next: Selection) => {
-    const params = new URLSearchParams();
-    if (next.kind === 'session') {
-      params.set('session', next.sessionId);
-    } else {
-      params.set('trace', next.file);
-    }
-    window.history.pushState(null, '', `?${params.toString()}`);
+  const select = useCallback((next: Selection | null) => {
+    const query = next === null ? '' : queryOf(next);
+    window.history.pushState(null, '', query === '' ? window.location.pathname : `?${query}`);
     setSelection(next);
   }, []);
 
   return [selection, select];
 }
 
+function queryOf(selection: Selection): string {
+  const params = new URLSearchParams();
+  if (selection.kind === 'session') {
+    params.set('session', selection.sessionId);
+  } else if (selection.kind === 'trace') {
+    params.set('trace', selection.file);
+  } else {
+    params.set('lab', 'rag');
+  }
+  return params.toString();
+}
+
 function readSelection(): Selection | null {
   const params = new URLSearchParams(window.location.search);
+  if (params.get('lab') === 'rag') {
+    return { kind: 'lab' };
+  }
   const sessionId = params.get('session');
   if (sessionId !== null) {
     return { kind: 'session', sessionId };

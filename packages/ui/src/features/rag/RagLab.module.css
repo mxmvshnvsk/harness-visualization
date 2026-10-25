@@ -1,0 +1,522 @@
+/* Лаборатория RAG: учебный маршрут из шести шагов. Перенесено из прототипа этапа 8b. */
+
+.screen {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 32px var(--space-page) 80px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block);
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 32px);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.lead {
+  margin: 6px 0 0;
+  color: var(--muted);
+  max-width: 72ch;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: var(--space-card);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+/* Навигация по шагам */
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.steps button {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  cursor: pointer;
+}
+
+.steps button small {
+  font: 11px var(--font-mono);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.steps button span {
+  font-size: 13.5px;
+  line-height: 1.3;
+}
+
+.steps button[aria-current='step'] {
+  border-color: var(--selected-line);
+  box-shadow: inset 0 0 0 1px var(--selected-line);
+}
+
+.steps button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* Шаг */
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.eyebrow {
+  font: 11.5px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.question {
+  margin: 0;
+  max-width: 30ch;
+  font-size: 26px;
+  line-height: 1.2;
+  font-weight: var(--weight-strong);
+  text-wrap: balance;
+}
+
+.prose {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 68ch;
+}
+
+.prose p {
+  margin: 0;
+}
+
+.term {
+  position: relative;
+  border-bottom: 1px dashed currentcolor;
+  cursor: help;
+}
+
+.term:hover::after,
+.term:focus::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 0;
+  top: calc(100% + 6px);
+  z-index: 5;
+  width: max-content;
+  max-width: 300px;
+  padding: 8px 10px;
+  border-radius: var(--radius-small);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text);
+  white-space: normal;
+}
+
+.lab {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border-radius: var(--radius-inner);
+  border: 1px solid var(--line);
+  background: var(--raised);
+}
+
+.labTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: var(--weight-strong);
+}
+
+.hint,
+.muted {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.notice,
+.takeaway {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 76ch;
+  padding: 14px 16px;
+  border-radius: var(--radius-inner);
+}
+
+.notice b,
+.takeaway b {
+  font: 500 12px var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.notice {
+  background: var(--accent-soft);
+}
+
+.takeaway {
+  border: 1px solid var(--selected-line);
+}
+
+.next {
+  align-self: flex-start;
+  padding: 10px 18px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--selected);
+  color: var(--selected-text);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.next:focus-visible,
+.choice:focus-visible,
+.steps button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Общие кусочки опытов */
+.choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.choice[aria-pressed='true'] {
+  border-color: transparent;
+  background: var(--selected);
+  color: var(--selected-text);
+}
+
+.twoColumns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.caption {
+  font: 11px var(--font-mono);
+  color: var(--muted);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.number {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.bad {
+  color: var(--error);
+}
+
+/* Шаг 1: сообщения запроса к модели */
+.message {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: 13.5px;
+}
+
+.message[data-tone='found'] {
+  border-color: var(--rag-regulation);
+  box-shadow: inset 3px 0 0 var(--rag-regulation);
+}
+
+.message[data-tone='stale'] {
+  border-color: var(--rag-faq);
+  box-shadow: inset 3px 0 0 var(--rag-faq);
+}
+
+.message[data-tone='answer'] {
+  background: var(--accent-soft);
+}
+
+/* Шаг 2: нарезка */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+  font-size: 14px;
+}
+
+.range,
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.range input {
+  width: 220px;
+  max-width: 100%;
+  accent-color: var(--selected);
+}
+
+.chunk {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.chunk[data-answer='true'] {
+  border-color: var(--rag-regulation);
+  box-shadow: inset 3px 0 0 var(--rag-regulation);
+}
+
+.chunk[data-long='true'] {
+  border-color: var(--error);
+}
+
+.chunkMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.chunkText {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 13px/1.5 var(--font-text);
+}
+
+.mark {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--rag-regulation) 28%, transparent);
+  color: var(--text);
+}
+
+/* Шаг 3: вектор, угадайка, карта фраз */
+.vector {
+  margin: 0;
+  font: 12px var(--font-mono);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.ranked {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ranked li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 200px 52px;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.ranked li[data-picked='true'] {
+  font-weight: var(--weight-strong);
+}
+
+.simbar {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line);
+}
+
+.simbar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+}
+
+.toy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  align-items: start;
+  gap: 16px;
+}
+
+.map {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  background: var(--surface);
+}
+
+.dot {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.dotLabel {
+  fill: #fff;
+  font: 10px var(--font-mono);
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.star {
+  fill: var(--text);
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.phraseList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.phraseList li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 6px;
+}
+
+.dotNumber {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--surface);
+  font: 10px var(--font-mono);
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legend li::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--swatch);
+}
+
+@media (width <= 860px) {
+  .screen {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .twoColumns,
+  .toy {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (width <= 600px) {
+  .ranked li {
+    grid-template-columns: 24px minmax(0, 1fr) 52px;
+  }
+
+  .ranked .simbar {
+    display: none;
+  }
+}

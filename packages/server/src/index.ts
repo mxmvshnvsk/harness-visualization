@@ -11,6 +11,7 @@ export type { SessionStatus, SessionSummary } from './sessions/SessionRegistry.j
 export type { StartSessionRequest } from './sessions/startSessionRequest.js';
 export type { TraceKind, TraceSummary } from './traces/TraceCatalog.js';
 export type { TraceStreamEnd } from './traces/traceRoutes.js';
+export type { GroundingClaim, GroundingReportResponse } from './rag/groundingReport.js';
 
 // GET /api/sessions/:sessionId
 export interface SessionDetails extends SessionSummary {

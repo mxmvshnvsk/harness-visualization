@@ -46,6 +46,12 @@
   --part-skills: #e87ba4;
   --part-memory: #6250d6;
 
+  /* Лаборатория RAG: виды документов (и темы учебных фраз). Проверено validate_palette.js. */
+  --rag-regulation: #2a78d6;
+  --rag-faq: #eb6834;
+  --rag-meeting: #1baf7a;
+  --rag-other: #8a8ba3;
+
   /* Один акцент — для главного действия. В светлой — перелив от индиго к фиолетовому. */
   --accent: #3647d2;
   --accent-2: #7b5cff;
@@ -107,6 +113,11 @@
   --part-results: #c98500;
   --part-skills: #d55181;
   --part-memory: #9085e9;
+
+  --rag-regulation: #3987e5;
+  --rag-faq: #d95926;
+  --rag-meeting: #199e70;
+  --rag-other: #6f7366;
 
   --accent: #e6ff4d;
   --accent-2: #e6ff4d;

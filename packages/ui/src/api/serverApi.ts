@@ -1,12 +1,14 @@
 // Запросы к серверу харнесса (packages/server). Типы ответов — из самого сервера:
 // так интерфейс не разойдётся с API незаметно — расхождение поймает tsc.
 
+import type { LabBase, LabSearch } from '@harness-visualization/mcp-server/lab';
 import type {
   SessionDetails,
   SessionSummary,
   StartSessionRequest,
   StartSessionResponse,
   TraceSummary,
+  GroundingReportResponse,
 } from '@harness-visualization/server';
 
 export async function listSessions(): Promise<SessionSummary[]> {
@@ -54,6 +56,23 @@ export function traceEventsUrl(file: string): string {
 }
 
 // Ошибка ответа сервера: статус и текст из его тела ({ error }).
+// Лаборатория RAG (этап 8b). Модели эмбеддингов нет — ServerError с кодом 503.
+export async function getRagBase(): Promise<LabBase> {
+  return getJson('/api/rag/base');
+}
+
+export async function searchRag(query: string): Promise<LabSearch> {
+  return postJson('/api/rag/search', { query });
+}
+
+export async function embedTexts(texts: readonly string[]): Promise<number[][]> {
+  return (await postJson<{ vectors: number[][] }>('/api/rag/embed', { texts })).vectors;
+}
+
+export async function getGrounding(file: string): Promise<GroundingReportResponse> {
+  return getJson(`/api/rag/grounding/${encodeURIComponent(file)}`);
+}
+
 export class ServerError extends Error {
   constructor(
     readonly status: number,

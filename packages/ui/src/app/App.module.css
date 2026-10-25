@@ -170,6 +170,35 @@
   font-size: 16px;
 }
 
+.labEntry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  text-align: left;
+  font: inherit;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.labEntry span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.labEntry:hover {
+  border-color: var(--selected-line);
+}
+
+.labEntry:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* Узкий экран: колонка диалога — поверх, по кнопке. */
 @media (width <= 1000px) {
   .shell {
