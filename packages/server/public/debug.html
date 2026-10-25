@@ -1,0 +1,634 @@
+<!doctype html>
+<!--
+  Отладочная страница сервера харнесса (этап 7.5). Не интерфейс проекта — тот будет на этапе 8.
+  Её задача — проверить сервер руками в браузере: запустить сессию, увидеть поток событий,
+  ответить на запрос разрешения, открыть записанный трейс. Без React и без сборки:
+  обычный HTML и JS, всё в одном файле. Данные из событий выводятся только через textContent.
+-->
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Harness debug</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f7f5f0;
+        --panel: #fffdf8;
+        --text: #26231e;
+        --muted: #77705f;
+        --line: #e4ded1;
+        --accent: #3d6b5a;
+        --model: #3f5f9e;
+        --tool: #8a5a1c;
+        --permission: #8c3f7a;
+        --retrieval: #2f7d86;
+        --judge: #6b52a3;
+        --dialog: #3d6b5a;
+        --error: #b03a2e;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #191816;
+          --panel: #22201d;
+          --text: #ece7dc;
+          --muted: #a39b89;
+          --line: #3a3630;
+          --accent: #7fbfa5;
+          --model: #8eaae6;
+          --tool: #e0a860;
+          --permission: #e08fcd;
+          --retrieval: #76c6cf;
+          --judge: #b9a2ef;
+          --dialog: #7fbfa5;
+          --error: #f08273;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          14px/1.45 system-ui,
+          sans-serif;
+      }
+      header {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        gap: 12px;
+        align-items: baseline;
+        flex-wrap: wrap;
+      }
+      header h1 {
+        font-size: 16px;
+        margin: 0;
+      }
+      header p {
+        margin: 0;
+        color: var(--muted);
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(260px, 340px) 1fr;
+        gap: 16px;
+        padding: 16px;
+      }
+      @media (max-width: 800px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px;
+        margin-bottom: 16px;
+        min-width: 0;
+      }
+      h2 {
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--muted);
+        margin: 0 0 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      textarea,
+      select,
+      button {
+        font: inherit;
+        color: inherit;
+      }
+      textarea {
+        width: 100%;
+        min-height: 64px;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 6px;
+      }
+      select {
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 3px;
+      }
+      label {
+        display: block;
+        margin-top: 6px;
+      }
+      button {
+        background: var(--accent);
+        color: var(--panel);
+        border: 0;
+        border-radius: 6px;
+        padding: 5px 12px;
+        cursor: pointer;
+        margin-top: 8px;
+      }
+      button.secondary {
+        background: transparent;
+        color: var(--accent);
+        border: 1px solid var(--line);
+        margin: 0;
+        padding: 2px 8px;
+      }
+      button.deny {
+        background: var(--error);
+      }
+      ul.items {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        max-height: 40vh;
+        overflow: auto;
+      }
+      ul.items li {
+        padding: 6px 4px;
+        border-top: 1px solid var(--line);
+        cursor: pointer;
+      }
+      ul.items li:hover,
+      ul.items li.active {
+        background: var(--bg);
+      }
+      ul.items li.active {
+        box-shadow: inset 3px 0 var(--accent);
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 11px;
+        padding: 0 6px;
+        border-radius: 8px;
+        border: 1px solid currentColor;
+        margin-right: 4px;
+      }
+      .badge.synthetic {
+        color: var(--error);
+      }
+      #status {
+        color: var(--muted);
+        margin-bottom: 8px;
+        overflow-wrap: anywhere;
+      }
+      #permission {
+        border-color: var(--permission);
+      }
+      #permission[hidden] {
+        display: none;
+      }
+      #log details {
+        border-top: 1px solid var(--line);
+      }
+      #log summary {
+        display: grid;
+        grid-template-columns: 40px 64px 170px 1fr;
+        gap: 8px;
+        padding: 3px 0;
+        cursor: pointer;
+        list-style: none;
+      }
+      #log summary span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #log .number,
+      #log .time {
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+      #log .type {
+        font-family: ui-monospace, monospace;
+        font-size: 12px;
+      }
+      #log pre {
+        margin: 4px 0 8px;
+        padding: 8px;
+        background: var(--bg);
+        border-radius: 6px;
+        overflow: auto;
+        max-height: 50vh;
+        font-size: 12px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+      .hide-service #log details.service {
+        display: none;
+      }
+      .group-model .type {
+        color: var(--model);
+      }
+      .group-tool .type {
+        color: var(--tool);
+      }
+      .group-permission .type {
+        color: var(--permission);
+      }
+      .group-retrieval .type {
+        color: var(--retrieval);
+      }
+      .group-judge .type {
+        color: var(--judge);
+      }
+      .group-dialog .type {
+        color: var(--dialog);
+        font-weight: 600;
+      }
+      .group-error .type,
+      .group-error .text {
+        color: var(--error);
+      }
+      @media (max-width: 600px) {
+        #log summary {
+          grid-template-columns: 34px 1fr;
+        }
+        #log .time,
+        #log .text {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body class="hide-service">
+    <header>
+      <h1>Harness debug</h1>
+      <p>Отладочная страница сервера: поток событий как есть. Интерфейс проекта — этап 8.</p>
+    </header>
+    <main>
+      <div>
+        <section>
+          <h2>Новая сессия</h2>
+          <form id="start">
+            <textarea id="question" required placeholder="Вопрос агенту">удалёнка</textarea>
+            <label
+              >Retrieval:
+              <select id="retrievalMode">
+                <option value="">из настроек</option>
+                <option value="tool">tool — ищет модель</option>
+                <option value="auto">auto — ищет харнесс</option>
+                <option value="rewrite">rewrite — харнесс по query от модели</option>
+              </select>
+            </label>
+            <label
+              >Reasoning effort:
+              <select id="reasoningEffort">
+                <option value="">из настроек</option>
+                <option>off</option>
+                <option>low</option>
+                <option>high</option>
+                <option>max</option>
+              </select>
+            </label>
+            <label><input type="checkbox" id="freshWorkspace" /> пересоздать workspace</label>
+            <button type="submit">Запустить</button>
+          </form>
+        </section>
+        <section>
+          <h2>Сессии сервера <button class="secondary" id="refreshSessions">обновить</button></h2>
+          <ul class="items" id="sessions"></ul>
+        </section>
+        <section>
+          <h2>Трейсы <button class="secondary" id="refreshTraces">обновить</button></h2>
+          <ul class="items" id="traces"></ul>
+        </section>
+      </div>
+      <div>
+        <section id="permission" hidden>
+          <h2>Нужно разрешение</h2>
+          <div id="permissionText"></div>
+          <div class="meta" id="permissionCountdown"></div>
+          <button id="approve">Разрешить</button>
+          <button class="deny" id="deny">Отказать</button>
+        </section>
+        <section>
+          <h2>
+            События
+            <label class="meta"
+              ><input type="checkbox" id="showService" /> показать служебные (mcp_message,
+              network_request, mcp_server_log)</label
+            >
+          </h2>
+          <div id="status">Выберите сессию или трейс слева.</div>
+          <div id="log"></div>
+        </section>
+      </div>
+    </main>
+    <script>
+      'use strict';
+
+      const SERVICE_TYPES = new Set(['mcp_message', 'network_request', 'mcp_server_log']);
+      const SUMMARY_LIMIT = 220;
+
+      const byId = (id) => document.getElementById(id);
+      // Открытый поток: { source: EventSource, kind: 'session' | 'trace', id }.
+      let current = null;
+      let firstTimestamp = null;
+      let countdownTimer = null;
+      let pendingToolCallId = null;
+
+      function group(type) {
+        if (type === 'error' || type === 'model_error' || type === 'mcp_server_failed')
+          return 'error';
+        if (type === 'user_message' || type === 'assistant_message') return 'dialog';
+        if (type.startsWith('model_') || type === 'prompt_assembled') return 'model';
+        if (type.startsWith('tool_')) return 'tool';
+        if (type.startsWith('permission_')) return 'permission';
+        if (type === 'context_retrieved' || type === 'query_rewritten') return 'retrieval';
+        if (type === 'claim_judged' || type === 'grounding_check_started') return 'judge';
+        return 'meta';
+      }
+
+      const PLURAL_RULES = new Intl.PluralRules('ru');
+      const EVENT_WORDS = { one: 'событие', few: 'события', many: 'событий', other: 'события' };
+
+      function countEvents(count) {
+        return `${count} ${EVENT_WORDS[PLURAL_RULES.select(count)]}`;
+      }
+
+      function usage(value) {
+        if (!value) return '';
+        return `input ${value.inputTokens} (cache hit ${value.inputCacheHitTokens}), output ${value.outputTokens}`;
+      }
+
+      function money(cost) {
+        return cost ? `, ${cost.total.toFixed(6)} ${cost.currency}` : '';
+      }
+
+      // Короткая строка для каждого типа; полное событие — по клику, в JSON.
+      const SUMMARIES = {
+        session_started: (e) =>
+          `${e.model}, reasoning effort ${e.reasoningEffort}, retrieval ${e.retrievalMode ?? '—'}`,
+        workspace_prepared: (e) => e.directory + (e.wasReset ? ' (пересоздана)' : ''),
+        mcp_server_ready: (e) => `${e.serverName}: ${e.tools.length} тулов за ${e.durationMs} мс`,
+        mcp_server_failed: (e) => `${e.serverName}: ${e.message}`,
+        mcp_message: (e) =>
+          `${e.serverName} ${e.direction === 'to_server' ? '→' : '←'} ${e.message.method ?? `ответ на ${e.message.id}`}`,
+        mcp_server_log: (e) => `${e.serverName}: ${e.text}`,
+        network_request: (e) => `${e.host}, ${e.viaProxy ? 'через прокси' : 'напрямую'}`,
+        user_message: (e) => e.text,
+        query_rewritten: (e) =>
+          `query «${e.query}»${e.usedFallback ? ' (fallback: вопрос как есть)' : ''}`,
+        context_retrieved: (e) =>
+          `${e.toolName}, query от ${e.queryAuthor}: ${e.status}, ${e.durationMs} мс`,
+        grounding_check_started: (e) =>
+          `${e.sourceTracePath}: ${e.claimCount} claims, судья ${e.judgeModel}`,
+        claim_judged: (e) => `#${e.claimNumber} ${e.verdict}: ${e.claim}`,
+        prompt_assembled: (e) => `${e.messages.length} messages, ${e.toolNames.length} тулов`,
+        model_request: (e) => `${e.purpose}${e.iteration === null ? '' : `, шаг ${e.iteration}`}`,
+        model_response: (e) =>
+          `${e.reply.finishReason}, ${usage(e.reply.usage)}${money(e.cost)}, ${e.durationMs} мс`,
+        model_error: (e) => e.message,
+        tool_call: (e) => `${e.toolName} ${e.argumentsText}`,
+        permission_evaluated: (e) => `${e.decision}: ${e.reason}`,
+        permission_requested: (e) => e.actionDescription,
+        permission_resolved: (e) =>
+          `${e.approved ? 'разрешено' : 'запрещено'}, answeredBy ${e.answeredBy}, ждали ${e.waitedForUserMs} мс`,
+        tool_result: (e) => `${e.status}, ${e.durationMs} мс: ${e.content}`,
+        assistant_message: (e) => e.text,
+        session_finished: (e) =>
+          `${e.modelRequests} запросов к модели, ${usage(e.usage)}${money(e.modelCost)}, ${e.durationMs} мс`,
+        error: (e) => e.message,
+      };
+
+      function summarize(event) {
+        try {
+          const text = SUMMARIES[event.type]?.(event) ?? '';
+          return text.length > SUMMARY_LIMIT ? `${text.slice(0, SUMMARY_LIMIT)}…` : text;
+        } catch {
+          return '';
+        }
+      }
+
+      function element(tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+      }
+
+      function appendEvent(event) {
+        firstTimestamp ??= Date.parse(event.timestamp);
+        const offset = (Date.parse(event.timestamp) - firstTimestamp) / 1000;
+        const row = element('details', `group-${group(event.type)}`);
+        if (SERVICE_TYPES.has(event.type)) row.classList.add('service');
+        const summary = element('summary');
+        summary.append(
+          element('span', 'number', String(event.sequence)),
+          element('span', 'time', `+${offset.toFixed(2)} с`),
+          element('span', 'type', event.type),
+          element('span', 'text', summarize(event)),
+        );
+        row.append(summary);
+        // JSON строится при раскрытии: в model_request весь prompt, держать его в DOM незачем.
+        row.addEventListener('toggle', () => {
+          if (row.open && row.childElementCount === 1) {
+            row.append(element('pre', '', JSON.stringify(event, null, 2)));
+          }
+        });
+        byId('log').append(row);
+      }
+
+      function closeStream() {
+        current?.source.close();
+        current = null;
+        hidePermission();
+      }
+
+      // note — пометка в строке статуса: например, что трейс синтетический.
+      function openStream(kind, id, url, label, note = '') {
+        closeStream();
+        for (const item of document.querySelectorAll('ul.items li')) {
+          item.classList.toggle('active', item.dataset.id === id);
+        }
+        byId('log').replaceChildren();
+        firstTimestamp = null;
+        byId('status').textContent = `${label}${note} — поток открыт`;
+        const source = new EventSource(url);
+        current = { source, kind, id };
+        source.onmessage = (message) => {
+          const event = JSON.parse(message.data);
+          appendEvent(event);
+          if (kind === 'session') handlePermissionEvent(event);
+        };
+        // Именованное событие конца: закрываем сами, иначе EventSource переподключится.
+        source.addEventListener('end', (message) => {
+          const end = JSON.parse(message.data);
+          source.close();
+          // У живой сессии в конце — её трейс; у записанного трейса имя уже в label.
+          const where = end.tracePath ? `. Трейс: ${end.tracePath}` : '';
+          const skipped = end.skippedLines ? `, пропущено строк: ${end.skippedLines}` : '';
+          byId('status').textContent =
+            `${label}${note} — ${end.status ?? 'трейс прочитан'}: ${countEvents(end.eventCount)}${skipped}${where}`;
+          hidePermission();
+          loadSessions();
+        });
+        source.onerror = () => {
+          if (source.readyState === EventSource.CONNECTING) {
+            byId('status').textContent = `${label} — обрыв, переподключаюсь (Last-Event-ID)…`;
+          }
+        };
+      }
+
+      // Разрешение: вопрос пришёл в потоке, срок ответа — в сводке сессии (expiresAt).
+      async function handlePermissionEvent(event) {
+        if (event.type === 'permission_resolved') {
+          hidePermission();
+          return;
+        }
+        if (event.type !== 'permission_requested') return;
+        const response = await fetch(`/api/sessions/${current.id}`);
+        const summary = await response.json();
+        const pending = summary.pendingPermissions?.find(
+          (item) => item.toolCallId === event.toolCallId,
+        );
+        // Вопроса уже нет: ответили или истёк срок — это видно по permission_resolved в потоке.
+        if (!pending) return;
+        pendingToolCallId = pending.toolCallId;
+        byId('permissionText').textContent =
+          `${pending.actionDescription} (тул ${pending.toolName})`;
+        byId('permission').hidden = false;
+        const expiresAt = Date.parse(pending.expiresAt);
+        const tick = () => {
+          const seconds = Math.max(0, Math.round((expiresAt - Date.now()) / 1000));
+          byId('permissionCountdown').textContent =
+            `Без ответа через ${seconds} с действие будет запрещено (answeredBy: timeout).`;
+        };
+        tick();
+        clearInterval(countdownTimer);
+        countdownTimer = setInterval(tick, 1000);
+      }
+
+      function hidePermission() {
+        clearInterval(countdownTimer);
+        pendingToolCallId = null;
+        byId('permission').hidden = true;
+      }
+
+      async function answerPermission(approved) {
+        if (!current || pendingToolCallId === null) return;
+        const response = await fetch(`/api/sessions/${current.id}/permissions`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ toolCallId: pendingToolCallId, approved }),
+        });
+        if (!response.ok) {
+          const { error } = await response.json();
+          byId('permissionCountdown').textContent =
+            `Ответ не принят (${response.status}): ${error}`;
+        }
+      }
+
+      async function startSession(submitEvent) {
+        submitEvent.preventDefault();
+        const body = { question: byId('question').value };
+        if (byId('retrievalMode').value) body.retrievalMode = byId('retrievalMode').value;
+        if (byId('reasoningEffort').value) body.reasoningEffort = byId('reasoningEffort').value;
+        if (byId('freshWorkspace').checked) body.freshWorkspace = true;
+        const response = await fetch('/api/sessions', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        const result = await response.json();
+        if (!response.ok) {
+          byId('status').textContent = `Сессия не запущена (${response.status}): ${result.error}`;
+          return;
+        }
+        openStream('session', result.sessionId, result.eventsUrl, `Сессия ${result.sessionId}`);
+        loadSessions();
+      }
+
+      function formatDate(value) {
+        return value ? new Date(value).toLocaleString('ru-RU') : '—';
+      }
+
+      async function loadSessions() {
+        const sessions = await (await fetch('/api/sessions')).json();
+        const items = sessions.reverse().map((session) => {
+          const item = element('li');
+          item.dataset.id = session.sessionId;
+          item.classList.toggle('active', current?.id === session.sessionId);
+          item.append(
+            element('div', '', session.question),
+            element(
+              'div',
+              'meta',
+              `${session.sessionId} · ${session.status} · ${countEvents(session.eventCount)}`,
+            ),
+          );
+          item.addEventListener('click', () =>
+            openStream(
+              'session',
+              session.sessionId,
+              `/api/sessions/${session.sessionId}/events`,
+              `Сессия ${session.sessionId}`,
+            ),
+          );
+          return item;
+        });
+        byId('sessions').replaceChildren(...items);
+        if (items.length === 0) byId('sessions').append(element('li', 'meta', 'Пока ни одной'));
+      }
+
+      async function loadTraces() {
+        const traces = await (await fetch('/api/traces')).json();
+        const items = traces.map((trace) => {
+          const item = element('li');
+          item.dataset.id = trace.file;
+          item.classList.toggle('active', current?.id === trace.file);
+          const title = element('div');
+          if (trace.synthetic) title.append(element('span', 'badge synthetic', 'синтетический'));
+          if (trace.kind !== 'session') title.append(element('span', 'badge', trace.kind));
+          title.append(trace.title ?? trace.file);
+          const state = trace.hasError ? 'с ошибкой' : trace.finished ? 'дописан' : 'оборван';
+          item.append(
+            title,
+            element(
+              'div',
+              'meta',
+              `${formatDate(trace.startedAt)} · ${countEvents(trace.eventCount)} · ${state}`,
+            ),
+          );
+          const note = trace.synthetic
+            ? ' (синтетический: собран руками, не настоящая сессия)'
+            : '';
+          item.addEventListener('click', () =>
+            openStream(
+              'trace',
+              trace.file,
+              `/api/traces/${encodeURIComponent(trace.file)}/events`,
+              trace.file,
+              note,
+            ),
+          );
+          return item;
+        });
+        byId('traces').replaceChildren(...items);
+      }
+
+      byId('start').addEventListener('submit', startSession);
+      byId('approve').addEventListener('click', () => answerPermission(true));
+      byId('deny').addEventListener('click', () => answerPermission(false));
+      byId('refreshSessions').addEventListener('click', loadSessions);
+      byId('refreshTraces').addEventListener('click', loadTraces);
+      byId('showService').addEventListener('change', (changeEvent) => {
+        document.body.classList.toggle('hide-service', !changeEvent.target.checked);
+      });
+      loadSessions();
+      loadTraces();
+    </script>
+  </body>
+</html>

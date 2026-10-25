@@ -4,6 +4,7 @@
 import { join } from 'node:path';
 import type { LoadedSettings } from '@harness-visualization/harness';
 import Fastify, { type FastifyInstance } from 'fastify';
+import { registerDebugPage } from './debugPage.js';
 import { PendingPermissions } from './permissions/PendingPermissions.js';
 import { SessionRegistry } from './sessions/SessionRegistry.js';
 import { registerSessionRoutes } from './sessions/sessionRoutes.js';
@@ -29,6 +30,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
   registerSessionRoutes(app, { ...options, registry, permissions });
   const { traces } = options.loadedSettings.settings;
   registerTraceRoutes(app, new TraceCatalog(join(options.projectRoot, traces.directory)));
+  registerDebugPage(app);
   // Сервер останавливают (Ctrl+C). Ждущие вопросы закрываются отказом noOneToAsk, а идущие
   // сессии получают время дописать трейс до session_finished — иначе трейс обрывается
   // посреди хода. preClose, а не onClose: пока открыты потоки SSE живых сессий, Fastify
