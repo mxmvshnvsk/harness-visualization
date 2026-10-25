@@ -1,8 +1,9 @@
 // Лента действий под плеером: каждое действие — отрезок цвета своей группы, ожидание — тонкая
-// полоска. По ленте перематывают мышью или стрелками; бегунок движется по кадрам часов.
+// полоска, пройденное ярче. По ленте перематывают мышью или стрелками; под курсором видно,
+// в какой момент сессии попадёшь и что там происходит. Бегунок движется по кадрам часов.
 
 import { useEffect, useRef, type KeyboardEvent, type PointerEvent, type ReactElement } from 'react';
-import type { Schedule } from '../timeline/schedule';
+import { realAt, type Schedule } from '../timeline/schedule';
 import type { TimelineClock } from '../timeline/TimelineClock';
 import styles from './PlayerBar.module.css';
 
@@ -23,7 +24,7 @@ export function ActionStrip({
   schedule: Schedule;
 }): ReactElement {
   const total = Math.max(1, schedule.total);
-  const { stripRef, headRef, handlers } = useStripControls(clock, total);
+  const { stripRef, headRef, handlers } = useStripControls(clock, schedule, total);
   return (
     <div
       ref={stripRef}
@@ -40,6 +41,7 @@ export function ActionStrip({
           key={segment.key}
           className={segment.waiting ? `${styles.segment} ${styles.waiting}` : styles.segment}
           data-group={segment.group}
+          data-from={segment.from}
           title={segment.title}
           style={{
             left: `${String((segment.from / total) * 100)}%`,
@@ -48,31 +50,40 @@ export function ActionStrip({
         />
       ))}
       <div ref={headRef} className={styles.head} />
+      <div className={styles.ghost} data-ghost="line" />
+      <div className={styles.ghostLabel} data-ghost="label" />
     </div>
   );
 }
 
-// Бегунок по кадрам часов, перемотка мышью (с захватом указателя) и стрелками.
-function useStripControls(clock: TimelineClock, total: number) {
+// Бегунок и пройденные отрезки — по кадрам часов, без перерисовки React.
+function useStripControls(clock: TimelineClock, schedule: Schedule, total: number) {
   const stripRef = useRef<HTMLDivElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const segments = [...(stripRef.current?.querySelectorAll<HTMLElement>('[data-from]') ?? [])];
     const draw = (): void => {
-      const share = clock.getState().time / total;
+      const { time } = clock.getState();
       if (headRef.current !== null) {
-        headRef.current.style.left = `${String(share * 100)}%`;
+        headRef.current.style.left = `${String((time / total) * 100)}%`;
       }
-      stripRef.current?.setAttribute('aria-valuenow', String(Math.round(share * 100)));
+      stripRef.current?.setAttribute('aria-valuenow', String(Math.round((time / total) * 100)));
+      for (const segment of segments) {
+        segment.dataset.past = String(time >= Number(segment.dataset.from));
+      }
     };
     draw();
     return clock.subscribe(draw);
   }, [clock, total]);
+  return { stripRef, headRef, handlers: stripHandlers(clock, schedule, total) };
+}
 
-  const seekTo = (event: PointerEvent<HTMLDivElement>): void => {
+function stripHandlers(clock: TimelineClock, schedule: Schedule, total: number) {
+  const timeOf = (event: PointerEvent<HTMLDivElement>): number => {
     const rect = event.currentTarget.getBoundingClientRect();
-    clock.seek(((event.clientX - rect.left) / rect.width) * total);
+    return Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)) * total;
   };
-  const handlers = {
+  return {
     onKeyDown: (event: KeyboardEvent<HTMLDivElement>): void => {
       const delta = { ArrowRight: total / 50, ArrowLeft: -total / 50 }[event.key];
       if (delta !== undefined) {
@@ -82,15 +93,45 @@ function useStripControls(clock: TimelineClock, total: number) {
     },
     onPointerDown: (event: PointerEvent<HTMLDivElement>): void => {
       event.currentTarget.setPointerCapture(event.pointerId);
-      seekTo(event);
+      clock.seek(timeOf(event));
     },
     onPointerMove: (event: PointerEvent<HTMLDivElement>): void => {
+      const time = timeOf(event);
+      showGhost(event.currentTarget, schedule, time / total);
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        seekTo(event);
+        clock.seek(time);
       }
     },
   };
-  return { stripRef, headRef, handlers };
+}
+
+function showGhost(strip: HTMLElement, schedule: Schedule, share: number): void {
+  const line = strip.querySelector<HTMLElement>('[data-ghost="line"]');
+  const label = strip.querySelector<HTMLElement>('[data-ghost="label"]');
+  if (line === null || label === null) {
+    return;
+  }
+  const time = share * schedule.total;
+  line.style.left = `${String(share * 100)}%`;
+  label.style.left = `${String(Math.min(90, Math.max(10, share * 100)))}%`;
+  const seconds = (realAt(schedule, time) / 1000).toLocaleString('ru-RU', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  label.textContent = `${seconds} с · ${actionAt(schedule, time) ?? 'начало сессии'}`;
+}
+
+// Что происходит в этот момент повтора: последнее начавшееся действие.
+function actionAt(schedule: Schedule, time: number): string | null {
+  let found: string | null = null;
+  for (const item of schedule.actions) {
+    if (item.outFrom > time) {
+      break;
+    }
+    const back = item.backFrom !== null && time >= item.backFrom;
+    found = back ? (item.action.whatBack ?? item.action.what) : item.action.what;
+  }
+  return found;
 }
 
 function segmentsOf(schedule: Schedule): Segment[] {

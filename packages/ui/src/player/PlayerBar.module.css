@@ -1,9 +1,7 @@
 .bar {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 14px 10px 8px;
-  border-top: 1px solid var(--line);
+  gap: 10px;
 }
 
 .buttons {
@@ -22,15 +20,30 @@
   justify-content: center;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line);
-  background: transparent;
+  background: var(--surface);
   color: var(--text);
   cursor: pointer;
+  box-shadow: inset 0 1px 0 var(--edge-hi);
+  transition:
+    transform 0.15s,
+    border-color 0.2s;
+}
+
+.icon:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+
+.icon:active {
+  transform: scale(0.94);
 }
 
 .primary {
+  width: 52px;
+  height: 52px;
   border-color: transparent;
-  background: var(--accent);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: var(--accent-text);
+  box-shadow: 0 8px 26px -8px color-mix(in srgb, var(--accent) 75%, transparent);
 }
 
 .follow {
@@ -52,7 +65,8 @@
 
 .speed select {
   min-height: 36px;
-  padding: 0 8px;
+  padding: 0 12px;
+  min-width: 72px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   background: transparent;
@@ -78,7 +92,7 @@
 }
 
 .strip:focus-visible {
-  outline: 2px solid var(--model);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -86,15 +100,31 @@
   position: absolute;
   top: 7px;
   height: 14px;
-  border-radius: 4px;
-  opacity: 0.55;
+  border-radius: 5px;
+  opacity: 0.45;
   background: var(--meta);
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
 }
 
 .waiting {
   top: 11px;
   height: 6px;
-  opacity: 0.3;
+  opacity: 0.25;
+}
+
+/* Пройденное ярче: видно, сколько сессии позади. */
+.segment[data-past='true'] {
+  opacity: 0.9;
+}
+
+.waiting[data-past='true'] {
+  opacity: 0.5;
+}
+
+.strip:hover .segment {
+  transform: scaleY(1.15);
 }
 
 .segment[data-group='dialog'] {
@@ -132,7 +162,45 @@
   width: 2px;
   border-radius: 2px;
   background: var(--text);
+  box-shadow: 0 0 calc(var(--glow) * 8px) var(--text);
   pointer-events: none;
+}
+
+/* Под курсором: куда попадём и что там происходит. */
+.ghost {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  background: var(--muted);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.ghostLabel {
+  position: absolute;
+  bottom: 34px;
+  transform: translateX(-50%);
+  padding: 4px 10px;
+  border-radius: var(--radius-small);
+  border: 1px solid var(--line);
+  background: var(--raised);
+  box-shadow: var(--shadow);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.strip:hover .ghost {
+  opacity: 0.6;
+}
+
+.strip:hover .ghostLabel {
+  opacity: 1;
 }
 
 .visuallyHidden {

@@ -1,13 +1,22 @@
-// Экран 8.1: запуск сессии, списки сессий и трейсов, лента событий и вопрос о разрешении.
+// Приложение-плеер (этап 8c): шапка с открытым потоком, виды на всю ширину, плеер внизу.
+// Сессии, трейсы и запуск — в выезжающей панели, а пока ничего не открыто — на стартовом экране.
 // Всё на экране выводится из списка событий потока — своего состояния сессии интерфейс не хранит.
 
 import type { HarnessEvent } from '@harness-visualization/harness';
 import type { TraceSummary } from '@harness-visualization/server';
-import { useEffect, useMemo, useState, type ReactElement } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 import { listSessions, listTraces, sessionEventsUrl, traceEventsUrl } from '../api/serverApi';
-import { useEventStream } from '../api/useEventStream';
+import { useEventStream, type EventStream } from '../api/useEventStream';
 import { useServerList } from '../api/useServerList';
-import { EmptyState } from '../components/EmptyState';
+import { Button } from '../components/Button';
+import { Drawer } from '../components/Drawer';
 import { Segmented } from '../components/Segmented';
 import { EventList } from '../features/EventList';
 import { FlowView } from '../features/flow/FlowView';
@@ -27,58 +36,114 @@ import { useSelection, type Selection } from './useSelection';
 
 export function App(): ReactElement {
   const [selection, select] = useSelection();
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const sessions = useServerList(listSessions);
   const traces = useServerList(listTraces);
   const stream = useEventStream<StreamEnd>(streamUrl(selection));
   const sessionId = selection?.kind === 'session' ? selection.sessionId : null;
   const pending = usePendingPermission(sessionId, stream.events);
+  const closeDrawer = useCallback(() => {
+    setDrawerOpen(false);
+  }, []);
+  // Выбрали сессию или трейс — панель закрывается: дальше смотрим.
+  const pick = useCallback(
+    (next: Selection) => {
+      select(next);
+      setDrawerOpen(false);
+      window.scrollTo({ top: 0 });
+    },
+    [select],
+  );
 
-  // Сессия закончилась — её статус в списке поменялся, а в traces/ появился трейс.
-  const { reload: reloadSessions } = sessions;
-  const { reload: reloadTraces } = traces;
+  useReloadOnEnd(stream.state, sessions.reload, traces.reload);
+
+  const sources = (
+    <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} />
+  );
+  if (selection === null) {
+    return <StartScreen>{sources}</StartScreen>;
+  }
+  return (
+    <div className={styles.page}>
+      <Topbar
+        {...describeSelection(selection, stream.events, traces.items)}
+        stream={stream}
+        onOpenSources={() => {
+          setDrawerOpen(true);
+        }}
+      />
+      {sessionId !== null && pending !== null && (
+        <PermissionCard
+          sessionId={sessionId}
+          pending={pending}
+          askedAt={findAskedAt(stream.events, pending.toolCallId)}
+        />
+      )}
+      {/* key: другая сессия или трейс — выбор в инспекторе начинается заново. */}
+      <StreamViews
+        key={streamUrl(selection)}
+        events={stream.events}
+        live={selection.kind === 'session' && stream.state !== 'ended'}
+      />
+      <Drawer open={drawerOpen} label="Сессии и трейсы" onClose={closeDrawer}>
+        {sources}
+      </Drawer>
+    </div>
+  );
+}
+
+// Сессия закончилась — её статус в списке поменялся, а в traces/ появился трейс.
+function useReloadOnEnd(
+  state: EventStream<StreamEnd>['state'],
+  reloadSessions: () => void,
+  reloadTraces: () => void,
+): void {
   useEffect(() => {
-    if (stream.state === 'ended') {
+    if (state === 'ended') {
       reloadSessions();
       reloadTraces();
     }
-  }, [stream.state, reloadSessions, reloadTraces]);
+  }, [state, reloadSessions, reloadTraces]);
+}
 
+interface TopbarProps {
+  title: string;
+  source: string;
+  synthetic: boolean;
+  stream: EventStream<StreamEnd>;
+  onOpenSources: () => void;
+}
+
+// Шапка: что открыто, и кнопки, открывающие панель с сессиями, трейсами и запуском.
+function Topbar({ onOpenSources, ...header }: TopbarProps): ReactElement {
   return (
-    <div className={styles.page}>
-      <header className={styles.topbar}>
-        <div className={styles.brand}>Harness Visualization</div>
-      </header>
-      <main className={styles.layout}>
-        <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={select} />
-        <div className={styles.content}>
-          {sessionId !== null && pending !== null && (
-            <PermissionCard
-              sessionId={sessionId}
-              pending={pending}
-              askedAt={findAskedAt(stream.events, pending.toolCallId)}
-            />
-          )}
-          {selection === null ? (
-            <EmptyState title="Ничего не открыто">
-              Задайте вопрос агенту — и посмотрите, как он проходит через харнесс: prompt, модель,
-              тулы, ответ. Или откройте записанный трейс.
-            </EmptyState>
-          ) : (
-            <section className={styles.card}>
-              <StreamHeader
-                {...describeSelection(selection, stream.events, traces.items)}
-                stream={stream}
-              />
-              {/* key: другая сессия или трейс — выбор в инспекторе начинается заново. */}
-              <StreamViews
-                key={streamUrl(selection)}
-                events={stream.events}
-                live={selection.kind === 'session' && stream.state !== 'ended'}
-              />
-            </section>
-          )}
-        </div>
-      </main>
+    <header className={styles.topbar}>
+      <StreamHeader {...header} />
+      <div className={styles.toolbar}>
+        <Button variant="quiet" onClick={onOpenSources}>
+          Сессии и трейсы
+        </Button>
+        <Button variant="accent" onClick={onOpenSources}>
+          Новый вопрос
+        </Button>
+      </div>
+    </header>
+  );
+}
+
+// Пока ничего не открыто — вопрос агенту и списки прямо на экране, без панели.
+function StartScreen({ children }: { children: ReactNode }): ReactElement {
+  return (
+    <div className={styles.start}>
+      <div className={styles.startIntro}>
+        <span className={styles.eyebrow}>Harness Visualization</span>
+        <h1 className={styles.startTitle}>Как вопрос проходит через харнесс</h1>
+        <p className={styles.startText}>
+          Задайте вопрос агенту или откройте записанный трейс — и посмотрите по шагам: prompt,
+          модель, политика, тулы, ответ.
+        </p>
+      </div>
+      {children}
     </div>
   );
 }
@@ -116,8 +181,10 @@ function StreamViews({ events, live }: StreamViewsProps): ReactElement {
       {viewName === 'inspector' && <InspectorView view={view} />}
       {viewName === 'events' && <EventList events={shown} />}
       <div className={styles.dock}>
-        <TokenomicsLine totals={view.totals} />
-        <PlayerBar clock={clock} schedule={schedule} live={live} />
+        <div className={styles.dockInner}>
+          <TokenomicsLine totals={view.totals} />
+          <PlayerBar clock={clock} schedule={schedule} live={live} />
+        </div>
       </div>
     </div>
   );

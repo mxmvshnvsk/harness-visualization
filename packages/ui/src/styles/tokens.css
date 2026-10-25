@@ -69,12 +69,9 @@
   --weight-strong: 600;
   --weight-medium: 500;
 
-  /* Стекло: плеер и пустое состояние. */
+  /* Стекло: док плеера. */
   --glass: rgb(250 250 254 / 66%);
   --glass-line: rgb(255 255 255 / 90%);
-  --blob-a: #b9a7f5;
-  --blob-b: #9cc8f2;
-  --blob-c: #c9c3ff;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -122,9 +119,6 @@
 
     --glass: rgb(10 11 9 / 60%);
     --glass-line: rgb(230 255 77 / 10%);
-    --blob-a: #3d4a12;
-    --blob-b: #1f2a1a;
-    --blob-c: #2a3320;
 
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;

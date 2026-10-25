@@ -1,4 +1,5 @@
-// Левая колонка: запуск сессии, сессии сервера и записанные трейсы.
+// Запуск сессии, сессии сервера и записанные трейсы. Живёт в выезжающей панели, а пока
+// ничего не открыто — на стартовом экране.
 
 import type { SessionSummary, TraceSummary } from '@harness-visualization/server';
 import type { ReactElement } from 'react';
@@ -17,7 +18,7 @@ interface SidebarProps {
 
 export function Sidebar({ sessions, traces, selection, onSelect }: SidebarProps): ReactElement {
   return (
-    <aside className={styles.sidebar}>
+    <div className={styles.sources}>
       <section className={styles.card}>
         <SessionForm
           onStarted={(sessionId) => {
@@ -44,6 +45,6 @@ export function Sidebar({ sessions, traces, selection, onSelect }: SidebarProps)
           onSelect={onSelect}
         />
       </section>
-    </aside>
+    </div>
   );
 }
