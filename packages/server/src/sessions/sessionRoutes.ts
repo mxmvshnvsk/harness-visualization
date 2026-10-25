@@ -13,13 +13,8 @@ import {
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { answerPermissionRequestSchema } from '../permissions/answerPermissionRequest.js';
 import type { PendingPermissions } from '../permissions/PendingPermissions.js';
-import {
-  formatEnd,
-  formatEvent,
-  formatHeartbeat,
-  formatRetry,
-  parseLastEventId,
-} from '../sse/sseMessages.js';
+import { openEventStream } from '../sse/openEventStream.js';
+import { formatEnd, formatEvent, formatHeartbeat, parseLastEventId } from '../sse/sseMessages.js';
 import type { SessionRegistry } from './SessionRegistry.js';
 import { startSessionRequestSchema, type StartSessionRequest } from './startSessionRequest.js';
 
@@ -141,9 +136,8 @@ function toSessionInput(
   };
 }
 
-// Ответ пишется руками в сокет (reply.hijack): Fastify не знает про SSE, а нам и не нужно —
-// формат простой и виден целиком (sseMessages.ts). Сначала — пропущенное из буфера,
-// потом — вживую, пока сессия не закончится или браузер не закроет поток.
+// Сначала — пропущенное из буфера, потом — вживую, пока сессия не закончится
+// или браузер не закроет поток.
 function streamSessionEvents(
   request: FastifyRequest<{ Params: SessionParams; Querystring: EventsQuery }>,
   reply: FastifyReply,
@@ -156,14 +150,7 @@ function streamSessionEvents(
     return;
   }
   const lastEventId = parseLastEventId(request.headers['last-event-id'] ?? request.query.after);
-  reply.hijack();
-  const socket = reply.raw;
-  socket.writeHead(200, {
-    'content-type': 'text/event-stream; charset=utf-8',
-    'cache-control': 'no-cache',
-    connection: 'keep-alive',
-  });
-  socket.write(formatRetry());
+  const socket = openEventStream(reply);
   for (const event of registry.eventsAfter(sessionId, lastEventId)) {
     socket.write(formatEvent(event));
   }

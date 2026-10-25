@@ -270,6 +270,8 @@ curl --noproxy '*' -N http://127.0.0.1:4317/api/sessions/<id>/events
 | `GET /api/sessions/:id`              | состояние одной сессии и вопросы о разрешении, ждущие ответа (`pendingPermissions`)                                                                               |
 | `GET /api/sessions/:id/events`       | поток событий (SSE): сначала то, что уже было, потом — вживую                                                                                                     |
 | `POST /api/sessions/:id/permissions` | ответ на `permission_requested`: `{"toolCallId": "…", "approved": true}`                                                                                          |
+| `GET /api/traces`                    | записанные трейсы из `traces/`: вид (сессия или проверка опоры), вопрос, время, дописан ли до конца, `synthetic` — собран руками                                  |
+| `GET /api/traces/:file/events`       | события трейса тем же потоком SSE, что у живой сессии, — сразу все, без исходных пауз                                                                             |
 
 Если на вопрос о разрешении не ответить за `server.permissionTimeoutSeconds` (по умолчанию 120 секунд), действие запрещается: молчание не согласие. Попробовать можно на вопросе, где агенту нужно удалить файл (запись разрешена без вопроса, удаление — с вопросом). Скрипт сам достаёт `toolCallId` из `pendingPermissions`; нужен `jq`:
 
