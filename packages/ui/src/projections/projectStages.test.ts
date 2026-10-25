@@ -46,6 +46,23 @@ describe('projectStages', () => {
     expect(step?.rows.find((row) => row.text.startsWith('политика'))?.code).toBe('kedr__search');
   });
 
+  it('следующий вопрос диалога — свой этап, а шаги и ответ подписаны его номером', () => {
+    const log = session()
+      .add({ type: 'awaiting_question', turn: 1 })
+      .add({ type: 'user_message', text: 'а гибрид?' })
+      .add(modelRequest('request-3', 1))
+      .add(modelResponse('request-3', { usage: usage(4100, 3800), text: 'Два дня.' }))
+      .add({ type: 'assistant_message', text: 'Два дня.' });
+    const titles = projectStages(log.events).map((stage) => stage.title);
+
+    expect(titles.slice(-4)).toEqual([
+      'Ответ пользователю',
+      'Вопрос 2',
+      'Вопрос 2 · Шаг 1 · agentStep',
+      'Ответ на вопрос 2',
+    ]);
+  });
+
   it('активный этап — тот, где последнее показанное событие', () => {
     const stages = projectStages(session().events);
 

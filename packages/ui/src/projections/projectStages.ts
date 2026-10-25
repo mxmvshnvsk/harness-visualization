@@ -16,7 +16,8 @@ export interface StageRow {
   text: string;
 }
 
-export type StageKind = 'prep' | 'agent' | 'answer';
+// question — следующий вопрос того же диалога (этап 6.1): у первого вопроса — «Подготовка».
+export type StageKind = 'prep' | 'question' | 'agent' | 'answer';
 
 export interface Stage {
   id: string;
@@ -85,6 +86,10 @@ const DESCRIBE: Describers = {
     text: `${event.status}, ${String(event.durationMs)} мс`,
   }),
   assistant_message: (event) => ({ code: null, text: shorten(event.text) }),
+  awaiting_question: (event) => ({
+    code: null,
+    text: `ход ${String(event.turn)} закончен — сессия ждёт следующего вопроса, история остаётся`,
+  }),
   error: (event) => ({ code: null, text: `ошибка: ${event.message}` }),
 };
 
@@ -126,16 +131,34 @@ export function projectStages(events: readonly HarnessEvent[]): Stage[] {
   return stages.filter((stage) => stage.rows.length > 0);
 }
 
-// Шаг агента начинается запросом к модели, ответ пользователю — своим этапом.
+// Шаг агента начинается запросом к модели, ответ пользователю — своим этапом, следующий вопрос
+// диалога — своим. Номер хода — по числу вопросов: у второго вопроса заголовки «Вопрос 2 · …».
 function openStageFor(stages: Stage[], event: HarnessEvent, index: number): void {
+  const turn = stages.filter((stage) => stage.kind === 'question').length + 1;
+  const prefix = turn > 1 ? `Вопрос ${String(turn)} · ` : '';
+  if (event.type === 'user_message' && stages.some((stage) => stage.kind === 'answer')) {
+    const next = turn + 1;
+    stages.push(
+      newStage(
+        {
+          id: `question-${String(next)}`,
+          kind: 'question',
+          title: `Вопрос ${String(next)}`,
+          badge: 'user_message',
+          requestId: null,
+        },
+        index,
+      ),
+    );
+  }
   if (event.type === 'model_request' && event.purpose === 'agentStep') {
     const step = String(event.iteration ?? stages.length);
     stages.push(
       newStage(
         {
-          id: `step-${step}`,
+          id: `turn-${String(turn)}-step-${step}`,
           kind: 'agent',
-          title: `Шаг ${step} · agentStep`,
+          title: `${prefix}Шаг ${step} · agentStep`,
           badge: 'модель думает…',
           requestId: event.requestId,
         },
@@ -147,9 +170,9 @@ function openStageFor(stages: Stage[], event: HarnessEvent, index: number): void
     stages.push(
       newStage(
         {
-          id: 'answer',
+          id: `answer-${String(turn)}`,
           kind: 'answer',
-          title: 'Ответ пользователю',
+          title: turn > 1 ? `Ответ на вопрос ${String(turn)}` : 'Ответ пользователю',
           badge: 'assistant_message',
           requestId: null,
         },

@@ -153,7 +153,7 @@ function statusOf(stage: Stage, started: boolean, active: boolean, reached: Stag
     return 'готово';
   }
   if (stage.kind !== 'agent') {
-    return stage.kind === 'prep' ? 'идёт' : 'готово';
+    return stage.kind === 'answer' ? 'готово' : 'идёт';
   }
   // Есть строка ответа модели — дальше работают тулы.
   return reached.some((row) => row.text.startsWith('ответ'))
@@ -161,9 +161,12 @@ function statusOf(stage: Stage, started: boolean, active: boolean, reached: Stag
     : 'модель думает…';
 }
 
-// Подготовка — штекер (подключение MCP, сборка prompt), шаг агента — искра модели, ответ — сообщение.
+// Подготовка — штекер (подключение MCP, сборка prompt), следующий вопрос — облачко с вопросом,
+// шаг агента — искра модели, ответ — сообщение.
 const ICONS: Record<StageKind, string> = {
   prep: 'M9 3v5M15 3v5M7 8h10v3a5 5 0 0 1-10 0V8ZM12 16v5',
+  question:
+    'M5 5h14a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1h-8l-4 3.5V16H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM10 9a2 2 0 1 1 2.8 1.8c-.5.3-.8.7-.8 1.2M12 13.5v.1',
   agent:
     'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3ZM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z',
   answer:

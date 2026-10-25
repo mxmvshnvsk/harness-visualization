@@ -234,6 +234,9 @@ const serverSettingsSchema = z.object({
   // Сколько ждать ответа браузера на запрос разрешения. Не ответили — действие запрещается:
   // молчание не согласие, а сессия не должна висеть вечно, если вкладку закрыли.
   permissionTimeoutSeconds: z.number().int().min(5).max(3600).default(120),
+  // Сколько диалог ждёт следующего вопроса из браузера (этап 6.1). Не дождался — сессия
+  // заканчивается и дописывает трейс.
+  questionTimeoutSeconds: z.number().int().min(30).max(86400).default(900),
 });
 
 // Проверка опоры ответа (pnpm check-grounding, этап 5b).
@@ -264,7 +267,11 @@ export const harnessSettingsSchema = z.object({
     limit: 5,
   }),
   grounding: groundingSettingsSchema.default({ similarityThreshold: 0.87 }),
-  server: serverSettingsSchema.default({ port: 4317, permissionTimeoutSeconds: 120 }),
+  server: serverSettingsSchema.default({
+    port: 4317,
+    permissionTimeoutSeconds: 120,
+    questionTimeoutSeconds: 900,
+  }),
   prices: z.record(z.string(), modelPricesSchema).default({}),
   traces: tracesSettingsSchema,
 });

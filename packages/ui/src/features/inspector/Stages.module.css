@@ -35,7 +35,8 @@
   --c: var(--model);
 }
 
-.card[data-kind='answer'] {
+.card[data-kind='answer'],
+.card[data-kind='question'] {
   --c: var(--dialog);
 }
 

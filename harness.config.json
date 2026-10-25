@@ -151,7 +151,8 @@
   },
   "server": {
     "port": 4317,
-    "permissionTimeoutSeconds": 120
+    "permissionTimeoutSeconds": 120,
+    "questionTimeoutSeconds": 900
   },
   "grounding": {
     "similarityThreshold": 0.87

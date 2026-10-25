@@ -36,6 +36,15 @@ export async function answerPermission(
   });
 }
 
+// Следующий вопрос диалога (после awaiting_question) и конец диалога.
+export async function askNextQuestion(sessionId: string, text: string): Promise<void> {
+  await postJson(`/api/sessions/${encodeURIComponent(sessionId)}/messages`, { text });
+}
+
+export async function finishSession(sessionId: string): Promise<void> {
+  await postJson(`/api/sessions/${encodeURIComponent(sessionId)}/finish`, {});
+}
+
 export function sessionEventsUrl(sessionId: string): string {
   return `/api/sessions/${encodeURIComponent(sessionId)}/events`;
 }

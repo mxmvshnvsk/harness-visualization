@@ -3,7 +3,9 @@
 //   GET  /api/sessions                    — список сессий этого запуска сервера;
 //   GET  /api/sessions/:sessionId         — состояние одной сессии и вопросы, ждущие ответа;
 //   GET  /api/sessions/:sessionId/events  — поток её событий (SSE), с пропущенными по Last-Event-ID;
-//   POST /api/sessions/:sessionId/permissions — ответ на permission_requested.
+//   POST /api/sessions/:sessionId/permissions — ответ на permission_requested;
+//   POST /api/sessions/:sessionId/messages    — следующий вопрос диалога (после awaiting_question);
+//   POST /api/sessions/:sessionId/finish      — закончить диалог.
 
 import {
   startSession,
@@ -13,6 +15,8 @@ import {
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { answerPermissionRequestSchema } from '../permissions/answerPermissionRequest.js';
 import type { PendingPermissions } from '../permissions/PendingPermissions.js';
+import { nextQuestionRequestSchema } from './nextQuestionRequest.js';
+import type { PendingQuestions } from './PendingQuestions.js';
 import { openEventStream } from '../sse/openEventStream.js';
 import { formatEnd, formatEvent, formatHeartbeat, parseLastEventId } from '../sse/sseMessages.js';
 import type { SessionRegistry } from './SessionRegistry.js';
@@ -25,6 +29,7 @@ export interface SessionRoutesOptions {
   projectRoot: string;
   registry: SessionRegistry;
   permissions: PendingPermissions;
+  questions: PendingQuestions;
 }
 
 interface SessionParams {
@@ -54,8 +59,14 @@ export function registerSessionRoutes(app: FastifyInstance, options: SessionRout
     if (summary === null) {
       return reply.code(404).send({ error: 'Сессии нет в памяти сервера' });
     }
-    return { ...summary, pendingPermissions: permissions.forSession(summary.sessionId) };
+    return {
+      ...summary,
+      pendingPermissions: permissions.forSession(summary.sessionId),
+      pendingQuestion: options.questions.forSession(summary.sessionId),
+    };
   });
+
+  registerDialogRoutes(app, options);
 
   app.post<{ Params: SessionParams }>('/api/sessions/:sessionId/permissions', (request, reply) => {
     const { sessionId } = request.params;
@@ -82,16 +93,50 @@ export function registerSessionRoutes(app: FastifyInstance, options: SessionRout
   );
 }
 
+// Диалог: следующий вопрос или конец. 409 — сессия сейчас не ждёт вопроса: ход ещё идёт,
+// сессия уже закончилась или вопрос прислали дважды.
+function registerDialogRoutes(
+  app: FastifyInstance,
+  { registry, questions }: SessionRoutesOptions,
+): void {
+  app.post<{ Params: SessionParams }>('/api/sessions/:sessionId/messages', (request, reply) => {
+    const { sessionId } = request.params;
+    if (registry.summary(sessionId) === null) {
+      return reply.code(404).send({ error: 'Сессии нет в памяти сервера' });
+    }
+    const parsed = nextQuestionRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.message });
+    }
+    if (questions.answer(sessionId, parsed.data.text) === 'notPending') {
+      return reply.code(409).send({ error: 'Сессия сейчас не ждёт вопроса' });
+    }
+    return { text: parsed.data.text };
+  });
+
+  app.post<{ Params: SessionParams }>('/api/sessions/:sessionId/finish', (request, reply) => {
+    const { sessionId } = request.params;
+    if (registry.summary(sessionId) === null) {
+      return reply.code(404).send({ error: 'Сессии нет в памяти сервера' });
+    }
+    if (questions.answer(sessionId, null) === 'notPending') {
+      return reply.code(409).send({ error: 'Сессия сейчас не ждёт вопроса' });
+    }
+    return { finished: true };
+  });
+}
+
 async function launchSession(
   body: StartSessionRequest,
   options: SessionRoutesOptions,
 ): Promise<string> {
-  const { loadedSettings, projectRoot, registry, permissions } = options;
+  const { loadedSettings, projectRoot, registry, permissions, questions } = options;
   // id сессии узнаём из первого события: permission_requested приходит раньше вопроса,
   // так что к вызову confirmAction он уже известен.
   let sessionId = '';
   const session = await startSession(toSessionInput(body, loadedSettings, projectRoot), {
     confirmAction: (request) => permissions.ask(sessionId, request),
+    nextQuestion: (turn) => questions.ask(sessionId, turn),
     listeners: [
       (event) => {
         sessionId = event.sessionId;

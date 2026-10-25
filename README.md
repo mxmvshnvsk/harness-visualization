@@ -280,6 +280,7 @@ curl --noproxy '*' -N http://127.0.0.1:4317/api/sessions/<id>/events
 | `GET /api/sessions`                  | сессии этого запуска сервера                                                                                                                                      |
 | `GET /api/sessions/:id`              | состояние одной сессии и вопросы о разрешении, ждущие ответа (`pendingPermissions`)                                                                               |
 | `GET /api/sessions/:id/events`       | поток событий (SSE): сначала то, что уже было, потом — вживую                                                                                                     |
+| `POST /api/sessions/:id/messages`    | следующий вопрос диалога (после `awaiting_question`): `{"text": "…"}`; `POST /api/sessions/:id/finish` — закончить диалог                                         |
 | `POST /api/sessions/:id/permissions` | ответ на `permission_requested`: `{"toolCallId": "…", "approved": true}`                                                                                          |
 | `GET /api/traces`                    | записанные трейсы из `traces/`: вид (сессия или проверка опоры), вопрос, время, дописан ли до конца, `synthetic` — собран руками                                  |
 | `GET /api/traces/:file/events`       | события трейса тем же потоком SSE, что у живой сессии, — сразу все, без исходных пауз                                                                             |

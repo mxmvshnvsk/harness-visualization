@@ -22,6 +22,7 @@ import { EventList } from '../features/EventList';
 import { FlowView } from '../features/flow/FlowView';
 import { InspectorView } from '../features/inspector/InspectorView';
 import { TokenomicsLine } from '../features/TokenomicsLine';
+import { NextQuestionCard } from '../features/NextQuestionCard';
 import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
@@ -73,12 +74,8 @@ export function App(): ReactElement {
           setDrawerOpen(true);
         }}
       />
-      {sessionId !== null && pending !== null && (
-        <PermissionCard
-          sessionId={sessionId}
-          pending={pending}
-          askedAt={findAskedAt(stream.events, pending.toolCallId)}
-        />
+      {sessionId !== null && (
+        <SessionPrompts sessionId={sessionId} pending={pending} stream={stream} />
       )}
       {/* key: другая сессия или трейс — выбор в инспекторе начинается заново. */}
       <StreamViews
@@ -91,6 +88,30 @@ export function App(): ReactElement {
       </Drawer>
     </div>
   );
+}
+
+interface SessionPromptsProps {
+  sessionId: string;
+  pending: ReturnType<typeof usePendingPermission>;
+  stream: EventStream<StreamEnd>;
+}
+
+// Чего живая сессия ждёт от человека: разрешения на действие или следующего вопроса диалога.
+function SessionPrompts({ sessionId, pending, stream }: SessionPromptsProps): ReactElement | null {
+  if (pending !== null) {
+    return (
+      <PermissionCard
+        sessionId={sessionId}
+        pending={pending}
+        askedAt={findAskedAt(stream.events, pending.toolCallId)}
+      />
+    );
+  }
+  const last = stream.events.at(-1);
+  if (stream.state !== 'ended' && last?.type === 'awaiting_question') {
+    return <NextQuestionCard key={last.turn} sessionId={sessionId} turn={last.turn} />;
+  }
+  return null;
 }
 
 // Сессия закончилась — её статус в списке поменялся, а в traces/ появился трейс.
