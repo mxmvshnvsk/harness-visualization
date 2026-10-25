@@ -32,6 +32,8 @@ interface SessionEntry {
 
 export class SessionRegistry {
   private readonly sessions = new Map<string, SessionEntry>();
+  // Кто ждёт, пока закончатся все идущие сессии: остановка сервера.
+  private idleWaiters: (() => void)[] = [];
 
   // Сессию регистрирует первое из двух: её первое событие или ответ startSession, —
   // какое придёт раньше, зависит от того, когда харнесс начнёт отправлять события.
@@ -77,6 +79,29 @@ export class SessionRegistry {
     }
     entry.subscribers.clear();
     this.forgetOldFinished();
+    if (this.runningCount() === 0) {
+      this.notifyIdle();
+    }
+  }
+
+  runningCount(): number {
+    return [...this.sessions.values()].filter((entry) => entry.summary.status === 'running').length;
+  }
+
+  // Ждёт, пока закончатся все идущие сессии, но не дольше timeoutMs.
+  // Возвращает, сколько так и не закончилось.
+  async waitForRunning(timeoutMs: number): Promise<number> {
+    if (this.runningCount() > 0) {
+      let timer: NodeJS.Timeout | undefined;
+      await Promise.race([
+        new Promise<void>((resolve) => this.idleWaiters.push(resolve)),
+        new Promise<void>((resolve) => {
+          timer = setTimeout(resolve, timeoutMs);
+        }),
+      ]);
+      clearTimeout(timer);
+    }
+    return this.runningCount();
   }
 
   summary(sessionId: string): SessionSummary | null {
@@ -101,6 +126,14 @@ export class SessionRegistry {
     return () => {
       entry?.subscribers.delete(subscriber);
     };
+  }
+
+  private notifyIdle(): void {
+    const waiters = this.idleWaiters;
+    this.idleWaiters = [];
+    for (const resolve of waiters) {
+      resolve();
+    }
   }
 
   private forgetOldFinished(): void {

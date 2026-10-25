@@ -10,6 +10,10 @@ import { registerSessionRoutes } from './sessions/sessionRoutes.js';
 import { TraceCatalog } from './traces/TraceCatalog.js';
 import { registerTraceRoutes } from './traces/traceRoutes.js';
 
+// Сколько ждать идущие сессии при остановке. Ход агента после отказа — ещё один запрос
+// к модели, обычно несколько секунд; дольше ждать незачем — пусть трейс лучше оборвётся.
+const SHUTDOWN_WAIT_MS = 10000;
+
 export interface ServerOptions {
   loadedSettings: LoadedSettings;
   projectRoot: string;
@@ -21,13 +25,24 @@ export function createServer(options: ServerOptions): FastifyInstance {
   const permissions = new PendingPermissions(
     options.loadedSettings.settings.server.permissionTimeoutSeconds * 1000,
   );
-  registerSessionRoutes(app, { ...options, registry: new SessionRegistry(), permissions });
+  const registry = new SessionRegistry();
+  registerSessionRoutes(app, { ...options, registry, permissions });
   const { traces } = options.loadedSettings.settings;
   registerTraceRoutes(app, new TraceCatalog(join(options.projectRoot, traces.directory)));
-  // Сервер останавливают — ждущие вопросы закрываются отказом, сессии дописывают трейсы.
-  app.addHook('onClose', (_instance, done) => {
+  // Сервер останавливают (Ctrl+C). Ждущие вопросы закрываются отказом noOneToAsk, а идущие
+  // сессии получают время дописать трейс до session_finished — иначе трейс обрывается
+  // посреди хода. preClose, а не onClose: пока открыты потоки SSE живых сессий, Fastify
+  // не закроется, а закрываются они как раз концом сессий.
+  app.addHook('preClose', async () => {
     permissions.denyAll();
-    done();
+    const running = registry.runningCount();
+    if (running > 0) {
+      console.log(`Остановка: жду, пока сессии допишут трейсы (${String(running)})…`);
+      const unfinished = await registry.waitForRunning(SHUTDOWN_WAIT_MS);
+      if (unfinished > 0) {
+        console.log(`Не дождался ${String(unfinished)} — их трейсы оборвутся.`);
+      }
+    }
   });
   return app;
 }
