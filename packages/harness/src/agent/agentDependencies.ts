@@ -9,6 +9,7 @@ import type { PermissionAnswerSource } from '../permissions/permissionTypes.js';
 import type { ModelPrices, PermissionsSettings } from '../settings/settingsSchema.js';
 import type { ToolRegistry } from '../tools/ToolRegistry.js';
 import type { ToolContext } from '../tools/toolTypes.js';
+import type { MemoryStore } from '../memory/MemoryStore.js';
 import type { SkillLibrary } from '../skills/SkillLibrary.js';
 import type { McpServerInstructions } from './systemPrompt.js';
 
@@ -27,6 +28,12 @@ export interface PermissionAnswer {
 
 export type ConfirmAction = (request: ConfirmationRequest) => Promise<PermissionAnswer>;
 
+export interface SessionMemory {
+  store: MemoryStore;
+  // memo.md на начало сессии — он в system prompt; null — файла нет.
+  memoAtStart: string | null;
+}
+
 export interface AgentDependencies {
   provider: ModelProvider;
   events: EventStream;
@@ -43,6 +50,8 @@ export interface AgentDependencies {
   mcpServerInstructions: McpServerInstructions[];
   // Скиллы сессии: каталог в system prompt, загрузка тулом и командой «/имя» (этап 6b).
   skills: SkillLibrary;
+  // Память между сессиями (этап 6b): тул memory и memo.md в system prompt.
+  memory: SessionMemory;
   // Сколько харнесс отводит prompt и как оценивает его размер (этап 6.2).
   budget: BudgetSettings;
   // Кто сжимает историю в сводку (этап 6.5): та же модель или указанная в context.compactionModel.

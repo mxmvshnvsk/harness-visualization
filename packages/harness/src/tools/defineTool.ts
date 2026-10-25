@@ -16,6 +16,9 @@ export interface ToolSpecification<ArgumentsSchema extends z.ZodType> {
   argumentsSchema: ArgumentsSchema;
   // Что делает тул. Тул не решает, опасно ли это, — решает политика харнесса.
   effects: readonly ToolEffect[];
+  // Классы действия конкретного вызова, если они зависят от аргументов (memory: view — read,
+  // delete — delete). Без функции — все effects тула.
+  effectsOf?: (toolArguments: z.infer<ArgumentsSchema>) => readonly ToolEffect[];
   // Описание действия для человека: «Удалить файл notes/a.md».
   // Без него используется имя тула и аргументы.
   describeAction?: (toolArguments: z.infer<ArgumentsSchema>) => string;
@@ -58,6 +61,10 @@ function prepareCall<ArgumentsSchema extends z.ZodType>(
   return {
     actionDescription: describeAction(specification, toolArguments),
     targets: specification.targets === undefined ? [] : specification.targets(toolArguments),
+    effects:
+      specification.effectsOf === undefined
+        ? specification.effects
+        : specification.effectsOf(toolArguments),
     async checkBeforeExecution(context) {
       if (specification.checkBeforeExecution !== undefined) {
         await specification.checkBeforeExecution(toolArguments, context);

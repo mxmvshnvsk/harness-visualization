@@ -118,14 +118,14 @@ async function runTool(
   }
 
   const evaluation = evaluatePermission(
-    { toolName: tool.name, effects: tool.effects, targets: preparedCall.targets },
+    { toolName: tool.name, effects: preparedCall.effects, targets: preparedCall.targets },
     dependencies.permissionPolicy,
   );
   dependencies.events.emit({
     type: 'permission_evaluated',
     toolCallId: toolCall.id,
     toolName: tool.name,
-    effects: [...tool.effects],
+    effects: [...preparedCall.effects],
     targets: preparedCall.targets,
     actionDescription: preparedCall.actionDescription,
     decision: evaluation.decision,

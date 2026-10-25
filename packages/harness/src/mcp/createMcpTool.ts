@@ -19,11 +19,12 @@ export function createMcpTool(
   trustAnnotations: boolean,
 ): Tool {
   const serverName = connection.serverName;
+  const effects = trustAnnotations ? effectsFromAnnotations(mcpTool.annotations) : [];
   return {
     name: `${serverName}${TOOL_NAME_SEPARATOR}${mcpTool.name}`,
     description: `MCP-сервер ${serverName}. ${mcpTool.description ?? mcpTool.title ?? ''}`.trim(),
     parametersSchema: withoutSchemaKeyword(mcpTool.inputSchema),
-    effects: trustAnnotations ? effectsFromAnnotations(mcpTool.annotations) : [],
+    effects,
     prepare(rawArguments) {
       // Аргументы проверяет сам сервер по своей схеме, харнесс проверяет только форму.
       if (!isPlainObject(rawArguments)) {
@@ -33,6 +34,7 @@ export function createMcpTool(
       return {
         actionDescription: `Вызвать ${mcpTool.name} на MCP-сервере ${serverName} с ${argumentsPreview}`,
         targets: [],
+        effects,
         checkBeforeExecution: () => Promise.resolve(),
         execute: async () => {
           const result = await connection.callTool(mcpTool.name, rawArguments);

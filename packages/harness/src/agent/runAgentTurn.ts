@@ -27,6 +27,7 @@ import {
   type RetrievalQuery,
 } from './retrieveContext.js';
 import { rewriteSearchQuery } from './rewriteSearchQuery.js';
+import { describeMemory } from '../memory/memoryPrompt.js';
 import { describeSkills, parseSkillCommand, withSkillInstructions } from '../skills/skillPrompt.js';
 import { buildSystemPrompt } from './systemPrompt.js';
 
@@ -114,6 +115,7 @@ function systemMessage(dependencies: AgentDependencies): ChatMessage {
     content: buildSystemPrompt(new Date(), {
       mcpInstructions: dependencies.mcpServerInstructions,
       skills: describeSkills(dependencies.skills),
+      memory: describeMemory(dependencies.memory.memoAtStart),
     }),
   };
 }

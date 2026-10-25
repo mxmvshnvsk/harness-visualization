@@ -164,6 +164,23 @@ const EVENT_DESCRIBERS: EventDescribers = {
       `Скилл ${event.name} загружен: ${SKILL_TRIGGERS[event.trigger]}${event.files.length > 0 ? ` · файлы: ${event.files.join(', ')}` : ''}`,
     ),
   ],
+  memory_loaded: (event) => [
+    styleText(
+      'cyan',
+      event.memoCharacters === null
+        ? `Память: ${event.memoPath} пока нет — модель начнёт с чистого листа`
+        : `Память: ${event.memoPath} (${formatNumber(event.memoCharacters)} симв.) → в system prompt`,
+    ),
+    ...(event.files.length > 0
+      ? [styleText('dim', `    файлы памяти: ${event.files.join(', ')}`)]
+      : []),
+  ],
+  memory_updated: (event) => [
+    styleText(
+      'cyan',
+      `    Память изменена: ${event.command} ${event.path}${event.newPath === null ? '' : ` → ${event.newPath}`}`,
+    ),
+  ],
   awaiting_question: (event) => [
     styleText(
       'dim',

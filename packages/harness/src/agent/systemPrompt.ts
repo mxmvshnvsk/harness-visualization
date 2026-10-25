@@ -1,5 +1,6 @@
-// Системный промпт: базовые правила, инструкции MCP-серверов, скиллы (этап 6b) и дата.
-// Память (memo.md) добавится на следующем шаге этапа 6b.
+// Системный промпт: базовые правила, инструкции MCP-серверов, скиллы и память (этап 6b), дата.
+// Порядок — от постоянного к меняющемуся: кэш prompt совпадает по общему началу, а memo.md
+// меняется чаще каталога скиллов.
 
 // Инструкции, которые MCP-сервер прислал при рукопожатии.
 export interface McpServerInstructions {
@@ -27,6 +28,8 @@ export interface SystemPromptParts {
   mcpInstructions: McpServerInstructions[];
   // Раздел скиллов: каталог и инструкции always (skills/skillPrompt.ts).
   skills: string[];
+  // Раздел памяти: как с ней работать и memo.md на начало сессии (memory/memoryPrompt.ts).
+  memory: string[];
 }
 
 export function buildSystemPrompt(now: Date, parts: SystemPromptParts): string {
@@ -34,6 +37,7 @@ export function buildSystemPrompt(now: Date, parts: SystemPromptParts): string {
     ...BASE_INSTRUCTIONS,
     ...describeMcpInstructions(parts.mcpInstructions),
     ...parts.skills,
+    ...parts.memory,
     describeToday(now),
   ].join('\n');
 }

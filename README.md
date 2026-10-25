@@ -48,6 +48,7 @@ pnpm chat --fresh "вопрос"
 | `fetch_url`                     | загружает страницу и возвращает её основной текст в Markdown         |
 | `web_search`                    | ищет в интернете через Yandex Search API или Tavily (если есть ключ) |
 | `load_skill`, `read_skill_file` | инструкция скилла и его файлы (раздел «Скиллы» ниже)                 |
+| `memory`                        | память между сессиями в `memory/` (раздел «Память» ниже)             |
 
 Лимит шагов агента за один ход — `agent.maxIterations` в `harness.config.json`.
 
@@ -93,6 +94,10 @@ pnpm chat "/meeting-summary общее собрание 20 октября"
 ```
 
 Подробнее о формате и своих скиллах — `skills/README.md`.
+
+## Память
+
+Память агента живёт между сессиями — в папке `memory/` песочницы; модель видит её как `/memories` и работает с ней тулом `memory`, как в [memory tool](https://platform.claude.com/docs/en/agents-and-tools/tool-use/memory-tool) Anthropic: `view`, `create`, `str_replace`, `insert`, `delete`, `rename`. Главный файл — `/memories/memo.md`: харнесс кладёт его в system prompt в начале каждой сессии, поэтому агент помнит договорённости и незаконченные дела без лишних шагов. Чтение и запись памяти разрешены, удаление — с вопросом пользователю. `--fresh` пересоздаёт песочницу вместе с памятью.
 
 ## MCP-сервер базы знаний
 

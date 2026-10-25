@@ -32,6 +32,10 @@ import type { SearchProvider } from '../search/searchProvider.js';
 import { createFileTools } from '../tools/fileTools/createFileTools.js';
 import { createWebTools, type WebToolsOptions } from '../tools/webTools/createWebTools.js';
 import { ToolRegistry } from '../tools/ToolRegistry.js';
+import type { SessionMemory } from '../agent/agentDependencies.js';
+import { createMemoryTool } from '../memory/createMemoryTool.js';
+import { MemoryStore } from '../memory/MemoryStore.js';
+import { MEMO_PATH, MEMORY_DIRECTORY } from '../memory/memoryPaths.js';
 import { createSkillTools } from '../skills/createSkillTools.js';
 import { loadSkills } from '../skills/loadSkills.js';
 import { SkillLibrary } from '../skills/SkillLibrary.js';
@@ -185,17 +189,20 @@ async function prepareSession(
     searchProviderName: searchProvider?.name ?? null,
     retrievalMode: input.retrievalMode,
   });
+  const workspace = new Workspace(workspaceDirectory);
   const skills = await prepareSkills(input, events);
+  const memory = await prepareMemory(workspace, events);
   const mcpServers = await connectMcpServers(settings.mcpServers, {
     projectRoot: input.projectRoot,
     events,
   });
   const dependencies = createAgentDependencies(input, hooks, events, {
-    workspaceDirectory,
+    workspace,
     searchProvider,
     mcpServers,
     fetchImpl,
     skills,
+    memory,
   });
   return { dependencies, mcpServers };
 }
@@ -224,6 +231,20 @@ async function prepareSkills(input: SessionInput, events: EventStream): Promise<
   return library;
 }
 
+// memo.md на начало сессии — в system prompt; событие memory_loaded показывает, что было в памяти.
+async function prepareMemory(workspace: Workspace, events: EventStream): Promise<SessionMemory> {
+  const store = new MemoryStore(workspace, events);
+  const memoAtStart = await store.readOrNull(MEMO_PATH);
+  events.emit({
+    type: 'memory_loaded',
+    directory: MEMORY_DIRECTORY,
+    memoPath: MEMO_PATH,
+    memoCharacters: memoAtStart?.length ?? null,
+    files: await store.files(),
+  });
+  return { store, memoAtStart };
+}
+
 async function prepareSearchProvider(
   input: SessionInput,
   hooks: SessionHooks,
@@ -240,13 +261,14 @@ async function prepareSearchProvider(
 }
 
 interface SessionResources {
-  workspaceDirectory: string;
+  workspace: Workspace;
   // null — веб-поиск выключен.
   searchProvider: SearchProvider | null;
   mcpServers: ConnectedMcpServers;
   // fetch с маршрутами из раздела network: им ходят модель, поиск и загрузка страниц.
   fetchImpl: RoutedFetch;
   skills: SkillLibrary;
+  memory: SessionMemory;
 }
 
 function createAgentDependencies(
@@ -263,7 +285,12 @@ function createAgentDependencies(
     fetchImpl: resources.fetchImpl,
   });
   const tools = new ToolRegistry();
-  const ownTools = [...createFileTools(), ...createSkillTools(resources.skills), ...webTools];
+  const ownTools = [
+    ...createFileTools(),
+    createMemoryTool(resources.memory.store),
+    ...createSkillTools(resources.skills),
+    ...webTools,
+  ];
   for (const tool of [...ownTools, ...resources.mcpServers.tools]) {
     tools.register(tool);
   }
@@ -288,11 +315,12 @@ function createAgentDependencies(
     prices: settings.prices,
     tools,
     harnessOnlyTools,
-    toolContext: { workspace: new Workspace(resources.workspaceDirectory) },
+    toolContext: { workspace: resources.workspace },
     confirmAction: hooks.confirmAction,
     permissionPolicy: settings.permissions,
     mcpServerInstructions: resources.mcpServers.instructions,
     skills: resources.skills,
+    memory: resources.memory,
     budget: budgetSettings(settings.context),
   };
 }

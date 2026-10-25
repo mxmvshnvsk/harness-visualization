@@ -12,6 +12,7 @@ import type {
 import type { NetworkRequestInfo } from '../network/NetworkRouter.js';
 import type { PromptBudget } from '../context/promptBudget.js';
 import type { RetrievalMode } from '../settings/settingsSchema.js';
+import type { MemoryCommand } from '../memory/MemoryStore.js';
 import type { SkillMode, SkillProblem, SkillTrigger } from '../skills/skillTypes.js';
 import type {
   RequestCost,
@@ -373,6 +374,27 @@ export interface SkillLoadedPayload {
   files: string[];
 }
 
+// Память на начало сессии (этап 6b): memo.md попадёт в system prompt.
+export interface MemoryLoadedPayload {
+  type: 'memory_loaded';
+  // Папка памяти в песочнице; модель видит её как /memories.
+  directory: string;
+  memoPath: string;
+  // Размер memo.md, символов; null — файла нет.
+  memoCharacters: number | null;
+  // Все файлы памяти — пути /memories/…
+  files: string[];
+}
+
+// Модель изменила память тулом memory.
+export interface MemoryUpdatedPayload {
+  type: 'memory_updated';
+  command: MemoryCommand;
+  path: string;
+  // rename: новый путь; у остальных команд null.
+  newPath: string | null;
+}
+
 export interface AwaitingQuestionPayload {
   type: 'awaiting_question';
   // Сколько ходов диалога уже было.
@@ -431,6 +453,8 @@ export type HarnessEventPayload =
   | HistoryCompactedPayload
   | SkillCatalogPayload
   | SkillLoadedPayload
+  | MemoryLoadedPayload
+  | MemoryUpdatedPayload
   | SessionFinishedPayload
   | ErrorPayload;
 

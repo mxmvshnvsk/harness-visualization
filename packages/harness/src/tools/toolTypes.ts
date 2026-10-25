@@ -28,6 +28,9 @@ export interface PreparedToolCall {
   actionDescription: string;
   // С чем работает вызов: пути и адреса — по ним проверяются правила политики.
   targets: ActionTarget[];
+  // Что делает именно этот вызов — у тула с командами (memory) это зависит от команды:
+  // view читает, delete удаляет. Политика решает по ним, а не по всем классам тула.
+  effects: readonly ToolEffect[];
   // Проверяет, что действие вообще возможно, ещё до решения о разрешении:
   // незачем спрашивать разрешение удалить файл, которого нет.
   checkBeforeExecution(context: ToolContext): Promise<void>;
@@ -40,7 +43,8 @@ export interface Tool {
   readonly description: string;
   // JSON Schema аргументов для модели.
   readonly parametersSchema: Record<string, unknown>;
-  // Что тул делает: читает, пишет, удаляет, ходит в сеть. Решения принимает политика харнесса.
+  // Что тул делает: читает, пишет, удаляет, ходит в сеть — все классы, какие могут быть у его
+  // вызовов. Решения принимает политика харнесса — по классам конкретного вызова.
   readonly effects: readonly ToolEffect[];
   // Проверяет аргументы. При ошибке бросает ToolError с понятным модели текстом.
   prepare(rawArguments: unknown): PreparedToolCall;

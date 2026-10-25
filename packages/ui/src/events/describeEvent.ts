@@ -71,6 +71,12 @@ const DESCRIBERS: Describers = {
       ? `скиллов нет (${event.directory})`
       : `скиллы: ${event.skills.map((skill) => `${skill.name} (${skill.mode})`).join(', ')}`,
   skill_loaded: (event) => `скилл ${event.name} загружен: ${SKILL_TRIGGERS[event.trigger]}`,
+  memory_loaded: (event) =>
+    event.memoCharacters === null
+      ? `памяти ещё нет (${event.memoPath})`
+      : `${event.memoPath} в system prompt: ${String(event.memoCharacters)} симв., файлов памяти ${String(event.files.length)}`,
+  memory_updated: (event) =>
+    `память: ${event.command} ${event.path}${event.newPath === null ? '' : ` → ${event.newPath}`}`,
   awaiting_question: (event) => `ход ${String(event.turn)} закончен, ждём следующий вопрос`,
   session_finished: (event) =>
     [
