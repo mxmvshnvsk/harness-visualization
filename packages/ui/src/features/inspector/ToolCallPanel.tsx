@@ -5,6 +5,8 @@ import type { ReactElement } from 'react';
 import { Badge, type BadgeTone } from '../../components/Badge';
 import type { ToolCallView } from '../../projections/sessionView';
 import styles from './Inspector.module.css';
+import { isMcpTool } from '../flow/eventToPacket';
+import { HelpButton, Term } from '../../help/HelpLinks';
 
 export function ToolCallPanel({ tool }: { tool: ToolCallView }): ReactElement {
   return (
@@ -15,6 +17,10 @@ export function ToolCallPanel({ tool }: { tool: ToolCallView }): ReactElement {
         </span>
         <h2 className={styles.panelTitle}>{tool.toolName}</h2>
         <Badge tone={STATUS_TONES[tool.status]}>{tool.status}</Badge>
+        <span className={styles.headerHelp}>
+          {isMcpTool(tool.toolName) && <Term topic="mcp">это tool MCP-сервера</Term>}
+          <HelpButton topic="tool-calls" />
+        </span>
       </header>
       <section className={styles.block}>
         <h3 className={styles.blockTitle}>аргументы от модели</h3>
@@ -30,7 +36,9 @@ function PermissionChain({ tool }: { tool: ToolCallView }): ReactElement {
   const { evaluation, question, answer } = tool;
   return (
     <section className={styles.block}>
-      <h3 className={styles.blockTitle}>разрешение</h3>
+      <h3 className={styles.blockTitle}>
+        <Term topic="permissions">разрешение</Term>
+      </h3>
       {evaluation === null ? (
         <div className={styles.muted}>Политика ещё не проверила вызов.</div>
       ) : (

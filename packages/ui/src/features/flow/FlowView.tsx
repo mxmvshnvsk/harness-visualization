@@ -12,6 +12,7 @@ import { FLOW_EDGES, FLOW_NODES, VIEW_HEIGHT, VIEW_WIDTH, type FlowNode } from '
 import styles from './FlowView.module.css';
 import { eventToPacket, modelHostOf, type Packet } from './eventToPacket';
 import { MovingPacket } from './MovingPacket';
+import { HelpButton } from '../../help/HelpLinks';
 
 interface FlowViewProps {
   // События до курсора плеера.
@@ -26,35 +27,40 @@ export function FlowView({ events, speed }: FlowViewProps): ReactElement {
   const packet = current === null ? null : eventToPacket(current, context);
   return (
     <div className={styles.flow}>
-      <svg
-        className={styles.diagram}
-        viewBox={`0 0 ${String(VIEW_WIDTH)} ${String(VIEW_HEIGHT)}`}
-        role="img"
-        aria-label="Схема потока данных: пользователь, харнесс, модель, MCP-сервер, тулы, интернет"
-      >
-        {FLOW_EDGES.map(([fromId, toId]) => (
-          <line
-            key={`${fromId}-${toId}`}
-            className={styles.edge}
-            data-active={isActiveEdge(packet, fromId, toId)}
-            x1={FLOW_NODES[fromId].x}
-            y1={FLOW_NODES[fromId].y}
-            x2={FLOW_NODES[toId].x}
-            y2={FLOW_NODES[toId].y}
-          />
-        ))}
-        {Object.values(FLOW_NODES).map((node) => (
-          <NodeBox
-            key={node.id}
-            node={node}
-            counter={counters[node.id]}
-            activeGroup={packet?.to === node.id ? packet.group : null}
-          />
-        ))}
-        {packet !== null && current !== null && (
-          <MovingPacket key={current.sequence} packet={packet} speed={speed} />
-        )}
-      </svg>
+      <div className={styles.stage}>
+        <div className={styles.toolbar}>
+          <HelpButton topic="flow" />
+        </div>
+        <svg
+          className={styles.diagram}
+          viewBox={`0 0 ${String(VIEW_WIDTH)} ${String(VIEW_HEIGHT)}`}
+          role="img"
+          aria-label="Схема потока данных: пользователь, харнесс, модель, MCP-сервер, тулы, интернет"
+        >
+          {FLOW_EDGES.map(([fromId, toId]) => (
+            <line
+              key={`${fromId}-${toId}`}
+              className={styles.edge}
+              data-active={isActiveEdge(packet, fromId, toId)}
+              x1={FLOW_NODES[fromId].x}
+              y1={FLOW_NODES[fromId].y}
+              x2={FLOW_NODES[toId].x}
+              y2={FLOW_NODES[toId].y}
+            />
+          ))}
+          {Object.values(FLOW_NODES).map((node) => (
+            <NodeBox
+              key={node.id}
+              node={node}
+              counter={counters[node.id]}
+              activeGroup={packet?.to === node.id ? packet.group : null}
+            />
+          ))}
+          {packet !== null && current !== null && (
+            <MovingPacket key={current.sequence} packet={packet} speed={speed} />
+          )}
+        </svg>
+      </div>
       <CurrentEvent event={current} shown={packet !== null} />
     </div>
   );

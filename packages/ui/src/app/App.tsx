@@ -12,6 +12,7 @@ import { Segmented } from '../components/Segmented';
 import { EventList } from '../features/EventList';
 import { FlowView } from '../features/flow/FlowView';
 import { InspectorView } from '../features/inspector/InspectorView';
+import { TokenomicsLine } from '../features/TokenomicsLine';
 import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
@@ -106,7 +107,10 @@ function StreamViews({ events, live }: StreamViewsProps): ReactElement {
       {viewName === 'flow' && <FlowView events={shown} speed={player.speed} />}
       {viewName === 'inspector' && <InspectorView view={view} />}
       {viewName === 'events' && <EventList events={shown} />}
-      <PlayerBar player={player} events={events} live={live} />
+      <div className={styles.dock}>
+        <TokenomicsLine totals={view.totals} />
+        <PlayerBar player={player} events={events} live={live} />
+      </div>
     </div>
   );
 }

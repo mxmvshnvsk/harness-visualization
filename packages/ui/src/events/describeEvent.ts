@@ -2,7 +2,10 @@
 // Термины индустрии — по-английски (docs/code-style.md, «Термины в терминале и интерфейсе»).
 
 import type { HarnessEvent, HarnessEventType, TokenUsage } from '@harness-visualization/harness';
+import { plural } from '../text/plural';
 import type { EventOfType } from './eventTypes';
+
+const MODEL_REQUESTS = { one: 'запрос', few: 'запроса', many: 'запросов' };
 
 // Для каждого типа — своя функция, и tsc знает поля события этого типа.
 type Describers = { [Type in HarnessEventType]: (event: EventOfType<Type>) => string };
@@ -53,7 +56,7 @@ const DESCRIBERS: Describers = {
   assistant_message: (event) => event.text,
   session_finished: (event) =>
     [
-      `${String(event.modelRequests)} запросов к модели`,
+      `${plural(event.modelRequests, MODEL_REQUESTS)} к модели`,
       describeUsage(event.usage),
       event.modelCost === null
         ? null

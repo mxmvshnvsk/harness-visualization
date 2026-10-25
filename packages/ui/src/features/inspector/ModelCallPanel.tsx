@@ -8,6 +8,7 @@ import { explainCache, type CacheExplanation } from './explainCache';
 import type { Focus } from './focus';
 import styles from './Inspector.module.css';
 import { MessageList } from './MessageList';
+import { HelpButton, Term } from '../../help/HelpLinks';
 
 interface ModelCallPanelProps {
   call: ModelCall;
@@ -24,6 +25,9 @@ export function ModelCallPanel({ call, onFocus }: ModelCallPanelProps): ReactEle
         </span>
         <h2 className={styles.panelTitle}>{describePurpose(call)}</h2>
         {cache !== null && <Badge dot={cache.warm}>{cache.label}</Badge>}
+        <span className={styles.headerHelp}>
+          <HelpButton topic="agent-loop" />
+        </span>
       </header>
       {call.response !== null && (
         <CallStats response={call.response} share={call.cache?.share ?? 0} />
@@ -86,7 +90,9 @@ function CallNotes({
       {cacheText !== null && (
         <p className={styles.note}>
           <span className={styles.noteDot} aria-hidden="true" />
-          <span>{cacheText}</span>
+          <span>
+            {cacheText} <Term topic="prompt-cache">Что такое prompt cache?</Term>
+          </span>
         </p>
       )}
       {call.error !== null && <p className={styles.errorNote}>Ошибка: {call.error.message}</p>}

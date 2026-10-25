@@ -1,0 +1,74 @@
+.dialog {
+  width: min(640px, calc(100vw - 32px));
+  max-height: min(80vh, 760px);
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.dialog::backdrop {
+  background: rgb(0 0 0 / 35%);
+}
+
+.dialogBody {
+  padding: 24px 28px 8px;
+  overflow-y: auto;
+  max-height: calc(min(80vh, 760px) - 80px);
+}
+
+.dialogFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 20px 20px;
+}
+
+.markdown {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.markdown p,
+.markdown ul {
+  margin: 0 0 12px;
+}
+
+.markdown ul {
+  padding-left: 22px;
+}
+
+.markdown a {
+  color: var(--model);
+}
+
+.title {
+  font-size: 24px;
+  letter-spacing: -0.01em;
+  margin-bottom: 14px;
+}
+
+.heading {
+  font-size: 16px;
+  margin: 18px 0 8px;
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: var(--raised);
+  border: 1px solid var(--line);
+}
+
+.term {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  cursor: help;
+}

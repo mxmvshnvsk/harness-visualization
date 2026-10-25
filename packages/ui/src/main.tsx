@@ -11,6 +11,7 @@ import './styles/global.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
+import { HelpProvider } from './help/HelpContext';
 
 const root = document.getElementById('root');
 if (root === null) {
@@ -18,6 +19,8 @@ if (root === null) {
 }
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <HelpProvider>
+      <App />
+    </HelpProvider>
   </StrictMode>,
 );

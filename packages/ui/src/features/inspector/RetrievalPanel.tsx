@@ -4,6 +4,7 @@
 import type { ReactElement } from 'react';
 import type { RetrievalView } from '../../projections/sessionView';
 import styles from './Inspector.module.css';
+import { HelpButton } from '../../help/HelpLinks';
 
 export function RetrievalPanel({ retrieval }: { retrieval: RetrievalView }): ReactElement {
   const { rewrite, retrieved } = retrieval;
@@ -14,6 +15,9 @@ export function RetrievalPanel({ retrieval }: { retrieval: RetrievalView }): Rea
           context_retrieved
         </span>
         <h2 className={styles.panelTitle}>Харнесс ищет сам</h2>
+        <span className={styles.headerHelp}>
+          <HelpButton topic="retrieval" />
+        </span>
       </header>
       {rewrite !== null && (
         <section className={styles.block}>

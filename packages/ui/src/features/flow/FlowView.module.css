@@ -4,6 +4,17 @@
   gap: 12px;
 }
 
+.stage {
+  position: relative;
+}
+
+/* «Что это?» — в левом верхнем углу схемы: там нет узлов, а отдельная строка над схемой не нужна. */
+.toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+}
+
 .diagram {
   width: 100%;
   height: auto;
