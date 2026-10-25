@@ -3,7 +3,14 @@
 import type { ReactElement } from 'react';
 import { requestLabel, type ContextRequest } from '../../projections/projectContext';
 import styles from './Context.module.css';
-import { actionsOf, cachePercent, errorPercent, formatTokens, PARTS } from './contextScale';
+import {
+  actionsOf,
+  cachePercent,
+  errorPercent,
+  formatTokens,
+  PARTS,
+  partTokens,
+} from './contextScale';
 
 interface ContextTableProps {
   requests: readonly ContextRequest[];
@@ -71,7 +78,7 @@ function Row({ request, future, selected, onSeek }: RowProps): ReactElement {
     >
       <td>{requestLabel(request)}</td>
       {PARTS.map((part) => (
-        <td key={part.key}>{formatTokens(estimate[part.key])}</td>
+        <td key={part.key}>{formatTokens(partTokens(estimate, part.key))}</td>
       ))}
       <td>{formatTokens(estimate.total)}</td>
       <td>{request.exactTokens === null ? '—' : formatTokens(request.exactTokens)}</td>

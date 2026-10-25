@@ -31,7 +31,11 @@ export function PromptContents({ request, previous }: PromptContentsProps): Reac
           prompt запроса {requestLabel(request)} · ≈ {formatTokens(total)} токенов
         </h3>
         <span className={styles.contentsMeta}>
-          сообщений: {items.filter((item) => item.part !== 'tools').length}
+          сообщений:{' '}
+          {
+            items.filter((item) => item.part !== 'tools' && !item.label.startsWith('system ·'))
+              .length
+          }
           {previous !== null && ` · новых с прошлого запроса: ${String(fresh)}`}
         </span>
       </div>

@@ -5,7 +5,7 @@
 import type { ReactElement } from 'react';
 import { requestLabel, type ContextRequest } from '../../projections/projectContext';
 import styles from './Context.module.css';
-import { formatTick, formatTokens, PARTS, type Scale } from './contextScale';
+import { formatTick, formatTokens, PARTS, type Scale, partTokens } from './contextScale';
 import { LEFT, type Columns } from './geometry';
 
 export const CHART_HEIGHT = 300;
@@ -259,7 +259,7 @@ function stackOf(request: ContextRequest, scale: Scale): Segment[] {
   const { estimate } = request.budget;
   const segments: Segment[] = [];
   for (const part of PARTS) {
-    const height = (estimate[part.key] / scale.max) * PLOT;
+    const height = (partTokens(estimate, part.key) / scale.max) * PLOT;
     if (height > 0) {
       const bottom = segments.at(-1)?.y ?? BASE;
       segments.push({ key: part.key, color: part.color, y: bottom - height, height });

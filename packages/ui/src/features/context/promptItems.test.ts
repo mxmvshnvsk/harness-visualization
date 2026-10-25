@@ -42,3 +42,56 @@ describe('promptContents', () => {
     expect(items.map((item) => item.marks)).toEqual([['summary'], ['stub']]);
   });
 });
+
+describe('promptContents: скиллы и память', () => {
+  it('результаты load_skill и memory — части «скиллы» и «память»', () => {
+    const call = (id: string, name: string) => ({
+      role: 'assistant',
+      content: null,
+      tool_calls: [{ id, type: 'function', function: { name, arguments: '{}' } }],
+    });
+    const items = promptContents(
+      {
+        messages: [
+          call('a', 'load_skill'),
+          { role: 'tool', tool_call_id: 'a', content: 'Скилл policy-answer: …' },
+          call('b', 'memory'),
+          { role: 'tool', tool_call_id: 'b', content: 'Файл создан' },
+        ],
+      },
+      3,
+      null,
+    );
+
+    expect(items.map((item) => item.part)).toEqual(['dialog', 'skills', 'dialog', 'memory']);
+    expect(items[1]?.label).toBe('tool · load_skill');
+  });
+
+  it('system prompt делится на сам system, скиллы и память', () => {
+    const system = {
+      role: 'system',
+      content: [
+        'Ты агент.',
+        '',
+        'Скиллы — инструкции для отдельных задач. Загружай load_skill.',
+        '- policy-answer: ответ по регламенту',
+        '',
+        'Память — папка /memories, тул memory.',
+        '/memories/memo.md пока пуст.',
+        'Сегодня 25 октября.',
+      ].join('\n'),
+    };
+    const items = promptContents({ messages: [system] }, 3, null);
+
+    expect(items.map((item) => [item.part, item.label])).toEqual([
+      ['system', 'system'],
+      ['skills', 'system · скиллы'],
+      ['memory', 'system · память'],
+    ]);
+    expect(items[1]?.text).toContain('policy-answer');
+    expect(items[0]?.text).not.toContain('policy-answer');
+    expect(items.reduce((sum, item) => sum + item.tokens, 0)).toBe(
+      Math.round(JSON.stringify(system).length / 3),
+    );
+  });
+});

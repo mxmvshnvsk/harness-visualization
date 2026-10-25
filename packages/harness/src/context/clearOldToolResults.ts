@@ -5,8 +5,12 @@
 // Чистим сразу пачкой — до целевого размера ниже порога, а не по одному результату каждый раз:
 // любая очистка меняет начало prompt, и кэш провайдера с этого места больше не совпадает.
 // Реже и сразу больше — дешевле, чем понемногу на каждом шаге.
+//
+// Инструкции скиллов (load_skill, read_skill_file) не чистим: это не данные, а правила работы —
+// без них модель забудет, по какому шаблону отвечает (этап 6b).
 
 import type { ChatMessage, ToolResultMessage } from '../model/chatTypes.js';
+import { SKILL_TOOLS } from './promptMarkers.js';
 
 export interface ClearedToolResult {
   toolCallId: string;
@@ -44,7 +48,10 @@ export function clearOldToolResults(
   const names = toolNames(messages);
   const cleared: ClearedToolResult[] = [];
   let total = beforeTokens;
-  for (const message of candidates(messages)) {
+  const clearable = candidates(messages).filter(
+    (message) => !SKILL_TOOLS.has(names.get(message.toolCallId) ?? ''),
+  );
+  for (const message of clearable) {
     if (total <= limits.targetTokens) {
       break;
     }

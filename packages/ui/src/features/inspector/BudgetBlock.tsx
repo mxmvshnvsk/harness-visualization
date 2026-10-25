@@ -2,8 +2,9 @@
 // оценка харнесса (≈), итог провайдера — точный; рядом видно, насколько оценка ошиблась.
 
 import type { PromptBudget } from '@harness-visualization/harness';
-import type { ReactElement } from 'react';
+import type { CSSProperties, ReactElement } from 'react';
 import { Term } from '../../help/HelpLinks';
+import { PARTS, partTokens } from '../context/contextScale';
 import styles from './Budget.module.css';
 
 interface BudgetBlockProps {
@@ -11,13 +12,6 @@ interface BudgetBlockProps {
   // Точный размер prompt из usage ответа; null — ответа ещё нет.
   exactTokens: number | null;
 }
-
-const PARTS = [
-  { key: 'system', label: 'system' },
-  { key: 'tools', label: 'описания тулов' },
-  { key: 'dialog', label: 'диалог' },
-  { key: 'toolResults', label: 'результаты тулов' },
-] as const;
 
 export function BudgetBlock({ budget, exactTokens }: BudgetBlockProps): ReactElement {
   const { estimate, limitTokens, thresholdTokens } = budget;
@@ -39,8 +33,10 @@ export function BudgetBlock({ budget, exactTokens }: BudgetBlockProps): ReactEle
           <span
             key={part.key}
             className={styles.part}
-            data-part={part.key}
-            style={{ width: `${String((estimate[part.key] / scale) * 100)}%` }}
+            style={{
+              width: `${String((partTokens(estimate, part.key) / scale) * 100)}%`,
+              background: part.color,
+            }}
           />
         ))}
         <span
@@ -50,8 +46,8 @@ export function BudgetBlock({ budget, exactTokens }: BudgetBlockProps): ReactEle
       </div>
       <ul className={styles.legend}>
         {PARTS.map((part) => (
-          <li key={part.key} data-part={part.key}>
-            {part.label} ≈ {format(estimate[part.key])}
+          <li key={part.key} style={{ '--swatch': part.color } as CSSProperties}>
+            {part.label} ≈ {format(partTokens(estimate, part.key))}
           </li>
         ))}
       </ul>

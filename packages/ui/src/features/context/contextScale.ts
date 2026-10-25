@@ -1,13 +1,24 @@
 // Шкала графика «Контекст»: до какого числа токенов тянется ось и какие деления подписать.
 
+import type { PromptBudget } from '@harness-visualization/harness';
 import type { ContextRequest } from '../../projections/projectContext';
 
+// Порядок — снизу вверх в столбике: от постоянного (system, скиллы, память) к растущему.
 export const PARTS = [
   { key: 'system', label: 'system', color: 'var(--part-system)' },
+  { key: 'skills', label: 'скиллы', color: 'var(--part-skills)' },
+  { key: 'memory', label: 'память', color: 'var(--part-memory)' },
   { key: 'tools', label: 'описания тулов', color: 'var(--part-tools)' },
   { key: 'dialog', label: 'диалог', color: 'var(--part-dialog)' },
   { key: 'toolResults', label: 'результаты тулов', color: 'var(--part-results)' },
 ] as const;
+
+export type PartKey = (typeof PARTS)[number]['key'];
+
+// Скиллов и памяти нет в трейсах до этапа 6b — там они 0.
+export function partTokens(estimate: PromptBudget['estimate'], key: PartKey): number {
+  return estimate[key] ?? 0;
+}
 
 export interface Scale {
   max: number;

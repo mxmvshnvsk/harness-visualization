@@ -3,7 +3,7 @@
 // charsPerToken) и что с ним случилось: новое с прошлого запроса, заглушка вместо убранного
 // результата, сводка компакции, обрезанный результат. Префиксы — из packages/harness/src/context.
 
-export type PromptPart = 'system' | 'tools' | 'dialog' | 'toolResults';
+export type PromptPart = 'system' | 'skills' | 'memory' | 'tools' | 'dialog' | 'toolResults';
 
 export type PromptMark = 'new' | 'stub' | 'summary' | 'truncated';
 
@@ -39,19 +39,73 @@ export function promptContents(
       marks: [],
     });
   }
-  for (const message of asArray(body.messages)) {
+  const messages = asArray(body.messages);
+  const toolNames = toolNamesById(messages);
+  for (const message of messages) {
     const record = asRecord(message);
     const role = typeof record.role === 'string' ? record.role : '?';
     const text = messageText(record);
-    items.push({
-      part: partOf(role),
-      label: role,
+    const toolName =
+      typeof record.tool_call_id === 'string' ? (toolNames.get(record.tool_call_id) ?? null) : null;
+    const item: PromptItem = {
+      part: partOf(role, toolName),
+      label: toolName === null ? role : `tool · ${toolName}`,
       text,
       tokens: tokensOf(message),
       marks: marksOf(text, previous !== null && !seen.has(JSON.stringify(message))),
-    });
+    };
+    items.push(...(role === 'system' ? splitSystem(item) : [item]));
   }
   return items;
+}
+
+// Каталог скиллов, инструкции always и раздел памяти — по пометкам харнесса, те же, что
+// в packages/harness/src/context/promptMarkers.ts. Найденное — отдельными строками.
+const SYSTEM_SECTIONS = [
+  {
+    part: 'skills',
+    label: 'system · скиллы',
+    pattern:
+      /Скиллы — инструкции для отдельных задач\.[^\n]*(?:\n- [^\n]*)*|\[Скилл [a-z0-9-]+ — [^\]\n]*\][\s\S]*?\[Конец скилла [a-z0-9-]+\]/g,
+  },
+  {
+    part: 'memory',
+    label: 'system · память',
+    pattern:
+      /Память — папка \/memories[\s\S]*?(?:\[Конец \/memories\/memo\.md\]|\/memories\/memo\.md пока пуст\.)/g,
+  },
+] as const;
+
+// System prompt одним сообщением, но у него три части бюджета: сам system, скиллы и память.
+// Токены делятся пропорционально доле текста, как в оценке харнесса.
+function splitSystem(item: PromptItem): PromptItem[] {
+  const sections = SYSTEM_SECTIONS.map((section) => ({
+    ...section,
+    text: [...item.text.matchAll(section.pattern)].map((match) => match[0]).join('\n\n'),
+  })).filter((section) => section.text !== '');
+  if (sections.length === 0 || item.text.length === 0) {
+    return [item];
+  }
+  const share = (text: string): number =>
+    Math.round((item.tokens * text.length) / item.text.length);
+  const rest = sections.reduce(
+    (text, section) => text.replace(section.pattern, '').trim(),
+    item.text,
+  );
+  return [
+    {
+      ...item,
+      text: rest,
+      tokens: item.tokens - sections.reduce((sum, section) => sum + share(section.text), 0),
+    },
+    ...sections.map((section) => ({
+      ...item,
+      part: section.part,
+      label: section.label,
+      text: section.text,
+      tokens: share(section.text),
+    })),
+  ];
 }
 
 function marksOf(text: string, isNew: boolean): PromptMark[] {
@@ -68,11 +122,32 @@ function marksOf(text: string, isNew: boolean): PromptMark[] {
   return marks;
 }
 
-function partOf(role: string): PromptPart {
+// Результаты тулов скиллов и памяти — свои части, как в бюджете харнесса (promptBudget.ts).
+function partOf(role: string, toolName: string | null): PromptPart {
   if (role === 'system') {
     return 'system';
   }
-  return role === 'tool' ? 'toolResults' : 'dialog';
+  if (role !== 'tool') {
+    return 'dialog';
+  }
+  if (toolName === 'load_skill' || toolName === 'read_skill_file') {
+    return 'skills';
+  }
+  return toolName === 'memory' ? 'memory' : 'toolResults';
+}
+
+function toolNamesById(messages: unknown[]): Map<string, string> {
+  const names = new Map<string, string>();
+  for (const message of messages) {
+    for (const call of asArray(asRecord(message).tool_calls)) {
+      const record = asRecord(call);
+      const name = asRecord(record.function).name;
+      if (typeof record.id === 'string' && typeof name === 'string') {
+        names.set(record.id, name);
+      }
+    }
+  }
+  return names;
 }
 
 function messageText(message: Record<string, unknown>): string {

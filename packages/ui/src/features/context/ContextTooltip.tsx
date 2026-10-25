@@ -4,7 +4,14 @@
 import type { CSSProperties, ReactElement } from 'react';
 import { requestLabel, type ContextRequest } from '../../projections/projectContext';
 import styles from './Context.module.css';
-import { actionsOf, cachePercent, errorPercent, formatTokens, PARTS } from './contextScale';
+import {
+  actionsOf,
+  cachePercent,
+  errorPercent,
+  formatTokens,
+  PARTS,
+  partTokens,
+} from './contextScale';
 
 interface ContextTooltipProps {
   request: ContextRequest;
@@ -31,7 +38,7 @@ export function ContextTooltip({ request, left, right, width }: ContextTooltipPr
         {PARTS.map((part) => (
           <li key={part.key} style={{ '--swatch': part.color } as CSSProperties}>
             <span>{part.label}</span>
-            <span>≈ {formatTokens(estimate[part.key])}</span>
+            <span>≈ {formatTokens(partTokens(estimate, part.key))}</span>
           </li>
         ))}
       </ul>

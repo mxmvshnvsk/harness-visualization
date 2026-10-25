@@ -324,7 +324,17 @@ function describeBudget(budget: EventOfType<'model_request'>['budget']): string[
   }
   const { estimate, limitTokens, preset } = budget;
   const share = Math.round((estimate.total / limitTokens) * 100);
-  const parts = `system ≈${formatNumber(estimate.system)}, тулы ≈${formatNumber(estimate.tools)}, диалог ≈${formatNumber(estimate.dialog)}, результаты тулов ≈${formatNumber(estimate.toolResults)}`;
+  const extra = [
+    ...(estimate.skills ? [`скиллы ≈${formatNumber(estimate.skills)}`] : []),
+    ...(estimate.memory ? [`память ≈${formatNumber(estimate.memory)}`] : []),
+  ];
+  const parts = [
+    `system ≈${formatNumber(estimate.system)}`,
+    ...extra,
+    `тулы ≈${formatNumber(estimate.tools)}`,
+    `диалог ≈${formatNumber(estimate.dialog)}`,
+    `результаты тулов ≈${formatNumber(estimate.toolResults)}`,
+  ].join(', ');
   return [
     styleText(
       share >= 100 ? 'red' : 'dim',

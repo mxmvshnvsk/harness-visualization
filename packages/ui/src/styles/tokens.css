@@ -37,11 +37,14 @@
   --glow: 0;
 
   /* Состав prompt (экран «Контекст», бюджет): категориальная палитра, проверена
-     validate_palette.js из скилла dataviz — различимы и при дальтонизме. */
+     validate_palette.js из скилла dataviz — различимы и при дальтонизме, в том числе
+     соседние в стопке: system, скиллы, память, тулы, диалог, результаты. */
   --part-system: #2a78d6;
   --part-tools: #eb6834;
   --part-dialog: #1baf7a;
   --part-results: #eda100;
+  --part-skills: #e87ba4;
+  --part-memory: #6250d6;
 
   /* Один акцент — для главного действия. В светлой — перелив от индиго к фиолетовому. */
   --accent: #3647d2;
@@ -102,6 +105,8 @@
   --part-tools: #d95926;
   --part-dialog: #199e70;
   --part-results: #c98500;
+  --part-skills: #d55181;
+  --part-memory: #9085e9;
 
   --accent: #e6ff4d;
   --accent-2: #e6ff4d;

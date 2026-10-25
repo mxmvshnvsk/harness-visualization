@@ -39,26 +39,6 @@
   overflow: hidden;
 }
 
-.part[data-part='system'],
-.legend [data-part='system']::before {
-  background: var(--part-system);
-}
-
-.part[data-part='tools'],
-.legend [data-part='tools']::before {
-  background: var(--part-tools);
-}
-
-.part[data-part='dialog'],
-.legend [data-part='dialog']::before {
-  background: var(--part-dialog);
-}
-
-.part[data-part='toolResults'],
-.legend [data-part='toolResults']::before {
-  background: var(--part-results);
-}
-
 .threshold {
   position: absolute;
   top: -2px;
@@ -89,6 +69,7 @@
   width: 10px;
   height: 10px;
   border-radius: 3px;
+  background: var(--swatch);
 }
 
 .note {
