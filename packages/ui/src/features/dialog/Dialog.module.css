@@ -214,3 +214,89 @@
     animation: none;
   }
 }
+
+/* Свёрнутый диалог — полоса у правого края. */
+.rail {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 22px 0 calc(var(--dock-space, 150px) + 12px);
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.rail:hover {
+  background: color-mix(in srgb, var(--accent-soft) 60%, var(--surface));
+  color: var(--text);
+}
+
+.rail:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.railArrow {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.railWord {
+  writing-mode: vertical-rl;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.railDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+  animation: rail-pulse 1.6s ease-in-out infinite;
+}
+
+.railCount {
+  margin-top: auto;
+  writing-mode: vertical-rl;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+@keyframes rail-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .railDot {
+    animation: none;
+  }
+}
+
+/* Узкий экран: места на полосу нет — «Диалог» в меню «⋯» шапки. */
+@media (width <= 760px) {
+  .rail {
+    display: none;
+  }
+}

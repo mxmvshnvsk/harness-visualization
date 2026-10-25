@@ -15,7 +15,13 @@ import { StepTool } from './StepTool';
 import { StepTrust } from './StepTrust';
 import { useMcpCourse } from './useMcpCourse';
 
-export function McpLab({ onBack }: { onBack: () => void }): ReactElement {
+export function McpLab({
+  backLabel,
+  onBack,
+}: {
+  backLabel: string;
+  onBack: () => void;
+}): ReactElement {
   const course = useMcpCourse();
   const [step, setStep] = useState(0);
   const go = (index: number): void => {
@@ -26,7 +32,7 @@ export function McpLab({ onBack }: { onBack: () => void }): ReactElement {
     <div className={styles.screen}>
       <header className={styles.top}>
         <Button variant="quiet" onClick={onBack}>
-          ← К сессиям
+          {backLabel}
         </Button>
         <ThemeToggle />
       </header>

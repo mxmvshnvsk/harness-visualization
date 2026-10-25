@@ -6,7 +6,9 @@
 import type { HarnessEvent } from '@harness-visualization/harness';
 import type { TraceSummary } from '@harness-visualization/server';
 import {
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useState,
@@ -28,6 +30,7 @@ import { InspectorView } from '../features/inspector/InspectorView';
 import { SkillsMemoryView } from '../features/skills/SkillsMemoryView';
 import { TokenomicsLine } from '../features/TokenomicsLine';
 import { DialogPanel } from '../features/dialog/DialogPanel';
+import { DialogRail } from '../features/dialog/DialogRail';
 import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
@@ -44,7 +47,7 @@ import { useTimeline } from '../timeline/useTimeline';
 import styles from './App.module.css';
 import { Sidebar } from './Sidebar';
 import { useTheme } from './theme';
-import { useSelection, type LabName, type Selection } from './useSelection';
+import { useSelection, type LabName, type OpenedSelection, type Selection } from './useSelection';
 import { ViewLinksContext, type SearchLink, type ViewLinks } from './viewLinks';
 
 export function App(): ReactElement {
@@ -52,56 +55,69 @@ export function App(): ReactElement {
   const { drawerOpen, setDrawerOpen, closeDrawer, pick } = useDrawer(select);
   const sessions = useServerList(listSessions);
   const traces = useServerList(listTraces);
-  const stream = useEventStream<StreamEnd>(streamUrl(selection));
-  const sessionId = selection?.kind === 'session' ? selection.sessionId : null;
-  const pending = usePendingPermission(sessionId, stream.events);
+  const { opened, stream, sessionId, pending } = useOpenedStream(selection);
 
-  const { openLab, closeLab } = useLabNavigation(pick);
+  const { openLab, closeLab } = useLabNavigation(select, pick, opened);
   useReloadOnEnd(stream.state, sessions.reload, traces.reload);
 
   const sources = (
     <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} />
   );
-  if (selection?.kind === 'lab') {
-    return <LabScreen lab={selection.lab} onBack={closeLab} />;
-  }
-  if (selection === null) {
-    return <StartScreen onOpenLab={openLab}>{sources}</StartScreen>;
+  const lab =
+    selection?.kind === 'lab' ? (
+      <LabScreen lab={selection.lab} back={opened} onBack={closeLab} />
+    ) : null;
+  if (opened === null) {
+    return lab ?? <StartScreen onOpenLab={openLab}>{sources}</StartScreen>;
   }
   return (
     <>
-      {/* key: другая сессия или трейс — повтор, выбор в инспекторе и диалог начинаются заново. */}
-      <OpenStream
-        key={streamUrl(selection)}
-        events={stream.events}
-        sessionId={sessionId}
-        traceFile={selection.kind === 'trace' ? selection.file : null}
-        live={selection.kind === 'session' && stream.state !== 'ended'}
-        header={
-          <Topbar
-            {...describeSelection(selection, stream.events, traces.items)}
-            stream={stream}
-            onOpenSources={() => {
-              setDrawerOpen(true);
-            }}
-            onOpenLab={openLab}
-          />
-        }
-        prompt={
-          sessionId !== null && pending !== null ? (
-            <PermissionCard
-              sessionId={sessionId}
-              pending={pending}
-              askedAt={findAskedAt(stream.events, pending.toolCallId)}
+      {lab}
+      {/* Пока открыта лаборатория, поток спрятан, но живёт: вид, плеер и диалог те же. */}
+      <div hidden={lab !== null}>
+        {/* key: другая сессия или трейс — повтор, выбор в инспекторе и диалог начинаются заново. */}
+        <OpenStream
+          key={streamUrl(opened)}
+          events={stream.events}
+          sessionId={sessionId}
+          traceFile={opened.kind === 'trace' ? opened.file : null}
+          live={opened.kind === 'session' && stream.state !== 'ended'}
+          header={
+            <Topbar
+              {...describeSelection(opened, stream.events, traces.items)}
+              stream={stream}
+              onOpenSources={() => {
+                setDrawerOpen(true);
+              }}
+              onOpenLab={openLab}
             />
-          ) : null
-        }
-      />
-      <Drawer open={drawerOpen} label="Сессии и трейсы" onClose={closeDrawer}>
-        {sources}
-      </Drawer>
+          }
+          prompt={
+            sessionId !== null && pending !== null ? (
+              <PermissionCard
+                sessionId={sessionId}
+                pending={pending}
+                askedAt={findAskedAt(stream.events, pending.toolCallId)}
+              />
+            ) : null
+          }
+        />
+        <Drawer open={drawerOpen} label="Сессии и трейсы" onClose={closeDrawer}>
+          {sources}
+        </Drawer>
+      </div>
     </>
   );
+}
+
+// Что за поток открыт. Лаборатория, открытая из сессии или трейса, лежит поверх него:
+// поток не закрывается.
+function useOpenedStream(selection: Selection | null) {
+  const opened = selection?.kind === 'lab' ? selection.back : selection;
+  const stream = useEventStream<StreamEnd>(streamUrl(opened));
+  const sessionId = opened?.kind === 'session' ? opened.sessionId : null;
+  const pending = usePendingPermission(sessionId, stream.events);
+  return { opened, stream, sessionId, pending };
 }
 
 // Панель с сессиями и трейсами. Выбрали что-то — панель закрывается: дальше смотрим.
@@ -121,24 +137,46 @@ function useDrawer(select: (next: Selection | null) => void) {
   return { drawerOpen, setDrawerOpen, closeDrawer, pick };
 }
 
-function LabScreen({ lab, onBack }: { lab: LabName; onBack: () => void }): ReactElement {
-  return lab === 'rag' ? <RagLab onBack={onBack} /> : <McpLab onBack={onBack} />;
+function LabScreen(props: {
+  lab: LabName;
+  back: OpenedSelection | null;
+  onBack: () => void;
+}): ReactElement {
+  const backLabel = BACK_LABELS[props.back?.kind ?? 'start'];
+  return props.lab === 'rag' ? (
+    <RagLab backLabel={backLabel} onBack={props.onBack} />
+  ) : (
+    <McpLab backLabel={backLabel} onBack={props.onBack} />
+  );
 }
 
-// Лаборатория RAG открывается со стартового экрана и из шапки, «назад» ведёт на старт.
-function useLabNavigation(pick: (next: Selection | null) => void): {
-  openLab: (lab: LabName) => void;
-  closeLab: () => void;
-} {
+const BACK_LABELS: Record<OpenedSelection['kind'] | 'start', string> = {
+  session: '← К сессии',
+  trace: '← К трейсу',
+  start: '← К сессиям',
+};
+
+// Лаборатория открывается со стартового экрана и из шапки сессии или трейса. «Назад» ведёт
+// туда, откуда пришли, — и на то же место страницы.
+function useLabNavigation(
+  select: (next: Selection | null) => void,
+  pick: (next: Selection | null) => void,
+  opened: OpenedSelection | null,
+): { openLab: (lab: LabName) => void; closeLab: () => void } {
+  const [scrollY, setScrollY] = useState(0);
   const openLab = useCallback(
     (lab: LabName) => {
-      pick({ kind: 'lab', lab });
+      setScrollY(window.scrollY);
+      pick({ kind: 'lab', lab, back: opened });
     },
-    [pick],
+    [pick, opened],
   );
   const closeLab = useCallback(() => {
-    pick(null);
-  }, [pick]);
+    select(opened);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: opened === null ? 0 : scrollY });
+    });
+  }, [select, opened, scrollY]);
   return { openLab, closeLab };
 }
 
@@ -167,9 +205,14 @@ interface TopbarProps {
 
 // Шапка в один ряд: что открыто — слева, справа тема иконкой, «Лаборатории ▾», «Сессии и трейсы»
 // и главное действие «Новый вопрос». На узком экране всё, кроме него, — в меню «⋯».
-// Кнопка «← Диалог» — плавающая, шапка оставляет под неё место.
+// Свёрнутый диалог — полоса у правого края; на узком экране полосы нет, «Диалог» — в «⋯».
 function Topbar({ onOpenSources, onOpenLab, ...header }: TopbarProps): ReactElement {
   const [theme, setTheme] = useTheme();
+  const openDialog = useContext(OpenDialogContext);
+  const dialog =
+    openDialog === null
+      ? []
+      : [{ label: 'Диалог', hint: 'развернуть колонку', onSelect: openDialog }];
   const labs = LAB_ENTRIES.map((entry) => ({
     label: entry.title,
     hint: entry.short,
@@ -201,7 +244,7 @@ function Topbar({ onOpenSources, onOpenLab, ...header }: TopbarProps): ReactElem
             shape="icon"
             trigger={<MoreIcon />}
             sections={[
-              { items: [{ label: 'Сессии и трейсы', onSelect: onOpenSources }] },
+              { items: [...dialog, { label: 'Сессии и трейсы', onSelect: onOpenSources }] },
               { title: 'лаборатории', items: labs },
               {
                 items: [
@@ -221,6 +264,9 @@ function Topbar({ onOpenSources, onOpenLab, ...header }: TopbarProps): ReactElem
     </header>
   );
 }
+
+// Диалог свёрнут — как его развернуть: для пункта «Диалог» в меню «⋯» узкого экрана.
+const OpenDialogContext = createContext<(() => void) | null>(null);
 
 function MoreIcon(): ReactElement {
   return (
@@ -319,56 +365,51 @@ function OpenStream(props: OpenStreamProps): ReactElement {
   const { clock, cursor, schedule, view } = replay;
   const [playerCollapsed, togglePlayer] = usePlayerCollapsed();
   const liveStartedAt = live && events[0] !== undefined ? Date.parse(events[0].timestamp) : null;
+  const openDialog = useCallback(() => {
+    setDialogOpen(true);
+  }, []);
+  const dialog = { events, shown: cursor, sessionId, live };
   return (
-    <div
-      className={styles.shell}
-      data-dialog={dialogOpen ? 'open' : 'closed'}
-      data-player={playerCollapsed ? 'collapsed' : 'open'}
-    >
-      <div className={styles.page}>
-        {header}
-        {/* Колонка свёрнута — вопрос о разрешении над видами, чтобы его не пропустить. */}
-        {!dialogOpen && prompt}
-        <ViewSwitch
-          events={events}
-          replay={replay}
-          liveStartedAt={liveStartedAt}
-          traceFile={props.traceFile}
-        />
-      </div>
-      {dialogOpen ? (
-        <DialogPanel
-          events={events}
-          shown={cursor}
-          sessionId={sessionId}
-          live={live}
+    <OpenDialogContext.Provider value={dialogOpen ? null : openDialog}>
+      <div
+        className={styles.shell}
+        data-dialog={dialogOpen ? 'open' : 'closed'}
+        data-player={playerCollapsed ? 'collapsed' : 'open'}
+      >
+        <div className={styles.page}>
+          {header}
+          {/* Колонка свёрнута — вопрос о разрешении над видами, чтобы его не пропустить. */}
+          {!dialogOpen && prompt}
+          <ViewSwitch
+            events={events}
+            replay={replay}
+            liveStartedAt={liveStartedAt}
+            traceFile={props.traceFile}
+          />
+        </div>
+        {dialogOpen ? (
+          <DialogPanel
+            {...dialog}
+            clock={clock}
+            schedule={schedule}
+            request={prompt}
+            onCollapse={() => {
+              setDialogOpen(false);
+            }}
+          />
+        ) : (
+          <DialogRail {...dialog} onExpand={openDialog} />
+        )}
+        <PlayerDock
+          view={view}
           clock={clock}
           schedule={schedule}
-          request={prompt}
-          onCollapse={() => {
-            setDialogOpen(false);
-          }}
+          live={live}
+          collapsed={playerCollapsed}
+          onToggle={togglePlayer}
         />
-      ) : (
-        <button
-          type="button"
-          className={styles.openDialog}
-          onClick={() => {
-            setDialogOpen(true);
-          }}
-        >
-          ← Диалог
-        </button>
-      )}
-      <PlayerDock
-        view={view}
-        clock={clock}
-        schedule={schedule}
-        live={live}
-        collapsed={playerCollapsed}
-        onToggle={togglePlayer}
-      />
-    </div>
+      </div>
+    </OpenDialogContext.Provider>
   );
 }
 
@@ -527,8 +568,8 @@ function useReplay(events: HarnessEvent[], live: boolean) {
   return { clock, cursor, schedule, shown, view };
 }
 
-function streamUrl(selection: Selection | null): string | null {
-  if (selection === null || selection.kind === 'lab') {
+function streamUrl(selection: OpenedSelection | null): string | null {
+  if (selection === null) {
     return null;
   }
   return selection.kind === 'session'
@@ -537,7 +578,7 @@ function streamUrl(selection: Selection | null): string | null {
 }
 
 function describeSelection(
-  selection: Exclude<Selection, { kind: 'lab' }>,
+  selection: OpenedSelection,
   events: HarnessEvent[],
   traces: TraceSummary[],
 ): { title: string; source: string; synthetic: boolean } {

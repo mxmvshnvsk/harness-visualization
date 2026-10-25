@@ -1,16 +1,19 @@
 // Что открыто: живая сессия сервера, записанный трейс или лаборатория (RAG, MCP). Хранится в адресе
 // (?session=…, ?trace=… или ?lab=rag | mcp), поэтому ссылкой можно поделиться, а «назад» работает.
-// null — ничего не открыто: стартовый экран.
+// null — ничего не открыто: стартовый экран. Лабораторию открыли из сессии или трейса — адрес
+// помнит и его (?lab=rag&trace=…): «назад» из лаборатории возвращает туда, а не на старт.
 
 import { useCallback, useEffect, useState } from 'react';
 
 export type LabName = 'rag' | 'mcp';
 const LABS: readonly LabName[] = ['rag', 'mcp'];
 
+// Открытый поток событий: живая сессия или записанный трейс.
+export type OpenedSelection =
+  { kind: 'session'; sessionId: string } | { kind: 'trace'; file: string };
+
 export type Selection =
-  | { kind: 'session'; sessionId: string }
-  | { kind: 'trace'; file: string }
-  | { kind: 'lab'; lab: LabName };
+  OpenedSelection | { kind: 'lab'; lab: LabName; back: OpenedSelection | null };
 
 export function useSelection(): [Selection | null, (selection: Selection | null) => void] {
   const [selection, setSelection] = useState(readSelection);
@@ -36,12 +39,14 @@ export function useSelection(): [Selection | null, (selection: Selection | null)
 
 function queryOf(selection: Selection): string {
   const params = new URLSearchParams();
-  if (selection.kind === 'session') {
-    params.set('session', selection.sessionId);
-  } else if (selection.kind === 'trace') {
-    params.set('trace', selection.file);
-  } else {
+  const opened = selection.kind === 'lab' ? selection.back : selection;
+  if (selection.kind === 'lab') {
     params.set('lab', selection.lab);
+  }
+  if (opened?.kind === 'session') {
+    params.set('session', opened.sessionId);
+  } else if (opened?.kind === 'trace') {
+    params.set('trace', opened.file);
   }
   return params.toString();
 }
@@ -49,9 +54,11 @@ function queryOf(selection: Selection): string {
 function readSelection(): Selection | null {
   const params = new URLSearchParams(window.location.search);
   const lab = LABS.find((name) => name === params.get('lab'));
-  if (lab !== undefined) {
-    return { kind: 'lab', lab };
-  }
+  const opened = readOpened(params);
+  return lab === undefined ? opened : { kind: 'lab', lab, back: opened };
+}
+
+function readOpened(params: URLSearchParams): OpenedSelection | null {
   const sessionId = params.get('session');
   if (sessionId !== null) {
     return { kind: 'session', sessionId };

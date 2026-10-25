@@ -7,8 +7,9 @@ import { useEffect, useMemo, useRef, type ReactElement, type ReactNode } from 'r
 import { projectDialog } from '../../projections/projectDialog';
 import { timeAt, type Schedule } from '../../timeline/schedule';
 import type { TimelineClock } from '../../timeline/TimelineClock';
-import { Composer, type DialogMode } from './Composer';
+import { Composer } from './Composer';
 import styles from './Dialog.module.css';
+import { modeOf, STATE_LABELS } from './dialogMode';
 import { TurnView } from './TurnView';
 
 interface DialogPanelProps {
@@ -76,28 +77,6 @@ export function DialogPanel(props: DialogPanelProps): ReactElement {
 function isAnswered(turn: { answeredIndex: number | null }, shown: number): boolean {
   return turn.answeredIndex !== null && turn.answeredIndex < shown;
 }
-
-// Что колонка может: спросить (сессия ждёт вопроса), подождать (идёт ход), только смотреть.
-function modeOf(
-  sessionId: string | null,
-  live: boolean,
-  events: readonly HarnessEvent[],
-): DialogMode {
-  if (sessionId === null) {
-    return 'record';
-  }
-  if (!live) {
-    return 'ended';
-  }
-  return events.at(-1)?.type === 'awaiting_question' ? 'awaiting' : 'working';
-}
-
-const STATE_LABELS: Record<DialogMode, string> = {
-  record: 'запись',
-  ended: 'закончена',
-  working: 'агент отвечает',
-  awaiting: 'ждёт вопроса',
-};
 
 // Новая реплика — колонка доезжает до низа.
 function useAutoScroll(count: number) {

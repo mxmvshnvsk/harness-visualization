@@ -25,7 +25,13 @@ const TABS = [
   { value: 'data', label: 'Данные' },
 ] as const;
 
-export function RagLab({ onBack }: { onBack: () => void }): ReactElement {
+export function RagLab({
+  backLabel,
+  onBack,
+}: {
+  backLabel: string;
+  onBack: () => void;
+}): ReactElement {
   const base = useRagBase();
   const [tab, setTab] = useState<'course' | 'data'>('course');
   const [step, setStep] = useState(0);
@@ -37,7 +43,7 @@ export function RagLab({ onBack }: { onBack: () => void }): ReactElement {
     <div className={styles.screen}>
       <header className={styles.top}>
         <Button variant="quiet" onClick={onBack}>
-          ← К сессиям
+          {backLabel}
         </Button>
         <ThemeToggle />
       </header>
