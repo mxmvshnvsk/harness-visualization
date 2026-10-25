@@ -157,7 +157,9 @@
   cursor: default;
 }
 
+/* Тул обычно короче запроса и часто стоит вплотную к нему — рисуем поверх, чтобы на него можно было навести. */
 .segment[data-kind='tool'] {
+  z-index: 1;
   top: 9px;
   bottom: 9px;
   opacity: 0.5;
@@ -254,6 +256,54 @@
   font-size: 14px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* Отчёт — свёрнут до начала: длинный конспект не растягивает страницу. */
+.report {
+  position: relative;
+  max-height: 220px;
+  overflow: hidden;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.report :is(h1, h2, h3) {
+  margin: 10px 0 4px;
+  font-size: 15px;
+}
+
+.report :is(h1, h2, h3):first-child {
+  margin-top: 0;
+}
+
+.report[data-whole='true'] {
+  max-height: none;
+}
+
+.report[data-whole='false']::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 56px;
+  background: linear-gradient(transparent, var(--raised));
+}
+
+.more {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.more:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .facts {

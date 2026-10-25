@@ -2,6 +2,7 @@
 // Отчёт и есть результат delegate_task — больше главный агент ничего не увидит.
 
 import { useState, type ReactElement } from 'react';
+import { MarkdownView } from '../../help/MarkdownView';
 import { Segmented } from '../../components/Segmented';
 import type { AgentLane, AgentsView } from '../../projections/projectAgents';
 import { reportTokens } from '../../projections/projectAgents';
@@ -51,10 +52,29 @@ function Report(props: {
   lane: AgentLane | undefined;
 }): ReactElement {
   const { run, charsPerToken, lane } = props;
+  const [whole, setWhole] = useState(false);
   return (
     <div>
       <span className={styles.eyebrow}>отчёт — это и есть результат тула для главного</span>
-      <p className={styles.quote}>{reportText(run)}</p>
+      {run.report === null ? (
+        <p className={styles.quote}>{reportText(run)}</p>
+      ) : (
+        <>
+          <div className={styles.report} data-whole={whole}>
+            <MarkdownView text={run.report} />
+          </div>
+          <button
+            type="button"
+            className={styles.more}
+            aria-expanded={whole}
+            onClick={() => {
+              setWhole(!whole);
+            }}
+          >
+            {whole ? 'свернуть' : 'показать целиком'}
+          </button>
+        </>
+      )}
       <div className={styles.facts}>
         {facts(run, charsPerToken, lane).map((fact) => (
           <span key={fact} className={styles.fact}>
