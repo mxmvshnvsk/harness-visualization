@@ -28,10 +28,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Части prompt — своим тоном, без цветов групп: это не события, а состав запроса. */
+/* Части prompt — палитрой --part-*, общей с экраном «Контекст»; между частями зазор 2px. */
 .track {
   position: relative;
   display: flex;
+  gap: 2px;
   height: 12px;
   border-radius: var(--radius-pill);
   background: var(--line);
@@ -40,22 +41,22 @@
 
 .part[data-part='system'],
 .legend [data-part='system']::before {
-  background: color-mix(in srgb, var(--text) 85%, transparent);
+  background: var(--part-system);
 }
 
 .part[data-part='tools'],
 .legend [data-part='tools']::before {
-  background: color-mix(in srgb, var(--text) 55%, transparent);
+  background: var(--part-tools);
 }
 
 .part[data-part='dialog'],
 .legend [data-part='dialog']::before {
-  background: var(--accent);
+  background: var(--part-dialog);
 }
 
 .part[data-part='toolResults'],
 .legend [data-part='toolResults']::before {
-  background: color-mix(in srgb, var(--accent) 45%, var(--muted));
+  background: var(--part-results);
 }
 
 .threshold {

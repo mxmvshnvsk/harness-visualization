@@ -36,6 +36,13 @@
   --shadow: 0 1px 2px rgb(20 20 60 / 6%), 0 10px 30px -12px rgb(20 20 60 / 18%);
   --glow: 0;
 
+  /* Состав prompt (экран «Контекст», бюджет): категориальная палитра, проверена
+     validate_palette.js из скилла dataviz — различимы и при дальтонизме. */
+  --part-system: #2a78d6;
+  --part-tools: #eb6834;
+  --part-dialog: #1baf7a;
+  --part-results: #eda100;
+
   /* Один акцент — для главного действия. В светлой — перелив от индиго к фиолетовому. */
   --accent: #3647d2;
   --accent-2: #7b5cff;
@@ -90,6 +97,11 @@
   --edge-hi: rgb(230 255 77 / 8%);
   --shadow: 0 1px 0 rgb(255 255 255 / 3%), 0 18px 40px -18px rgb(0 0 0 / 90%);
   --glow: 1;
+
+  --part-system: #3987e5;
+  --part-tools: #d95926;
+  --part-dialog: #199e70;
+  --part-results: #c98500;
 
   --accent: #e6ff4d;
   --accent-2: #e6ff4d;

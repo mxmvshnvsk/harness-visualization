@@ -1,0 +1,275 @@
+.view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: var(--space-card);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.empty {
+  color: var(--muted);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.summary {
+  margin: 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--swatch);
+}
+
+.legendExact::before,
+.legendThreshold::before {
+  content: '';
+  width: 16px;
+  border-top: 2px solid var(--text);
+}
+
+.legendThreshold::before {
+  border-top-style: dashed;
+}
+
+/* Оба графика в одной прокрутке — колонки одного запроса стоят друг под другом. */
+.scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
+.plots {
+  position: relative;
+  min-width: 100%;
+}
+
+.chart {
+  display: block;
+  overflow: visible;
+}
+
+.grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.tick,
+.guideLabel,
+.barLabel,
+.turnLabel,
+.cacheLabel {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  fill: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.guideLabel {
+  fill: var(--text);
+}
+
+.turnLabel {
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.threshold,
+.limit {
+  stroke: var(--text);
+  stroke-width: 1.5;
+}
+
+.threshold {
+  stroke-dasharray: 5 4;
+}
+
+.limit {
+  opacity: 0.55;
+}
+
+.turnLine {
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.exact {
+  stroke: var(--text);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.marks {
+  font-size: 13px;
+  fill: var(--text);
+}
+
+.cacheTitle {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.cacheBar {
+  fill: color-mix(in srgb, var(--text) 45%, transparent);
+}
+
+/* Колонка запроса: область наведения шире столбика; будущее — бледно, текущее — с подложкой. */
+.column {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.hit {
+  fill: transparent;
+}
+
+.column[data-current='true'] .hit {
+  fill: var(--accent-soft);
+}
+
+.column[data-hovered='true'] .hit {
+  fill: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.column[data-future='true'] {
+  opacity: 0.22;
+}
+
+.tooltip {
+  position: absolute;
+  top: 4px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 280px;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border-radius: var(--radius-inner);
+  border: 1px solid var(--line);
+  background: var(--raised);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.tooltipParts {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 4px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tooltipParts li,
+.tooltipRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.tooltipParts li span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.tooltipParts li span:first-child::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--swatch);
+}
+
+.tooltipRow span:first-child {
+  color: var(--muted);
+}
+
+.tooltipAction {
+  color: var(--text);
+}
+
+.tooltipHint {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.table th,
+.table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.table th {
+  color: var(--muted);
+  font-weight: var(--weight-medium);
+}
+
+.table th:first-child,
+.table td:first-child,
+.table th:last-child,
+.table td:last-child {
+  text-align: left;
+}
+
+.table tbody tr {
+  cursor: pointer;
+}
+
+.table tbody tr:hover {
+  background: color-mix(in srgb, var(--text) 4%, transparent);
+}
+
+.table tr[data-future='true'] {
+  opacity: 0.4;
+}

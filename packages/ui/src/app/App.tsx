@@ -20,6 +20,7 @@ import { Button } from '../components/Button';
 import { Drawer } from '../components/Drawer';
 import { Segmented } from '../components/Segmented';
 import { EventList } from '../features/EventList';
+import { ContextView } from '../features/context/ContextView';
 import { FlowView } from '../features/flow/FlowView';
 import { InspectorView } from '../features/inspector/InspectorView';
 import { TokenomicsLine } from '../features/TokenomicsLine';
@@ -164,6 +165,7 @@ function StartScreen({ children }: { children: ReactNode }): ReactElement {
 const VIEWS = [
   { value: 'flow', label: 'Поток' },
   { value: 'inspector', label: 'Инспектор' },
+  { value: 'context', label: 'Контекст' },
   { value: 'events', label: 'Сырые события' },
 ] as const;
 
@@ -206,6 +208,9 @@ function OpenStream({ events, sessionId, live, header, prompt }: OpenStreamProps
               clock={clock}
               schedule={schedule}
             />
+          )}
+          {viewName === 'context' && (
+            <ContextView events={events} shown={cursor} clock={clock} schedule={schedule} />
           )}
           {viewName === 'events' && <EventList events={shown} />}
         </div>
