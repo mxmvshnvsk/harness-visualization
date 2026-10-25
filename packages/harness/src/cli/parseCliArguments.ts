@@ -81,7 +81,7 @@ function parseReasoningEffort(value: string): ReasoningEffort {
   const matchingEffort = REASONING_EFFORTS.find((effort) => effort === value);
   if (matchingEffort === undefined) {
     throw new Error(
-      `Неизвестный уровень рассуждений «${value}». Допустимые: ${REASONING_EFFORTS.join(', ')}.`,
+      `Неизвестный уровень reasoning effort «${value}». Допустимые: ${REASONING_EFFORTS.join(', ')}.`,
     );
   }
   return matchingEffort;

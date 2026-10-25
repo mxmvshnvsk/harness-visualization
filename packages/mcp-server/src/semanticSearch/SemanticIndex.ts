@@ -56,7 +56,7 @@ export class SemanticIndex {
     } catch (error) {
       this.building = null;
       const reason = error instanceof Error ? error.message : String(error);
-      this.options.log(`Индекс для поиска по смыслу не построен: ${reason}`);
+      this.options.log(`Semantic search index не построен: ${reason}`);
       throw error;
     }
   }
@@ -64,7 +64,7 @@ export class SemanticIndex {
   private async build(): Promise<ReadyIndex> {
     const { log } = this.options;
     const startedAt = performance.now();
-    log('Индекс для поиска по смыслу: загрузка модели эмбеддингов');
+    log('Semantic search index: загрузка embedding model');
     const embedder = await TextEmbedder.load({
       modelDirectory: this.options.modelDirectory,
       allowDownload: false,
@@ -74,12 +74,12 @@ export class SemanticIndex {
       embedder,
       vectorCachePath: this.options.vectorCachePath,
       onProgress: (embeddedCount, totalToEmbed) => {
-        log(`Индекс для поиска по смыслу: векторы ${embeddedCount} из ${totalToEmbed}`);
+        log(`Semantic search index: embeddings ${embeddedCount} из ${totalToEmbed}`);
       },
     });
     const seconds = ((performance.now() - startedAt) / 1000).toFixed(1);
     log(
-      `Индекс для поиска по смыслу готов за ${seconds} с: ${result.chunks.length} фрагментов, ` +
+      `Semantic search index готов за ${seconds} с: ${result.chunks.length} chunks, ` +
         `из кэша ${result.reusedCount}, посчитано ${result.embeddedCount}`,
     );
     return { embedder, chunks: result.chunks };

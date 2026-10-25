@@ -25,7 +25,7 @@ const LEVEL_STYLES: Record<SourceLevel, LevelStyle> = {
     icon: '~',
     color: 'yellow',
     describe: (sequence) =>
-      `виден только фрагментом в выдаче поиска (событие #${String(sequence)})`,
+      `виден только snippet (фрагментом) в выдаче поиска (событие #${String(sequence)})`,
   },
   catalog: {
     icon: '!',
@@ -41,7 +41,7 @@ const LEVEL_STYLES: Record<SourceLevel, LevelStyle> = {
 
 const LEVEL_SUMMARY_LABELS: Record<SourceLevel, string> = {
   full: 'прочитано целиком',
-  fragment: 'только фрагмент',
+  fragment: 'только snippet',
   catalog: 'только каталог',
   notSeen: 'не видели',
 };
@@ -84,7 +84,7 @@ function describeSummary(report: GroundingReport): string {
   if (counts.fragment > 0) {
     return styleText(
       'yellow',
-      `${summary}. Проверьте, есть ли утверждения из ответа во фрагментах выдачи.`,
+      `${summary}. Проверьте, есть ли claims (утверждения) из ответа в snippets выдачи.`,
     );
   }
   return styleText('green', `${summary}.`);

@@ -39,9 +39,9 @@ const COLUMN_TITLES = [
   'вариант',
   'запросов',
   'тулов',
-  'вход, токенов',
-  'из кэша',
-  'прогрет к 1-му',
+  'input, токенов',
+  'cache hit',
+  'cache warm',
   'USD',
   'прочитан',
   'назван',
@@ -165,7 +165,7 @@ function printIntroduction(
   console.log(
     styleText(
       'dim',
-      '«Прогрет к 1-му» — в скольких прогонах кэш промпта был прогрет уже к первому запросу: ' +
+      '«Cache warm» — в скольких прогонах prompt cache был прогрет уже к первому шагу агента: ' +
         'начало запроса недавно отправляла предыдущая сессия или другая программа с тем же ключом. ' +
         'Такой прогон дешевле не из-за варианта.',
     ),
@@ -233,10 +233,10 @@ function describeProgress(
   const cost =
     summary.costUsd === null ? 'стоимость неизвестна' : `${summary.costUsd.toFixed(6)} USD`;
   const seconds = (summary.durationMs / 1000).toFixed(1);
-  const cache = summary.firstRequestCache === 'warm' ? 'кэш прогрет' : 'кэш холодный';
-  const query = summary.harnessQuery === null ? '' : `, харнесс искал «${summary.harnessQuery}»`;
+  const cache = summary.firstRequestCache === 'warm' ? 'cache warm' : 'cache cold';
+  const query = summary.harnessQuery === null ? '' : `, query харнесса «${summary.harnessQuery}»`;
   return (
-    `${head}: запросов ${summary.modelRequests}, вход ${formatNumber(summary.inputTokens)}, ` +
+    `${head}: запросов ${summary.modelRequests}, input ${formatNumber(summary.inputTokens)}, ` +
     `${cost}, ${seconds} с, ${cache}${query} — ${tracePath}`
   );
 }

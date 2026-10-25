@@ -19,9 +19,9 @@ type EventOfType<Type extends HarnessEventType> = Extract<HarnessEvent, { type: 
 
 const RETRIEVAL_MODE_DESCRIPTIONS: Record<RetrievalMode, string> = {
   tool: 'модель ищет сама тулами (retrieval tool)',
-  auto: 'харнесс сам ищет словами пользователя и подмешивает найденное (retrieval auto)',
+  auto: 'харнесс сам делает retrieval словами пользователя и подмешивает найденное (retrieval auto)',
   rewrite:
-    'модель составляет запрос, харнесс ищет по нему и подмешивает найденное (retrieval rewrite)',
+    'модель составляет query, харнесс делает retrieval по нему и подмешивает найденное (retrieval rewrite)',
 };
 
 type EventDescribers = {
@@ -147,7 +147,7 @@ function describeMcpServerReady(event: EventOfType<'mcp_server_ready'>): string[
     lines.push(
       styleText(
         'dim',
-        `    инструкции → в системный промпт: ${shortenForPreview(event.instructions)}`,
+        `    инструкции → в system prompt: ${shortenForPreview(event.instructions)}`,
       ),
     );
   }
@@ -178,7 +178,7 @@ function describeQueryRewritten(event: EventOfType<'query_rewritten'>): string[]
     return [styleText('yellow', 'Модель не дала запрос — харнесс ищет словами пользователя')];
   }
   return [
-    styleText('yellow', `Запрос для поиска составила модель: «${event.query}»`),
+    styleText('yellow', `Query для поиска составила модель: «${event.query}»`),
     styleText('dim', `    вместо слов пользователя: «${event.userQuestion}»`),
   ];
 }
@@ -217,7 +217,7 @@ function describeModelResponse(event: EventOfType<'model_response'>): string[] {
     `    стоимость: ${formatMoney(event.cost)}${tariff}`,
   ];
   if (reply.reasoningText !== null && reply.reasoningText !== '') {
-    lines.push(styleText('dim', `    рассуждения: ${shortenForPreview(reply.reasoningText)}`));
+    lines.push(styleText('dim', `    reasoning: ${shortenForPreview(reply.reasoningText)}`));
   }
   if (reply.toolCalls.length > 0) {
     const toolNames = reply.toolCalls.map((toolCall) => toolCall.name).join(', ');

@@ -23,19 +23,19 @@ export const RUN_VARIANTS: RunVariant[] = [
     name: 'auto',
     retrievalMode: 'auto',
     retrievalToolName: 'kedr__semantic_search',
-    description: 'харнесс ищет по смыслу словами пользователя и подмешивает',
+    description: 'харнесс делает semantic search словами пользователя и подмешивает',
   },
   {
     name: 'rewrite',
     retrievalMode: 'rewrite',
     retrievalToolName: 'kedr__semantic_search',
-    description: 'модель составляет запрос, харнесс ищет по нему по смыслу и подмешивает',
+    description: 'модель составляет query, харнесс делает semantic search по нему и подмешивает',
   },
   {
     name: 'hybrid',
     retrievalMode: 'auto',
     retrievalToolName: 'kedr__hybrid_search',
-    description: 'харнесс ищет гибридно словами пользователя и подмешивает',
+    description: 'харнесс делает hybrid search словами пользователя и подмешивает',
   },
 ];
 

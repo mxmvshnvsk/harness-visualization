@@ -39,7 +39,7 @@ async function main(): Promise<void> {
 
   printChunkStatistics(result.chunks);
   console.log(`Из кэша: ${result.reusedCount}, посчитано заново: ${result.embeddedCount}`);
-  console.log(`Кэш векторов: ${VECTOR_CACHE_PATH}`);
+  console.log(`Vector cache: ${VECTOR_CACHE_PATH}`);
   const seconds = ((performance.now() - startedAt) / 1000).toFixed(1);
   console.log(`Готово за ${seconds} с`);
 }
@@ -58,7 +58,7 @@ function printChunkStatistics(chunks: IndexedChunk[]): void {
   const longest = Math.max(0, ...lengths);
   const overLimit = lengths.filter((length) => length > CHUNK_TARGET_LENGTH).length;
   console.log(
-    `Фрагментов: ${chunks.length}, средняя длина ${averageLength} символов, ` +
+    `Chunks: ${chunks.length}, средняя длина ${averageLength} символов, ` +
       `самый длинный ${longest}, длиннее ${CHUNK_TARGET_LENGTH}: ${overLimit}`,
   );
 }

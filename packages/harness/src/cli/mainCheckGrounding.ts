@@ -15,7 +15,7 @@ async function main(): Promise<void> {
   }
   const events = await readTrace(tracePath);
   const report = checkGrounding(events);
-  console.log(styleText('bold', `Проверка опоры ответа по трейсу ${tracePath}`));
+  console.log(styleText('bold', `Grounding check (проверка опоры ответа) по трейсу ${tracePath}`));
   for (const line of describeGroundingReport(report)) {
     console.log(line);
   }

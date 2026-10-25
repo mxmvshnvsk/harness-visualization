@@ -39,10 +39,10 @@ export function formatCallCount(calls: number): string {
 }
 
 export function formatUsage(usage: TokenUsage): string {
-  const input = `вход ${formatNumber(usage.inputTokens)} (из кэша ${formatNumber(usage.inputCacheHitTokens)})`;
+  const input = `input ${formatNumber(usage.inputTokens)} (cache hit ${formatNumber(usage.inputCacheHitTokens)})`;
   const reasoning =
-    usage.reasoningTokens > 0 ? ` (рассуждения ${formatNumber(usage.reasoningTokens)})` : '';
-  const output = `выход ${formatNumber(usage.outputTokens)}${reasoning}`;
+    usage.reasoningTokens > 0 ? ` (reasoning ${formatNumber(usage.reasoningTokens)})` : '';
+  const output = `output ${formatNumber(usage.outputTokens)}${reasoning}`;
   return `${input}, ${output}`;
 }
 

@@ -15,9 +15,9 @@ export type SearchMethod = 'words' | 'meaning' | 'hybrid';
 export const SEARCH_METHODS: SearchMethod[] = ['words', 'meaning', 'hybrid'];
 
 export const SEARCH_METHOD_TITLES: Record<SearchMethod, string> = {
-  words: 'по словам',
-  meaning: 'по смыслу',
-  hybrid: 'гибрид',
+  words: 'keyword',
+  meaning: 'semantic',
+  hybrid: 'hybrid',
 };
 
 export type SearchRankings = Record<SearchMethod, RankedDocument[]>;
