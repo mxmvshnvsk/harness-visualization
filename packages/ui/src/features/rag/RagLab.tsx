@@ -6,6 +6,7 @@ import type { LabBase } from '@harness-visualization/mcp-server/lab';
 import { useState, type ReactElement } from 'react';
 import { ThemeSwitch } from '../../app/ThemeSwitch';
 import { Button } from '../../components/Button';
+import { Segmented } from '../../components/Segmented';
 import { COURSE_STEPS } from './course/courseContent';
 import { StepCheck } from './course/StepCheck';
 import { StepChunks } from './course/StepChunks';
@@ -13,11 +14,18 @@ import { StepClose } from './course/StepClose';
 import { StepMethods } from './course/StepMethods';
 import { StepVectors } from './course/StepVectors';
 import { StepWhy } from './course/StepWhy';
+import { DataTab } from './data/DataTab';
 import styles from './RagLab.module.css';
 import { useRagBase } from './useRagData';
 
+const TABS = [
+  { value: 'course', label: 'Маршрут' },
+  { value: 'data', label: 'Данные' },
+] as const;
+
 export function RagLab({ onBack }: { onBack: () => void }): ReactElement {
   const base = useRagBase();
+  const [tab, setTab] = useState<'course' | 'data'>('course');
   const [step, setStep] = useState(0);
   const go = (index: number): void => {
     setStep(index);
@@ -35,19 +43,27 @@ export function RagLab({ onBack }: { onBack: () => void }): ReactElement {
         <h1 className={styles.title}>Лаборатория RAG</h1>
         <p className={styles.lead}>
           Как агент находит нужное в базе знаний и почему найденное не гарантирует верный ответ.
-          Шесть шагов по порядку, в каждом — опыт на настоящих документах базы.
+          «Маршрут» — шесть шагов по порядку, в каждом опыт на настоящих документах базы. «Данные» —
+          та же база без подсказок: свой запрос на карте и в трёх поисках.
         </p>
       </div>
-      <StepNav current={step} onStep={go} />
-      <div className={styles.card}>
-        {base.status === 'ready' ? (
-          <CourseStep index={step} base={base.value} onStep={go} />
-        ) : (
-          <p className={base.status === 'error' ? styles.bad : styles.hint}>
-            {base.status === 'loading' ? 'Загружаем базу знаний…' : base.message}
-          </p>
-        )}
+      <div className={styles.tabs}>
+        <Segmented label="Раздел" options={TABS} value={tab} onChange={setTab} />
       </div>
+      {base.status !== 'ready' && (
+        <p className={base.status === 'error' ? styles.bad : styles.hint}>
+          {base.status === 'loading' ? 'Загружаем базу знаний…' : base.message}
+        </p>
+      )}
+      {base.status === 'ready' && tab === 'course' && (
+        <>
+          <StepNav current={step} onStep={go} />
+          <div className={styles.card}>
+            <CourseStep index={step} base={base.value} onStep={go} />
+          </div>
+        </>
+      )}
+      {base.status === 'ready' && tab === 'data' && <DataTab base={base.value} />}
     </div>
   );
 }

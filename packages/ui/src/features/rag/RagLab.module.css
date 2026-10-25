@@ -31,6 +31,10 @@
   max-width: 72ch;
 }
 
+.tabs {
+  align-self: flex-start;
+}
+
 .card {
   display: flex;
   flex-direction: column;

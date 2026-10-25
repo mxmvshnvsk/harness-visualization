@@ -15,7 +15,8 @@
     "@fontsource/jetbrains-mono": "5.3.0",
     "@fontsource/onest": "5.3.1",
     "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react-dom": "19.3.0",
+    "umap-js": "1.4.0"
   },
   "devDependencies": {
     "@harness-visualization/harness": "workspace:*",
