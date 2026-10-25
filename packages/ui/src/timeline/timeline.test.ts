@@ -63,13 +63,16 @@ describe('buildActions', () => {
   it('собирает действия по участникам, а не по событиям', () => {
     const actions = buildActions(session().events, context);
 
-    // Вызов tool идёт через политику к исполнению, тул MCP-сервера — дальше, к серверу.
+    // Вызов tool сначала доходит до политики, после решения уходит к исполнению, тул
+    // MCP-сервера — дальше, к серверу.
     expect(actions.map((action) => `${action.kind}:${action.route.join('>')}`)).toEqual([
       'message:user>loop',
       'exchange:loop>model',
-      'exchange:loop>policy>tools>mcp',
+      'message:loop>policy',
+      'exchange:policy>tools>mcp',
       'inside:policy',
-      'exchange:loop>policy>tools',
+      'message:loop>policy',
+      'exchange:policy>tools',
       'inside:policy',
       'exchange:tools>network',
       'message:loop>user',
@@ -99,9 +102,11 @@ describe('buildSchedule', () => {
 
     expect(searchItem).toBeDefined();
     if (searchItem !== undefined) {
-      // Три перехода: первый — TRAVEL_MS, два следующих — по половине.
-      expect(searchItem.outTo - searchItem.outFrom).toBe(TRAVEL_MS * 2);
+      // Туда два перехода (политика → исполнение → MCP): первый — TRAVEL_MS, второй — половина.
+      // Обратно три — ещё и в цикл.
+      expect(searchItem.outTo - searchItem.outFrom).toBe(TRAVEL_MS * 1.5);
       expect(searchItem.backFrom).toBeGreaterThanOrEqual(searchItem.outTo + MIN_DWELL_MS);
+      expect((searchItem.backTo ?? 0) - (searchItem.backFrom ?? 0)).toBe(TRAVEL_MS * 2);
     }
   });
 
@@ -133,12 +138,17 @@ describe('buildSchedule', () => {
     expect(timeAt(schedule, realAt(schedule, middle))).toBeCloseTo(middle, 0);
   });
 
-  it('решение политики показано раньше, чем tool отправился', () => {
+  it('вызов доходит до политики, она решает, и только потом tool уходит к исполнению', () => {
     const schedule = buildSchedule(buildActions(session().events, context));
+    const call = schedule.actions.find((item) => item.action.id === 'message:6');
     const policy = schedule.actions.find((item) => item.action.id === 'inside:7');
     const tool = schedule.actions.find((item) => item.action.id === 'tool:c1');
 
+    expect(call?.outTo).toBeLessThanOrEqual(policy?.outFrom ?? 0);
     expect(policy?.outFrom).toBeLessThan(tool?.outFrom ?? 0);
+    // Результат возвращается мимо политики в цикл: исполнение → политика → цикл.
+    expect(tool?.action.from).toBe('loop');
+    expect(tool?.action.backRoute).toEqual(['loop', 'policy', 'tools', 'mcp']);
   });
 
   it('шаги кнопками — к началам моментов', () => {

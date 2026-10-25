@@ -39,15 +39,24 @@ export function FlowView({ clock, schedule, liveStartedAt }: FlowViewProps): Rea
   const [focus, setFocus] = useState<FlowNodeId | null>(null);
   // Кто в этой сессии вообще работал — остальные части приглушены.
   const used = useMemo(
-    () => new Set(schedule.actions.flatMap((item) => item.action.route)),
+    () =>
+      new Set(
+        schedule.actions.flatMap((item) => [
+          ...item.action.route,
+          ...(item.action.backRoute ?? []),
+        ]),
+      ),
     [schedule],
   );
   useFrames(rootRef, clock, schedule, liveStartedAt);
   return (
     <div className={styles.flow} ref={rootRef}>
       <div className={styles.stage}>
+        {/* Левый верхний угол схемы пуст — там «Что это?» и описание участника под курсором:
+            подсказка у самого узла на плотной схеме закрывала соседей. */}
         <div className={styles.toolbar}>
           <HelpButton topic="flow" />
+          {focus !== null && <NodeTip node={FLOW_NODES[focus]} />}
         </div>
         <svg
           className={styles.diagram}
@@ -71,7 +80,6 @@ export function FlowView({ clock, schedule, liveStartedAt }: FlowViewProps): Rea
           ))}
           <Pools />
         </svg>
-        {focus !== null && <NodeTip node={FLOW_NODES[focus]} />}
       </div>
       <div className={styles.caption} aria-live="polite">
         <span className={styles.what} data-caption="what" />
@@ -245,18 +253,8 @@ function HeatBar({ node, left, top }: PlacedNode): ReactElement {
 }
 
 function NodeTip({ node }: { node: FlowNode }): ReactElement {
-  // Подсказка — сбоку от участника, чтобы не закрывать соседей: правее, если он в левой части.
-  const right = node.x < VIEW_WIDTH / 2;
-  const x =
-    ((right ? node.x + node.width / 2 + 14 : node.x - node.width / 2 - 14) / VIEW_WIDTH) * 100;
-  const y = (node.y / VIEW_HEIGHT) * 100;
   return (
-    <div
-      className={styles.tip}
-      data-side={right ? 'right' : 'left'}
-      style={{ left: `${String(x)}%`, top: `${String(y)}%` }}
-      role="tooltip"
-    >
+    <div className={styles.tip} role="tooltip">
       <b>{node.title}</b>
       {node.about}
     </div>

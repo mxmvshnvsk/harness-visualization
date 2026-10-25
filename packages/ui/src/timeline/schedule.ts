@@ -7,7 +7,7 @@
 // Действия, которые в записи шли одновременно (tool ждёт, пока тулы ходят в интернет), и в
 // повторе идут одновременно.
 
-import type { FlowAction } from './actions';
+import { laneRoute, type FlowAction } from './actions';
 
 // Темп на 1×, мс повтора.
 export const TRAVEL_MS = 650;
@@ -117,15 +117,15 @@ function waitFor(gap: number): number {
 
 // Перелёт по маршруту: первый переход — TRAVEL_MS, каждый следующий — ещё половина.
 // Цикл → политика → исполнение → MCP-сервер идёт дольше, чем цикл → модель, но не втрое.
-export function travelFor(action: FlowAction): number {
-  const hops = Math.max(1, action.route.length - 1);
+export function travelFor(action: FlowAction, lane: 'out' | 'back' = 'out'): number {
+  const hops = Math.max(1, laneRoute(action, lane).length - 1);
   return TRAVEL_MS * (1 + (hops - 1) / 2);
 }
 
 function durationOf(moment: Moment): number {
   switch (moment.item.action.kind) {
     case 'exchange':
-      return travelFor(moment.item.action);
+      return travelFor(moment.item.action, moment.edge === 'end' ? 'back' : 'out');
     case 'message':
       return travelFor(moment.item.action) + HOLD_MS;
     case 'inside':

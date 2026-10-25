@@ -1,7 +1,7 @@
 // Рисует кадр «Потока» в готовый SVG: меняет атрибуты, текст и классы у заранее созданных
 // элементов. Никаких новых элементов в кадре — только переиспользуемые пулы точек и подписей.
 
-import type { FlowAction } from '../../timeline/actions';
+import { laneRoute, type FlowAction } from '../../timeline/actions';
 import type { Frame, WaitingNode } from '../../timeline/frame';
 import {
   FLOW_NODES,
@@ -49,7 +49,7 @@ function drawLanes(elements: FlowElements, frame: Frame): void {
   // Подсвечен весь маршрут действия: видно, через кого идёт вызов.
   const active = new Map<string, string>();
   for (const dot of frame.dots) {
-    for (const hop of hopsOf(dot.action.route, dot.lane)) {
+    for (const hop of hopsOf(laneRoute(dot.action, dot.lane), dot.lane)) {
       active.set(hop, dot.action.group);
     }
   }
@@ -109,7 +109,7 @@ function drawLabels(elements: FlowElements, frame: Frame): void {
     ...frame.labels.map((label) => ({
       text: label.lane === 'out' ? label.action.out : (label.action.back ?? ''),
       group: label.action.group,
-      at: labelPoint(label.action.route, label.lane),
+      at: labelPoint(laneRoute(label.action, label.lane), label.lane),
       opacity: label.opacity,
     })),
     ...frame.insideLabels.map((label) => {
@@ -172,7 +172,7 @@ function drawDots(elements: FlowElements, frame: Frame): void {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const all: DotSpec[] = [
     ...frame.dots.map((dot) => ({
-      route: dot.action.route,
+      route: laneRoute(dot.action, dot.lane),
       lane: dot.lane,
       progress: reduced ? 1 : dot.progress,
       group: dot.action.group,

@@ -18,6 +18,10 @@ export interface FlowAction {
   kind: 'exchange' | 'message' | 'inside';
   // Через кого идёт точка; from и to — концы маршрута. У inside маршрут из одной части.
   route: Route;
+  // Обратный путь, если он длиннее прямого (в том же порядке, что route, — точка идёт по нему
+  // с конца); null — обратно тем же маршрутом. Вызов tool уходит от политики, а результат
+  // возвращается мимо неё в цикл.
+  backRoute: Route | null;
   from: FlowNodeId;
   to: FlowNodeId;
   group: EventGroup;
@@ -41,6 +45,14 @@ export interface FlowAction {
 export interface ActionContext {
   // Хост модели: его сетевые запросы уже показаны обменом с моделью.
   modelHost: string | null;
+}
+
+// Маршрут полосы: «туда» — route, «обратно» — backRoute, если он есть.
+export function laneRoute(
+  action: Pick<FlowAction, 'route' | 'backRoute'>,
+  lane: 'out' | 'back',
+): Route {
+  return lane === 'back' ? (action.backRoute ?? action.route) : action.route;
 }
 
 // Тулы MCP-серверов харнесс называет «сервер__тул» (kedr__search).
@@ -256,12 +268,27 @@ const HANDLERS: Handlers = {
   },
   tool_call: (builder, event, at) => {
     const mcp = isMcpTool(event.toolName);
+    // Сначала вызов доходит до политики — она решает, пока точка стоит у неё; к исполнению
+    // он уходит уже от политики, а результат возвращается в цикл.
+    addAction(
+      builder,
+      { event, at },
+      {
+        kind: 'message',
+        route: ['loop', 'policy'],
+        group: 'tool',
+        out: event.toolName,
+        what: 'Цикл передаёт вызов политике',
+        detail: shorten(event.argumentsText),
+      },
+    );
+    const route: Route = mcp ? ['policy', 'tools', 'mcp'] : ['policy', 'tools'];
     openExchange(
       builder,
       `tool:${event.toolCallId}`,
       { event, at },
       {
-        route: mcp ? ['loop', 'policy', 'tools', 'mcp'] : ['loop', 'policy', 'tools'],
+        route,
         group: 'tool',
         out: event.toolName,
         busy: 'выполняет…',
@@ -271,6 +298,10 @@ const HANDLERS: Handlers = {
         detail: shorten(event.argumentsText),
       },
     );
+    const action = builder.open.get(`tool:${event.toolCallId}`);
+    if (action !== undefined) {
+      Object.assign(action, { from: 'loop', backRoute: ['loop', ...route] });
+    }
   },
   permission_evaluated: (builder, event, at) => {
     addInside(
@@ -449,6 +480,7 @@ function addAction(
     ...spec,
     from: spec.route[0] ?? 'loop',
     to: spec.route.at(-1) ?? 'loop',
+    backRoute: null,
     id: id ?? `${spec.kind}:${String(event.sequence)}`,
     start: at,
     end: null,
@@ -506,6 +538,7 @@ function closeTool(builder: Builder, event: EventOfType<'tool_result'>, at: numb
     Object.assign(action, {
       kind: 'inside',
       route: ['policy'],
+      backRoute: null,
       from: 'policy',
       to: 'policy',
       group: 'permission',
