@@ -271,15 +271,19 @@ curl --noproxy '*' -N http://127.0.0.1:4317/api/sessions/<id>/events
 | `GET /api/sessions/:id/events`       | поток событий (SSE): сначала то, что уже было, потом — вживую                                                                                                     |
 | `POST /api/sessions/:id/permissions` | ответ на `permission_requested`: `{"toolCallId": "…", "approved": true}`                                                                                          |
 
-Если на вопрос о разрешении не ответить за `server.permissionTimeoutSeconds` (по умолчанию 120 секунд), действие запрещается: молчание не согласие. Попробовать можно на вопросе, где агенту нужно удалить файл (запись разрешена без вопроса, удаление — с вопросом):
+Если на вопрос о разрешении не ответить за `server.permissionTimeoutSeconds` (по умолчанию 120 секунд), действие запрещается: молчание не согласие. Попробовать можно на вопросе, где агенту нужно удалить файл (запись разрешена без вопроса, удаление — с вопросом). Скрипт сам достаёт `toolCallId` из `pendingPermissions`; нужен `jq`:
 
 ```bash
+U=http://127.0.0.1:4317
+S=$(curl --noproxy '*' -s -X POST -H 'content-type: application/json' \
+  -d '{"question": "Создай notes/probe.md с текстом «проба», потом удали его"}' $U/api/sessions | jq -r .sessionId)
+sleep 10   # подождать, пока агент дойдёт до удаления
+T=$(curl --noproxy '*' -s $U/api/sessions/$S | jq -r '.pendingPermissions[0].toolCallId')
 curl --noproxy '*' -X POST -H 'content-type: application/json' \
-  -d '{"question": "Создай notes/probe.md с текстом «проба», потом удали его"}' http://127.0.0.1:4317/api/sessions
-curl --noproxy '*' http://127.0.0.1:4317/api/sessions/<id>        # toolCallId — в pendingPermissions
-curl --noproxy '*' -X POST -H 'content-type: application/json' \
-  -d '{"toolCallId": "<toolCallId>", "approved": true}' http://127.0.0.1:4317/api/sessions/<id>/permissions
+  -d "{\"toolCallId\": \"$T\", \"approved\": true}" $U/api/sessions/$S/permissions
 ```
+
+Если `T` — `null`, агент ещё не дошёл до удаления: повторите две последние команды.
 
 Формат потока и ответа на разрешение — в `docs/events.md`.
 
