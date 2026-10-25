@@ -7,6 +7,7 @@ import type { ToolCallView } from '../../projections/sessionView';
 import styles from './Inspector.module.css';
 import { isMcpTool } from '../../timeline/actions';
 import { HelpButton, Term } from '../../help/HelpLinks';
+import { McpCallBlock } from './McpCallBlock';
 
 export function ToolCallPanel({ tool }: { tool: ToolCallView }): ReactElement {
   return (
@@ -27,6 +28,9 @@ export function ToolCallPanel({ tool }: { tool: ToolCallView }): ReactElement {
         <pre className={styles.code}>{formatJson(tool.call.arguments)}</pre>
       </section>
       <PermissionChain tool={tool} />
+      {isMcpTool(tool.toolName) && (
+        <McpCallBlock toolCallId={tool.toolCallId} toolName={tool.toolName} />
+      )}
       <ToolResult tool={tool} />
     </article>
   );

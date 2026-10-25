@@ -1,0 +1,373 @@
+/* Вид «MCP» открытой сессии. */
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block);
+}
+
+.empty,
+.muted {
+  color: var(--muted);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  background: var(--surface);
+}
+
+.tile small {
+  font: 11px var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tile b {
+  font-size: 20px;
+  font-weight: var(--weight-strong);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.tile span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: var(--space-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: var(--weight-medium);
+}
+
+.sub {
+  margin: 0;
+  max-width: 84ch;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.sub b {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}
+
+/* Сервер */
+.server {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 6px 12px;
+  margin: 0;
+  font-size: 13.5px;
+}
+
+.facts dt {
+  color: var(--muted);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--raised);
+  font-size: 13.5px;
+}
+
+.role {
+  font: 11px var(--font-mono);
+  color: var(--muted);
+}
+
+.logs {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font: 12px var(--font-mono);
+  color: var(--muted);
+}
+
+.chip {
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.chip[data-tone='on'] {
+  border-color: var(--dialog);
+  color: var(--dialog);
+}
+
+.chip[data-tone='off'] {
+  border-color: var(--tool);
+  color: var(--tool);
+}
+
+/* Тулы */
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.table th,
+.table td {
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.table th {
+  font-size: 12px;
+  font-weight: var(--weight-medium);
+  color: var(--muted);
+}
+
+.table tr[data-hidden='true'] td {
+  color: var(--muted);
+}
+
+.table tr[data-unused='true'] .calls {
+  color: var(--tool);
+  font-weight: var(--weight-strong);
+}
+
+.decision {
+  font: 600 12px var(--font-mono);
+}
+
+.decision[data-decision='allow'] {
+  color: var(--dialog);
+}
+
+.decision[data-decision='ask'] {
+  color: var(--tool);
+}
+
+.decision[data-decision='deny'] {
+  color: var(--error);
+}
+
+.weight {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 6px;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-radius: 3px;
+  background: var(--line);
+}
+
+.weight::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--width);
+  border-radius: 3px;
+  background: var(--part-tools);
+}
+
+/* Журнал */
+.journal {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.journal li {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.phase {
+  margin-top: 8px;
+  font: 11px var(--font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.journal li:first-child .phase {
+  margin-top: 0;
+}
+
+.log {
+  padding: 0 12px;
+  font: 12px var(--font-mono);
+  color: var(--muted);
+}
+
+.cause {
+  padding-left: 12px;
+  border-left: 2px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.cause b {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}
+
+.pair {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.pair > button {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr) 90px 70px;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  text-align: left;
+  font: inherit;
+  font-size: 13.5px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+}
+
+.pair > button:hover {
+  background: var(--accent-soft);
+}
+
+.pair > button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.method {
+  font: 500 12.5px var(--font-mono);
+}
+
+.params {
+  overflow: hidden;
+  font-size: 13px;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.latency,
+.size {
+  font: 12px var(--font-mono);
+}
+
+.size {
+  color: var(--muted);
+  text-align: right;
+}
+
+.pair[data-pending='true'] .latency {
+  color: var(--tool);
+}
+
+.messages {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 12px 12px;
+}
+
+.json {
+  max-height: 300px;
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--raised);
+  font: 12px/1.5 var(--font-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (width <= 1100px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (width <= 760px) {
+  .tiles,
+  .server,
+  .messages {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pair > button {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

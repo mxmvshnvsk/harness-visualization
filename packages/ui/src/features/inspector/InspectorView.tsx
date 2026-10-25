@@ -9,6 +9,7 @@ import { activeStage, projectStages } from '../../projections/projectStages';
 import type { SessionView } from '../../projections/sessionView';
 import { timeAt, type Schedule } from '../../timeline/schedule';
 import type { TimelineClock } from '../../timeline/TimelineClock';
+import { McpPairsContext, useMcpPairs } from './mcpPairs';
 import { StageCard } from './StageCard';
 import styles from './Stages.module.css';
 import { useFollowActive } from './useFollowActive';
@@ -32,29 +33,32 @@ export function InspectorView({
   const stages = useMemo(() => projectStages(events), [events]);
   const active = activeStage(stages, shown);
   const follow = useFollowActive(active?.id ?? null, clock);
+  const mcpPairs = useMcpPairs(events, shown);
   if (stages.length === 0) {
     return <div className={styles.empty}>Событий пока нет.</div>;
   }
   return (
-    <div className={styles.stages}>
-      {stages.map((stage) => (
-        <StageCard
-          key={stage.id}
-          stage={stage}
-          view={view}
-          shown={shown}
-          active={stage.id === active?.id}
-          cardRef={follow.register(stage.id)}
-          onSeek={(at) => {
-            clock.seek(timeAt(schedule, at));
-          }}
-        />
-      ))}
-      {follow.paused && (
-        <button type="button" className={styles.followChip} onClick={follow.resume}>
-          ↓ к текущему шагу
-        </button>
-      )}
-    </div>
+    <McpPairsContext.Provider value={mcpPairs}>
+      <div className={styles.stages}>
+        {stages.map((stage) => (
+          <StageCard
+            key={stage.id}
+            stage={stage}
+            view={view}
+            shown={shown}
+            active={stage.id === active?.id}
+            cardRef={follow.register(stage.id)}
+            onSeek={(at) => {
+              clock.seek(timeAt(schedule, at));
+            }}
+          />
+        ))}
+        {follow.paused && (
+          <button type="button" className={styles.followChip} onClick={follow.resume}>
+            ↓ к текущему шагу
+          </button>
+        )}
+      </div>
+    </McpPairsContext.Provider>
   );
 }

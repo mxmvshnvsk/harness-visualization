@@ -30,6 +30,7 @@ import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
 import { McpLab } from '../features/mcp/McpLab';
+import { McpSessionView } from '../features/mcp/session/McpSessionView';
 import { RagLab } from '../features/rag/RagLab';
 import { RetrievalView } from '../features/rag/session/RetrievalView';
 import { PlayerBar } from '../player/PlayerBar';
@@ -251,6 +252,7 @@ const VIEWS = [
   { value: 'inspector', label: 'Инспектор' },
   { value: 'context', label: 'Контекст' },
   { value: 'rag', label: 'RAG' },
+  { value: 'mcp', label: 'MCP' },
   { value: 'skills', label: 'Скиллы и память' },
   { value: 'events', label: 'Сырые события' },
 ] as const;
@@ -362,6 +364,7 @@ function ViewSwitch({ events, replay, liveStartedAt, traceFile }: ViewSwitchProp
         <ContextView events={events} shown={cursor} clock={clock} schedule={schedule} />
       )}
       {viewName === 'rag' && <RetrievalView events={events} shown={cursor} traceFile={traceFile} />}
+      {viewName === 'mcp' && <McpSessionView events={events} shown={cursor} />}
       {viewName === 'skills' && (
         <SkillsMemoryView events={events} shown={cursor} clock={clock} schedule={schedule} />
       )}

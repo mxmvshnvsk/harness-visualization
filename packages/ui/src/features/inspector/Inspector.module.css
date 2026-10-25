@@ -207,3 +207,22 @@
 .dropped {
   opacity: 0.45;
 }
+
+/* Блок «через MCP» у вызова тула сервера */
+.mcpRename {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: 12.5px var(--font-mono);
+  color: var(--muted);
+}
+
+.mcpName {
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--text);
+}
