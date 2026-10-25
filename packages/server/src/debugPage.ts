@@ -1,4 +1,4 @@
-// GET / — отладочная страница (packages/server/public/debug.html). Файл читается при каждом
+// GET /debug — отладочная страница (packages/server/public/debug.html). Файл читается при каждом
 // запросе: правку страницы видно после обновления вкладки, без перезапуска сервера.
 // Без @fastify/static: файл один, а так видно, что именно сервер отдаёт.
 
@@ -13,7 +13,7 @@ const CONTENT_SECURITY_POLICY =
   "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'";
 
 export function registerDebugPage(app: FastifyInstance): void {
-  app.get('/', async (_request, reply) => {
+  app.get('/debug', async (_request, reply) => {
     const html = await readFile(DEBUG_PAGE, 'utf8');
     return reply
       .header('content-type', 'text/html; charset=utf-8')

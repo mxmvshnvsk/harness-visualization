@@ -1,4 +1,5 @@
-// Точка входа pnpm serve: сервер на 127.0.0.1 и порту из harness.config.json (server.port).
+// Точка входа pnpm serve: сервер на 127.0.0.1 и порту из harness.config.json (server.port);
+// он же отдаёт собранный интерфейс.
 // Только локальный адрес: авторизации нет, а сессия тратит деньги владельца ключа модели.
 
 import { loadSettings } from '@harness-visualization/harness';
@@ -13,7 +14,8 @@ async function main(): Promise<void> {
   const app = createServer({ loadedSettings, projectRoot });
   const { port } = loadedSettings.settings.server;
   await app.listen({ host: HOST, port });
-  console.log(`Сервер харнесса: http://${HOST}:${String(port)}`);
+  const url = `http://${HOST}:${String(port)}`;
+  console.log(`Интерфейс: ${url}  ·  отладочная страница: ${url}/debug`);
   const stop = (): void => {
     void app.close().then(() => process.exit(0));
   };

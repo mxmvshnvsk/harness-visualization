@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import type { LoadedSettings } from '@harness-visualization/harness';
 import Fastify, { type FastifyInstance } from 'fastify';
 import { registerDebugPage } from './debugPage.js';
+import { registerUiPages } from './uiPages.js';
 import { PendingPermissions } from './permissions/PendingPermissions.js';
 import { PendingQuestions } from './sessions/PendingQuestions.js';
 import { SessionRegistry } from './sessions/SessionRegistry.js';
@@ -34,6 +35,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
   registerSessionRoutes(app, { ...options, registry, permissions, questions });
   const { traces } = options.loadedSettings.settings;
   registerTraceRoutes(app, new TraceCatalog(join(options.projectRoot, traces.directory)));
+  registerUiPages(app);
   registerDebugPage(app);
   // Сервер останавливают (Ctrl+C). Ждущие вопросы закрываются отказом noOneToAsk, диалоги,
   // ждущие следующего вопроса, заканчиваются, а идущие
