@@ -171,6 +171,11 @@
     "toolName": "kedr__semantic_search",
     "limit": 5
   },
+  "skills": {
+    "directory": "skills",
+    "always": [],
+    "manual": ["meeting-summary"]
+  },
   "mcpServers": [
     {
       "name": "kedr",

@@ -24,6 +24,36 @@ const RETRIEVAL_MODE_DESCRIPTIONS: Record<RetrievalMode, string> = {
     'модель составляет query, харнесс делает retrieval по нему и подмешивает найденное (retrieval rewrite)',
 };
 
+const SKILL_TRIGGERS: Record<EventOfType<'skill_loaded'>['trigger'], string> = {
+  always: 'харнесс при старте (always)',
+  model: 'модель выбрала его тулом load_skill',
+  user: 'пользователь командой /имя',
+};
+
+const SKILL_MODES: Record<EventOfType<'skill_catalog'>['skills'][number]['mode'], string> = {
+  always: 'always',
+  on_demand: 'по выбору модели',
+  manual: 'по команде /имя',
+};
+
+function describeSkillCatalog(event: EventOfType<'skill_catalog'>): string[] {
+  if (event.skills.length === 0 && event.problems.length === 0) {
+    return [styleText('dim', `Скиллов нет (папка ${event.directory}).`)];
+  }
+  return [
+    styleText('cyan', `Скиллы (${event.directory}): ${String(event.skills.length)}`),
+    ...event.skills.map((skill) =>
+      styleText(
+        'dim',
+        `    ${skill.name} — ${SKILL_MODES[skill.mode]}: ${shortenForPreview(skill.description)}`,
+      ),
+    ),
+    ...event.problems.map((problem) =>
+      styleText('yellow', `    ${problem.folder} — не скилл: ${problem.message}`),
+    ),
+  ];
+}
+
 type EventDescribers = {
   [Type in HarnessEventType]: (event: EventOfType<Type>) => string[];
 };
@@ -126,6 +156,13 @@ const EVENT_DESCRIBERS: EventDescribers = {
       `Харнесс сжал прошлые ходы в сводку: ${String(event.replacedMessages)} сообщений → 1, prompt ≈${formatNumber(event.beforeTokens)} → ≈${formatNumber(event.afterTokens)} токенов (порог ${formatNumber(event.thresholdTokens)}, ${event.preset})`,
     ),
     styleText('dim', `    сводка: ${shortenForPreview(event.summary)}`),
+  ],
+  skill_catalog: describeSkillCatalog,
+  skill_loaded: (event) => [
+    styleText(
+      'cyan',
+      `Скилл ${event.name} загружен: ${SKILL_TRIGGERS[event.trigger]}${event.files.length > 0 ? ` · файлы: ${event.files.join(', ')}` : ''}`,
+    ),
   ],
   awaiting_question: (event) => [
     styleText(

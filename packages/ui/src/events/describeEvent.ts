@@ -5,6 +5,12 @@ import type { HarnessEvent, HarnessEventType, TokenUsage } from '@harness-visual
 import { plural } from '../text/plural';
 import type { EventOfType } from './eventTypes';
 
+const SKILL_TRIGGERS = {
+  always: 'харнесс при старте',
+  model: 'модель тулом load_skill',
+  user: 'пользователь командой /имя',
+} as const;
+
 const MODEL_REQUESTS = { one: 'запрос', few: 'запроса', many: 'запросов' };
 
 // Для каждого типа — своя функция, и tsc знает поля события этого типа.
@@ -60,6 +66,11 @@ const DESCRIBERS: Describers = {
     `убрано результатов тулов: ${String(event.cleared.length)}, prompt ≈${String(event.beforeTokens)} → ≈${String(event.afterTokens)}`,
   history_compacted: (event) =>
     `сводка вместо ${String(event.replacedMessages)} сообщений, prompt ≈${String(event.beforeTokens)} → ≈${String(event.afterTokens)}`,
+  skill_catalog: (event) =>
+    event.skills.length === 0
+      ? `скиллов нет (${event.directory})`
+      : `скиллы: ${event.skills.map((skill) => `${skill.name} (${skill.mode})`).join(', ')}`,
+  skill_loaded: (event) => `скилл ${event.name} загружен: ${SKILL_TRIGGERS[event.trigger]}`,
   awaiting_question: (event) => `ход ${String(event.turn)} закончен, ждём следующий вопрос`,
   session_finished: (event) =>
     [

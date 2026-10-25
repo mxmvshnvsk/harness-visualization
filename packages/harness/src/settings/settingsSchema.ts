@@ -262,6 +262,14 @@ const retrievalSettingsSchema = z.object({
   limit: z.number().int().min(1).max(20).default(5),
 });
 
+// Скиллы (этап 6b): папка с папками скиллов от корня проекта. Режим по умолчанию — on_demand;
+// always — инструкция в system prompt сразу, manual — только по команде «/имя» пользователя.
+const skillsSettingsSchema = z.object({
+  directory: z.string().min(1).default('skills'),
+  always: z.array(z.string().min(1)).default([]),
+  manual: z.array(z.string().min(1)).default([]),
+});
+
 // Сервер для браузера (pnpm serve, этап 7). Адрес не настраивается: сервер слушает только
 // 127.0.0.1 — это локальный учебный стенд без авторизации, ключи модели остаются на нём.
 const serverSettingsSchema = z.object({
@@ -311,6 +319,7 @@ export const harnessSettingsSchema = z.object({
     limit: 5,
   }),
   grounding: groundingSettingsSchema.default({ similarityThreshold: 0.87 }),
+  skills: skillsSettingsSchema.default({ directory: 'skills', always: [], manual: [] }),
   server: serverSettingsSchema.default({
     port: 4317,
     permissionTimeoutSeconds: 120,
@@ -342,4 +351,5 @@ export type NetworkRoute = z.infer<typeof networkRouteSchema>;
 export type ServerSettings = z.infer<typeof serverSettingsSchema>;
 export type GroundingSettings = z.infer<typeof groundingSettingsSchema>;
 export type RetrievalSettings = z.infer<typeof retrievalSettingsSchema>;
+export type SkillsSettings = z.infer<typeof skillsSettingsSchema>;
 export type RetrievalMode = RetrievalSettings['mode'];

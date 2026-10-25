@@ -32,6 +32,9 @@ import type { SearchProvider } from '../search/searchProvider.js';
 import { createFileTools } from '../tools/fileTools/createFileTools.js';
 import { createWebTools, type WebToolsOptions } from '../tools/webTools/createWebTools.js';
 import { ToolRegistry } from '../tools/ToolRegistry.js';
+import { createSkillTools } from '../skills/createSkillTools.js';
+import { loadSkills } from '../skills/loadSkills.js';
+import { SkillLibrary } from '../skills/SkillLibrary.js';
 import { prepareWorkspace } from '../workspace/prepareWorkspace.js';
 import { Workspace } from '../workspace/Workspace.js';
 import { announceSession } from './announceSession.js';
@@ -182,6 +185,7 @@ async function prepareSession(
     searchProviderName: searchProvider?.name ?? null,
     retrievalMode: input.retrievalMode,
   });
+  const skills = await prepareSkills(input, events);
   const mcpServers = await connectMcpServers(settings.mcpServers, {
     projectRoot: input.projectRoot,
     events,
@@ -191,8 +195,33 @@ async function prepareSession(
     searchProvider,
     mcpServers,
     fetchImpl,
+    skills,
   });
   return { dependencies, mcpServers };
+}
+
+// Каталог скиллов — событием skill_catalog; скиллы always загружаются сразу: их инструкции
+// будут в system prompt с первого запроса.
+async function prepareSkills(input: SessionInput, events: EventStream): Promise<SkillLibrary> {
+  const settings = input.loadedSettings.settings.skills;
+  const catalog = await loadSkills(resolve(input.projectRoot, settings.directory), settings);
+  events.emit({
+    type: 'skill_catalog',
+    directory: settings.directory,
+    skills: catalog.skills.map((skill) => ({
+      name: skill.name,
+      description: skill.description,
+      mode: skill.mode,
+      files: skill.files,
+      instructionCharacters: skill.instructions.length,
+    })),
+    problems: catalog.problems,
+  });
+  const library = new SkillLibrary(catalog, events);
+  for (const skill of library.always()) {
+    library.load(skill, 'always');
+  }
+  return library;
 }
 
 async function prepareSearchProvider(
@@ -217,6 +246,7 @@ interface SessionResources {
   mcpServers: ConnectedMcpServers;
   // fetch с маршрутами из раздела network: им ходят модель, поиск и загрузка страниц.
   fetchImpl: RoutedFetch;
+  skills: SkillLibrary;
 }
 
 function createAgentDependencies(
@@ -233,7 +263,8 @@ function createAgentDependencies(
     fetchImpl: resources.fetchImpl,
   });
   const tools = new ToolRegistry();
-  for (const tool of [...createFileTools(), ...webTools, ...resources.mcpServers.tools]) {
+  const ownTools = [...createFileTools(), ...createSkillTools(resources.skills), ...webTools];
+  for (const tool of [...ownTools, ...resources.mcpServers.tools]) {
     tools.register(tool);
   }
   const harnessOnlyTools = new ToolRegistry();
@@ -261,6 +292,7 @@ function createAgentDependencies(
     confirmAction: hooks.confirmAction,
     permissionPolicy: settings.permissions,
     mcpServerInstructions: resources.mcpServers.instructions,
+    skills: resources.skills,
     budget: budgetSettings(settings.context),
   };
 }

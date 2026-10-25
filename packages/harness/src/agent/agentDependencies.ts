@@ -9,6 +9,7 @@ import type { PermissionAnswerSource } from '../permissions/permissionTypes.js';
 import type { ModelPrices, PermissionsSettings } from '../settings/settingsSchema.js';
 import type { ToolRegistry } from '../tools/ToolRegistry.js';
 import type { ToolContext } from '../tools/toolTypes.js';
+import type { SkillLibrary } from '../skills/SkillLibrary.js';
 import type { McpServerInstructions } from './systemPrompt.js';
 
 export interface ConfirmationRequest {
@@ -40,6 +41,8 @@ export interface AgentDependencies {
   permissionPolicy: PermissionsSettings;
   // Инструкции подключённых MCP-серверов — попадут в системный промпт.
   mcpServerInstructions: McpServerInstructions[];
+  // Скиллы сессии: каталог в system prompt, загрузка тулом и командой «/имя» (этап 6b).
+  skills: SkillLibrary;
   // Сколько харнесс отводит prompt и как оценивает его размер (этап 6.2).
   budget: BudgetSettings;
   // Кто сжимает историю в сводку (этап 6.5): та же модель или указанная в context.compactionModel.

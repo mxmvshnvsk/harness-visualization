@@ -27,7 +27,8 @@ import {
   type RetrievalQuery,
 } from './retrieveContext.js';
 import { rewriteSearchQuery } from './rewriteSearchQuery.js';
-import { buildSystemPrompt, type McpServerInstructions } from './systemPrompt.js';
+import { describeSkills, parseSkillCommand, withSkillInstructions } from '../skills/skillPrompt.js';
+import { buildSystemPrompt } from './systemPrompt.js';
 
 export interface TurnOptions {
   reasoningEffort: ReasoningEffort;
@@ -46,9 +47,9 @@ export async function runAgentTurn(
   const { events, tools } = dependencies;
   events.emit({ type: 'user_message', text: userText });
 
-  const userContent = await prepareUserContent(userText, dependencies, options.retrieval);
+  const userContent = await prepareWithSkill(userText, dependencies, options.retrieval);
   if (messages.length === 0) {
-    messages.push(systemMessage(dependencies.mcpServerInstructions));
+    messages.push(systemMessage(dependencies));
   }
   messages.push({ role: 'user', content: userContent });
   events.emit({ type: 'prompt_assembled', messages: [...messages], toolNames: tools.names() });
@@ -107,8 +108,33 @@ async function prepareRetrievalQuery(
 }
 
 // Модель не помнит прошлых запросов: всё, что она должна знать, харнесс кладёт в начало истории.
-function systemMessage(mcpInstructions: McpServerInstructions[]): ChatMessage {
-  return { role: 'system', content: buildSystemPrompt(new Date(), mcpInstructions) };
+function systemMessage(dependencies: AgentDependencies): ChatMessage {
+  return {
+    role: 'system',
+    content: buildSystemPrompt(new Date(), {
+      mcpInstructions: dependencies.mcpServerInstructions,
+      skills: describeSkills(dependencies.skills),
+    }),
+  };
+}
+
+// «/имя скилла» в начале вопроса — пользователь сам загружает скилл: инструкция встаёт перед
+// вопросом. Поиск харнесса (retrieval) ищет по самому вопросу, без команды и инструкции.
+async function prepareWithSkill(
+  userText: string,
+  dependencies: AgentDependencies,
+  retrieval: RetrievalOptions | null,
+): Promise<string> {
+  const command = parseSkillCommand(userText, dependencies.skills);
+  if (command === null) {
+    return prepareUserContent(userText, dependencies, retrieval);
+  }
+  dependencies.skills.load(command.skill, 'user');
+  const question = command.rest || 'Выполни задачу скилла.';
+  return withSkillInstructions(
+    command.skill,
+    await prepareUserContent(question, dependencies, retrieval),
+  );
 }
 
 // Перед запросом к модели: prompt дорос до порога — сначала убрать старые результаты тулов

@@ -35,6 +35,8 @@ const EVENT_GROUPS: Record<HarnessEventType, EventGroup> = {
   tool_result_truncated: 'model',
   tool_results_cleared: 'model',
   history_compacted: 'model',
+  skill_catalog: 'meta',
+  skill_loaded: 'model',
   session_finished: 'meta',
   error: 'error',
 };

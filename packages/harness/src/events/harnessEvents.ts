@@ -12,6 +12,7 @@ import type {
 import type { NetworkRequestInfo } from '../network/NetworkRouter.js';
 import type { PromptBudget } from '../context/promptBudget.js';
 import type { RetrievalMode } from '../settings/settingsSchema.js';
+import type { SkillMode, SkillProblem, SkillTrigger } from '../skills/skillTypes.js';
 import type {
   RequestCost,
   SessionCost,
@@ -344,6 +345,34 @@ export interface HistoryCompactedPayload {
   preset: string;
 }
 
+// Каталог скиллов при старте сессии (этап 6b): что модель увидит и в каком режиме.
+export interface SkillCatalogPayload {
+  type: 'skill_catalog';
+  // Папка скиллов от корня проекта.
+  directory: string;
+  skills: SkillSummary[];
+  // Папки, которые не прочитались как скилл, — с причиной.
+  problems: SkillProblem[];
+}
+
+export interface SkillSummary {
+  name: string;
+  description: string;
+  mode: SkillMode;
+  files: string[];
+  // Размер инструкции, символов: сколько она займёт в prompt, если её загрузить.
+  instructionCharacters: number;
+}
+
+// Инструкция скилла попала в prompt: харнесс при старте, модель тулом load_skill или
+// пользователь командой «/имя».
+export interface SkillLoadedPayload {
+  type: 'skill_loaded';
+  name: string;
+  trigger: SkillTrigger;
+  files: string[];
+}
+
 export interface AwaitingQuestionPayload {
   type: 'awaiting_question';
   // Сколько ходов диалога уже было.
@@ -400,6 +429,8 @@ export type HarnessEventPayload =
   | ToolResultTruncatedPayload
   | ToolResultsClearedPayload
   | HistoryCompactedPayload
+  | SkillCatalogPayload
+  | SkillLoadedPayload
   | SessionFinishedPayload
   | ErrorPayload;
 
