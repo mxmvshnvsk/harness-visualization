@@ -3,6 +3,7 @@
 // Тихий режим — для pnpm compare-runs: без консоли, а действия, требующие разрешения,
 // запрещаются — спросить некого.
 
+import type { PermissionAnswer } from '../agent/agentDependencies.js';
 import { askConfirmation } from './askConfirmation.js';
 import { createConsolePrinter } from '../events/createConsolePrinter.js';
 import { startSession, type SessionInput, type SessionResult } from '../session/startSession.js';
@@ -28,8 +29,8 @@ export async function runCliSession(input: CliSessionInput): Promise<CliSessionR
 }
 
 // В тихой сессии спросить некого, а молчание — не согласие.
-function denyWithoutAsking(): Promise<boolean> {
-  return Promise.resolve(false);
+function denyWithoutAsking(): Promise<PermissionAnswer> {
+  return Promise.resolve({ approved: false, answeredBy: 'noOneToAsk' });
 }
 
 function printMessage(message: string): void {

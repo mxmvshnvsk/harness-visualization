@@ -6,9 +6,10 @@
 import type { ToolCall, ToolResultMessage } from '../model/chatTypes.js';
 import type { ToolResultStatus } from '../events/harnessEvents.js';
 import { evaluatePermission } from '../permissions/evaluatePermission.js';
+import type { PermissionAnswerSource } from '../permissions/permissionTypes.js';
 import type { ToolCallCost } from '../tokenomics/costTypes.js';
 import type { PreparedToolCall } from '../tools/toolTypes.js';
-import type { AgentDependencies } from './agentDependencies.js';
+import type { AgentDependencies, PermissionAnswer } from './agentDependencies.js';
 
 type ParsedArguments = { success: true; value: unknown } | { success: false; errorMessage: string };
 
@@ -106,10 +107,10 @@ async function runTool(
     case 'deny':
       return blocked(preparedCall.actionDescription, evaluation.reason);
     case 'ask': {
-      const approved = await askPermission(toolCall, preparedCall.actionDescription, dependencies);
-      return approved
+      const answer = await askPermission(toolCall, preparedCall.actionDescription, dependencies);
+      return answer.approved
         ? executePreparedCall(preparedCall, dependencies)
-        : denial(preparedCall.actionDescription);
+        : denial(preparedCall.actionDescription, answer.answeredBy);
     }
     case 'allow':
       return executePreparedCall(preparedCall, dependencies);
@@ -120,7 +121,7 @@ async function askPermission(
   toolCall: ToolCall,
   actionDescription: string,
   dependencies: AgentDependencies,
-): Promise<boolean> {
+): Promise<PermissionAnswer> {
   dependencies.events.emit({
     type: 'permission_requested',
     toolCallId: toolCall.id,
@@ -128,15 +129,20 @@ async function askPermission(
     actionDescription,
   });
   const waitStartedAt = performance.now();
-  const approved = await dependencies.confirmAction({ toolName: toolCall.name, actionDescription });
+  const answer = await dependencies.confirmAction({
+    toolCallId: toolCall.id,
+    toolName: toolCall.name,
+    actionDescription,
+  });
   dependencies.events.emit({
     type: 'permission_resolved',
     toolCallId: toolCall.id,
     toolName: toolCall.name,
-    approved,
+    approved: answer.approved,
+    answeredBy: answer.answeredBy,
     waitedForUserMs: Math.round(performance.now() - waitStartedAt),
   });
-  return approved;
+  return answer;
 }
 
 async function executePreparedCall(
@@ -178,11 +184,19 @@ function blocked(actionDescription: string, reason: string): ToolOutcome {
 }
 
 // Модель должна понять, что это не сбой, а решение человека, и не пытаться обойти его.
-function denial(actionDescription: string): ToolOutcome {
+// Модели говорим, кто на самом деле отказал: «пользователь не разрешил» при тайм-ауте
+// была бы неправдой, и модель сделала бы из неё неверный вывод о желаниях пользователя.
+const DENIAL_REASONS: Record<PermissionAnswerSource, string> = {
+  user: 'Пользователь не разрешил действие',
+  timeout: 'Пользователь не ответил на запрос разрешения вовремя, поэтому действие запрещено',
+  noOneToAsk: 'Спросить разрешения у пользователя было некому, поэтому действие запрещено',
+};
+
+function denial(actionDescription: string, answeredBy: PermissionAnswerSource): ToolOutcome {
   return {
     status: 'denied',
     content:
-      `Пользователь не разрешил действие: ${actionDescription}. ` +
+      `${DENIAL_REASONS[answeredBy]}: ${actionDescription}. ` +
       'Не повторяй его без нового запроса пользователя.',
     details: null,
     cost: null,

@@ -6,6 +6,7 @@ export type {
   AgentDependencies,
   ConfirmAction,
   ConfirmationRequest,
+  PermissionAnswer,
 } from './agent/agentDependencies.js';
 export { EventStream, type EventListener } from './events/EventStream.js';
 export type * from './events/harnessEvents.js';
@@ -19,7 +20,11 @@ export { loadSettings, type LoadedSettings } from './settings/loadSettings.js';
 export type * from './settings/settingsSchema.js';
 export { evaluatePermission, type PermissionRequest } from './permissions/evaluatePermission.js';
 export { matchesHostPattern, matchesPathPattern } from './permissions/matchPatterns.js';
-export { PERMISSION_DECISIONS, TOOL_EFFECTS } from './permissions/permissionTypes.js';
+export {
+  PERMISSION_ANSWER_SOURCES,
+  PERMISSION_DECISIONS,
+  TOOL_EFFECTS,
+} from './permissions/permissionTypes.js';
 export type * from './permissions/permissionTypes.js';
 export type * from './search/searchProvider.js';
 export { createSearchProvider, type SearchProviderSetup } from './search/createSearchProvider.js';

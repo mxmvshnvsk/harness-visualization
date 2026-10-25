@@ -231,6 +231,9 @@ const retrievalSettingsSchema = z.object({
 // 127.0.0.1 — это локальный учебный стенд без авторизации, ключи модели остаются на нём.
 const serverSettingsSchema = z.object({
   port: z.number().int().min(1).max(65535).default(4317),
+  // Сколько ждать ответа браузера на запрос разрешения. Не ответили — действие запрещается:
+  // молчание не согласие, а сессия не должна висеть вечно, если вкладку закрыли.
+  permissionTimeoutSeconds: z.number().int().min(5).max(3600).default(120),
 });
 
 // Проверка опоры ответа (pnpm check-grounding, этап 5b).
@@ -261,7 +264,7 @@ export const harnessSettingsSchema = z.object({
     limit: 5,
   }),
   grounding: groundingSettingsSchema.default({ similarityThreshold: 0.87 }),
-  server: serverSettingsSchema.default({ port: 4317 }),
+  server: serverSettingsSchema.default({ port: 4317, permissionTimeoutSeconds: 120 }),
   prices: z.record(z.string(), modelPricesSchema).default({}),
   traces: tracesSettingsSchema,
 });

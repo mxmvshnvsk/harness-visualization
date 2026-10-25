@@ -38,7 +38,7 @@
 | `tool_call`               | модель попросила вызвать тул                                              | `toolCallId`, `toolName`, `argumentsText`, `arguments`                                                                           |
 | `permission_evaluated`    | политика разрешений приняла решение (на каждом вызове)                    | `toolCallId`, `toolName`, `effects`, `targets`, `actionDescription`, `decision`, `reason`, `checks`                              |
 | `permission_requested`    | тулу нужно разрешение пользователя                                        | `toolCallId`, `toolName`, `actionDescription`                                                                                    |
-| `permission_resolved`     | пользователь ответил                                                      | `toolCallId`, `toolName`, `approved`, `waitedForUserMs`                                                                          |
+| `permission_resolved`     | на вопрос ответили — или ответа не дождались                              | `toolCallId`, `toolName`, `approved`, `answeredBy`, `waitedForUserMs`                                                            |
 | `tool_result`             | тул выполнен, не смог, пользователь отказал или политика запретила        | `toolCallId`, `toolName`, `status`, `content`, `details`, `cost`, `durationMs`                                                   |
 | `assistant_message`       | харнесс отдал ответ пользователю                                          | `text`                                                                                                                           |
 | `session_finished`        | сессия закончилась                                                        | `durationMs`, `modelRequests`, `usage`, `modelCost`, `toolCosts`                                                                 |
@@ -77,7 +77,7 @@ assistant_message
 - `details` — подробности для трейса и токеномики, модель их не видит. У `fetch_url` это адрес после перенаправлений, вес скачанного HTML и сколько символов текста из него получилось; у `web_search` — кредиты Tavily и время ответа или, у Яндекса, размер полученного XML.
 - `cost` — стоимость вызова в деньгах, если тул ходит в платный сервис: валюта, сумма, тариф и дата проверки цен. Сейчас она есть у поиска Яндекса (дневной или ночной тариф); у бесплатных тулов и у Tavily, где кредиты стоят по-разному в зависимости от тарифа пользователя, — `null`.
 
-Между `tool_call` и `tool_result` всегда стоит `permission_evaluated` — «след решения» политики: все проверки по порядку (`checks`: источник, что проверялось, подошло ли, решение), итог `decision` (`allow`, `ask`, `deny`) и причина `reason`. Если итог `ask`, дальше идут `permission_requested` и `permission_resolved`. Возможность действия харнесс проверяет до вопроса: про несуществующий файл пользователя не спрашивают. Время, пока пользователь решал, записано в `waitedForUserMs` и в `durationMs` тула не входит.
+Между `tool_call` и `tool_result` всегда стоит `permission_evaluated` — «след решения» политики: все проверки по порядку (`checks`: источник, что проверялось, подошло ли, решение), итог `decision` (`allow`, `ask`, `deny`) и причина `reason`. Если итог `ask`, дальше идут `permission_requested` и `permission_resolved`. Возможность действия харнесс проверяет до вопроса: про несуществующий файл пользователя не спрашивают. Время, пока пользователь решал, записано в `waitedForUserMs` и в `durationMs` тула не входит. Кто решил — в `answeredBy`: `user` — пользователь; `timeout` — браузер не ответил вовремя; `noOneToAsk` — спросить было некого (нет терминала, тихий режим `compare-runs`). Два последних — всегда отказ, и модель получает об этом правду: не «пользователь не разрешил», а «не ответил вовремя» или «спросить было некому».
 
 ## MCP
 
@@ -127,6 +127,17 @@ data: {"sessionId":"51d266ac","status":"finished","eventCount":31,"tracePath":"t
 - `data` — событие харнесса целиком, в том же JSON, что и строка трейса.
 - `event: end` — сессия закончилась: статус (`finished` или `failed`) и путь к трейсу. Браузер должен закрыть `EventSource` сам — иначе по спецификации он переподключится к законченной сессии.
 - Строки `: ping` раз в 15 секунд — комментарии: браузер их не показывает, а соединение не считается простаивающим.
+
+### Ответ на запрос разрешения
+
+Увидев в потоке `permission_requested`, браузер отвечает обычным POST — поток SSE односторонний:
+
+```
+POST /api/sessions/51d266ac/permissions
+{"toolCallId": "call_00_…", "approved": true}
+```
+
+`200` — ответ принят; `409` — вопрос уже закрыт (ответили раньше, истёк срок или `toolCallId` не тот); `404` — сессии нет. Ждущие вопросы видны и в `GET /api/sessions/:id` — поле `pendingPermissions` со сроком `expiresAt`: так вкладка, открытая посреди сессии, узнает о вопросе без разбора всех событий. Не ответили за `server.permissionTimeoutSeconds` (по умолчанию 120) — действие запрещается, в `permission_resolved` будет `answeredBy: "timeout"`.
 
 Сервер держит в памяти все события сессии, поэтому подключиться можно и после начала, и после конца — придёт всё с первого события. Законченных сессий в памяти не больше 20; их трейсы остаются на диске.
 

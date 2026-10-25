@@ -99,7 +99,7 @@ const EVENT_DESCRIBERS: EventDescribers = {
   permission_resolved: (event) => [
     styleText(
       'magenta',
-      `${event.approved ? 'Пользователь разрешил' : 'Пользователь отказал'} (думал ${formatNumber(event.waitedForUserMs)} мс)`,
+      `${describePermissionAnswer(event)} (ждали ${formatNumber(event.waitedForUserMs)} мс)`,
     ),
   ],
   tool_result: describeToolResult,
@@ -311,4 +311,15 @@ function describeSessionFinished(event: EventOfType<'session_finished'>): string
     ),
     styleText('bold', `    стоимость: ${costs.join(' · ')}`),
   ];
+}
+
+function describePermissionAnswer(event: { approved: boolean; answeredBy: string }): string {
+  switch (event.answeredBy) {
+    case 'timeout':
+      return 'Никто не ответил вовремя — действие запрещено';
+    case 'noOneToAsk':
+      return 'Спросить некого — действие запрещено';
+    default:
+      return event.approved ? 'Пользователь разрешил' : 'Пользователь отказал';
+  }
 }

@@ -4,6 +4,7 @@
 import type { ChatMessage, ModelReply, ReasoningEffort, TokenUsage } from '../model/chatTypes.js';
 import type {
   ActionTarget,
+  PermissionAnswerSource,
   PermissionCheck,
   PermissionDecision,
   ToolEffect,
@@ -285,6 +286,8 @@ export interface PermissionResolvedPayload {
   toolCallId: string;
   toolName: string;
   approved: boolean;
+  // Кто решил: пользователь, тайм-аут или «спросить некого» — два последних всегда отказ.
+  answeredBy: PermissionAnswerSource;
   // Сколько пользователь думал. В длительность тула это время не входит.
   waitedForUserMs: number;
 }

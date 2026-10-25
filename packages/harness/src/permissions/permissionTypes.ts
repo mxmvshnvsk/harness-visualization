@@ -13,6 +13,11 @@ export const PERMISSION_DECISIONS = ['allow', 'ask', 'deny'] as const;
 
 export type PermissionDecision = (typeof PERMISSION_DECISIONS)[number];
 
+// Кто решил: пользователь; никто не ответил вовремя; спросить было некого
+// (нет терминала, тихий режим compare-runs). Последние два — всегда отказ.
+export const PERMISSION_ANSWER_SOURCES = ['user', 'timeout', 'noOneToAsk'] as const;
+export type PermissionAnswerSource = (typeof PERMISSION_ANSWER_SOURCES)[number];
+
 // С чем работает вызов: по этим целям проверяются правила по аргументам.
 export type ActionTarget = { kind: 'path'; path: string } | { kind: 'host'; host: string };
 

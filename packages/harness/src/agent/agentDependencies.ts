@@ -4,19 +4,26 @@
 
 import type { EventStream } from '../events/EventStream.js';
 import type { ModelProvider } from '../model/modelProvider.js';
+import type { PermissionAnswerSource } from '../permissions/permissionTypes.js';
 import type { ModelPrices, PermissionsSettings } from '../settings/settingsSchema.js';
 import type { ToolRegistry } from '../tools/ToolRegistry.js';
 import type { ToolContext } from '../tools/toolTypes.js';
 import type { McpServerInstructions } from './systemPrompt.js';
 
 export interface ConfirmationRequest {
+  // По нему ответ из браузера находит свой вопрос.
+  toolCallId: string;
   toolName: string;
   // Понятное человеку описание действия: «Удалить файл notes/a.md».
   actionDescription: string;
 }
 
-// Возвращает true, если пользователь разрешил действие.
-export type ConfirmAction = (request: ConfirmationRequest) => Promise<boolean>;
+export interface PermissionAnswer {
+  approved: boolean;
+  answeredBy: PermissionAnswerSource;
+}
+
+export type ConfirmAction = (request: ConfirmationRequest) => Promise<PermissionAnswer>;
 
 export interface AgentDependencies {
   provider: ModelProvider;

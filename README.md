@@ -263,14 +263,25 @@ curl --noproxy '*' -X POST -H 'content-type: application/json' \
 curl --noproxy '*' -N http://127.0.0.1:4317/api/sessions/<id>/events
 ```
 
-| Маршрут                        | Что делает                                                                                                                                                        |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POST /api/sessions`           | запускает сессию: `question` и необязательные `reasoningEffort`, `retrievalMode`, `retrievalToolName`, `searchProvider`, `freshWorkspace` — как флаги `pnpm chat` |
-| `GET /api/sessions`            | сессии этого запуска сервера                                                                                                                                      |
-| `GET /api/sessions/:id`        | состояние одной сессии                                                                                                                                            |
-| `GET /api/sessions/:id/events` | поток событий (SSE): сначала то, что уже было, потом — вживую                                                                                                     |
+| Маршрут                              | Что делает                                                                                                                                                        |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /api/sessions`                 | запускает сессию: `question` и необязательные `reasoningEffort`, `retrievalMode`, `retrievalToolName`, `searchProvider`, `freshWorkspace` — как флаги `pnpm chat` |
+| `GET /api/sessions`                  | сессии этого запуска сервера                                                                                                                                      |
+| `GET /api/sessions/:id`              | состояние одной сессии и вопросы о разрешении, ждущие ответа (`pendingPermissions`)                                                                               |
+| `GET /api/sessions/:id/events`       | поток событий (SSE): сначала то, что уже было, потом — вживую                                                                                                     |
+| `POST /api/sessions/:id/permissions` | ответ на `permission_requested`: `{"toolCallId": "…", "approved": true}`                                                                                          |
 
-Формат потока — в `docs/events.md`. Разрешения на действия из браузера — следующий шаг; пока сервер такие действия запрещает: спросить некого.
+Если на вопрос о разрешении не ответить за `server.permissionTimeoutSeconds` (по умолчанию 120 секунд), действие запрещается: молчание не согласие. Попробовать можно на вопросе, где агенту нужно удалить файл (запись разрешена без вопроса, удаление — с вопросом):
+
+```bash
+curl --noproxy '*' -X POST -H 'content-type: application/json' \
+  -d '{"question": "Создай notes/probe.md с текстом «проба», потом удали его"}' http://127.0.0.1:4317/api/sessions
+curl --noproxy '*' http://127.0.0.1:4317/api/sessions/<id>        # toolCallId — в pendingPermissions
+curl --noproxy '*' -X POST -H 'content-type: application/json' \
+  -d '{"toolCallId": "<toolCallId>", "approved": true}' http://127.0.0.1:4317/api/sessions/<id>/permissions
+```
+
+Формат потока и ответа на разрешение — в `docs/events.md`.
 
 ## Команды
 

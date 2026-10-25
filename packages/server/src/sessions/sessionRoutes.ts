@@ -1,8 +1,9 @@
 // Маршруты сессий:
 //   POST /api/sessions                    — запустить сессию, сразу ответить её id;
 //   GET  /api/sessions                    — список сессий этого запуска сервера;
-//   GET  /api/sessions/:sessionId         — состояние одной сессии;
-//   GET  /api/sessions/:sessionId/events  — поток её событий (SSE), с пропущенными по Last-Event-ID.
+//   GET  /api/sessions/:sessionId         — состояние одной сессии и вопросы, ждущие ответа;
+//   GET  /api/sessions/:sessionId/events  — поток её событий (SSE), с пропущенными по Last-Event-ID;
+//   POST /api/sessions/:sessionId/permissions — ответ на permission_requested.
 
 import {
   startSession,
@@ -10,6 +11,8 @@ import {
   type SessionInput,
 } from '@harness-visualization/harness';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { answerPermissionRequestSchema } from '../permissions/answerPermissionRequest.js';
+import type { PendingPermissions } from '../permissions/PendingPermissions.js';
 import {
   formatEnd,
   formatEvent,
@@ -26,6 +29,7 @@ export interface SessionRoutesOptions {
   loadedSettings: LoadedSettings;
   projectRoot: string;
   registry: SessionRegistry;
+  permissions: PendingPermissions;
 }
 
 interface SessionParams {
@@ -37,7 +41,7 @@ interface EventsQuery {
 }
 
 export function registerSessionRoutes(app: FastifyInstance, options: SessionRoutesOptions): void {
-  const { registry } = options;
+  const { registry, permissions } = options;
 
   app.post('/api/sessions', async (request, reply) => {
     const parsed = startSessionRequestSchema.safeParse(request.body);
@@ -55,7 +59,24 @@ export function registerSessionRoutes(app: FastifyInstance, options: SessionRout
     if (summary === null) {
       return reply.code(404).send({ error: 'Сессии нет в памяти сервера' });
     }
-    return summary;
+    return { ...summary, pendingPermissions: permissions.forSession(summary.sessionId) };
+  });
+
+  app.post<{ Params: SessionParams }>('/api/sessions/:sessionId/permissions', (request, reply) => {
+    const { sessionId } = request.params;
+    if (registry.summary(sessionId) === null) {
+      return reply.code(404).send({ error: 'Сессии нет в памяти сервера' });
+    }
+    const parsed = answerPermissionRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.message });
+    }
+    const { toolCallId, approved } = parsed.data;
+    if (permissions.answer(sessionId, toolCallId, approved) === 'notPending') {
+      // 409: вопрос уже закрыт — ответили раньше, истёк срок или toolCallId не тот.
+      return reply.code(409).send({ error: 'Этот вопрос не ждёт ответа' });
+    }
+    return { toolCallId, approved };
   });
 
   app.get<{ Params: SessionParams; Querystring: EventsQuery }>(
@@ -70,12 +91,15 @@ async function launchSession(
   body: StartSessionRequest,
   options: SessionRoutesOptions,
 ): Promise<string> {
-  const { loadedSettings, projectRoot, registry } = options;
+  const { loadedSettings, projectRoot, registry, permissions } = options;
+  // id сессии узнаём из первого события: permission_requested приходит раньше вопроса,
+  // так что к вызову confirmAction он уже известен.
+  let sessionId = '';
   const session = await startSession(toSessionInput(body, loadedSettings, projectRoot), {
-    // Разрешения из браузера — шаг 7.3. Пока спросить некого, а молчание — не согласие.
-    confirmAction: () => Promise.resolve(false),
+    confirmAction: (request) => permissions.ask(sessionId, request),
     listeners: [
       (event) => {
+        sessionId = event.sessionId;
         registry.ensure(event.sessionId, body.question);
         registry.record(event);
       },
