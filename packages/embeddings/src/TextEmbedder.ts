@@ -25,7 +25,8 @@ const ONNX_LOG_LEVEL_ERROR = 3;
 export interface EmbedderOptions {
   // Папка, где лежит модель (и куда она скачивается).
   modelDirectory: string;
-  // Можно ли скачать модель, если её нет в папке. MCP-сервер не скачивает — только pnpm rag-index.
+  // Можно ли скачать модель, если её нет в папке. Скачивает только pnpm rag-index,
+  // остальные — MCP-сервер и харнесс — берут уже скачанную.
   allowDownload: boolean;
   onLoadProgress?: ProgressCallback;
 }
@@ -85,7 +86,7 @@ export class TextEmbedder {
   }
 }
 
-// Модель хранится в папке пакета, а не внутри node_modules, как по умолчанию:
+// Модель хранится в .cache/embeddings в корне проекта, а не внутри node_modules, как по умолчанию:
 // так она переживает переустановку зависимостей и лежит рядом с кэшем векторов.
 // Скачанный файл и «локальная модель» для transformers.js — одна и та же папка.
 function configureModelStorage(options: EmbedderOptions): void {

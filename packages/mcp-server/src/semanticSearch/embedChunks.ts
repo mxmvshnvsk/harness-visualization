@@ -4,8 +4,12 @@
 import type { KnowledgeDocument } from '../knowledgeBase/documentTypes.js';
 import type { DocumentChunk, IndexedChunk } from './documentChunk.js';
 import { splitIntoChunks } from './splitIntoChunks.js';
-import type { TextEmbedder } from './TextEmbedder.js';
-import { hashPassage, readVectorCache, writeVectorCache } from './vectorCache.js';
+import {
+  hashPassage,
+  readVectorCache,
+  writeVectorCache,
+  type TextEmbedder,
+} from '@harness-visualization/embeddings';
 
 // Сколько фрагментов отправлять в модель за раз: больше — быстрее, но дольше
 // нет вестей о ходе работы.

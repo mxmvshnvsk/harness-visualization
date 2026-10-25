@@ -36,6 +36,15 @@ importers:
         specifier: 8.72.0
         version: 8.72.0(eslint@10.13.0)(typescript@6.0.3)
 
+  packages/embeddings:
+    dependencies:
+      '@huggingface/transformers':
+        specifier: 4.3.1
+        version: 4.3.1(@types/node@22.20.5)
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+
   packages/harness:
     dependencies:
       '@modelcontextprotocol/client':
@@ -59,9 +68,9 @@ importers:
 
   packages/mcp-server:
     dependencies:
-      '@huggingface/transformers':
-        specifier: 4.3.1
-        version: 4.3.1(@types/node@22.20.5)
+      '@harness-visualization/embeddings':
+        specifier: workspace:*
+        version: link:../embeddings
       '@modelcontextprotocol/server':
         specifier: 2.4.0
         version: 2.4.0

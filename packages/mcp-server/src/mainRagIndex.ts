@@ -5,7 +5,8 @@
 // молча тянул бы около 120 МБ, а подпроцесс сервера ещё и не получает сетевые настройки
 // харнесса. Здесь же сеть идёт через прокси из HTTPS_PROXY (команда задаёт NODE_USE_ENV_PROXY=1).
 
-import type { ProgressInfo } from '@huggingface/transformers';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { loadKnowledgeBase } from './knowledgeBase/loadKnowledgeBase.js';
 import type { IndexedChunk } from './semanticSearch/documentChunk.js';
 import { embedChunks } from './semanticSearch/embedChunks.js';
@@ -14,7 +15,8 @@ import {
   EMBEDDING_MODEL_DTYPE,
   EMBEDDING_MODEL_ID,
   TextEmbedder,
-} from './semanticSearch/TextEmbedder.js';
+  type ProgressInfo,
+} from '@harness-visualization/embeddings';
 import { DATA_DIRECTORY, MODEL_DIRECTORY, VECTOR_CACHE_PATH } from './serverPaths.js';
 
 async function main(): Promise<void> {
@@ -33,7 +35,7 @@ async function main(): Promise<void> {
     embedder,
     vectorCachePath: VECTOR_CACHE_PATH,
     onProgress: (embeddedCount, totalToEmbed) => {
-      console.log(`Векторы: ${embeddedCount} из ${totalToEmbed}`);
+      console.log(`Embeddings: ${embeddedCount} из ${totalToEmbed}`);
     },
   });
 
@@ -44,11 +46,16 @@ async function main(): Promise<void> {
   console.log(`Готово за ${seconds} с`);
 }
 
-// Показываем только скачивание: файлы, уже лежащие в папке модели, загружаются молча.
+// Показываем только настоящее скачивание. transformers.js шлёт событие download и для файла,
+// который берёт из кэша на диске, поэтому проверяем, лежит ли файл уже в папке модели.
 function printDownloadProgress(progress: ProgressInfo): void {
-  if (progress.status === 'download') {
-    console.log(`Скачивается ${progress.file}…`);
+  if (progress.status !== 'download') {
+    return;
   }
+  if (existsSync(join(MODEL_DIRECTORY, EMBEDDING_MODEL_ID, progress.file))) {
+    return;
+  }
+  console.log(`Скачивается ${progress.file}…`);
 }
 
 function printChunkStatistics(chunks: IndexedChunk[]): void {

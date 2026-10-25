@@ -8,7 +8,7 @@ import type { KnowledgeDocument } from '../knowledgeBase/documentTypes.js';
 import type { IndexedChunk } from './documentChunk.js';
 import { embedChunks } from './embedChunks.js';
 import { rankChunks, type SemanticHit } from './rankChunks.js';
-import { TextEmbedder } from './TextEmbedder.js';
+import { TextEmbedder } from '@harness-visualization/embeddings';
 
 export interface SemanticIndexOptions {
   documents: KnowledgeDocument[];

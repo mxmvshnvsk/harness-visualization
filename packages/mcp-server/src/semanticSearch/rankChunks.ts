@@ -3,6 +3,7 @@
 // структур для приближённого поиска: здесь видно, что поиск по смыслу — это просто
 // «сравнить вектор вопроса со всеми векторами и взять самые близкие».
 
+import { cosineSimilarity } from '@harness-visualization/embeddings';
 import type { IndexedChunk } from './documentChunk.js';
 
 export interface SemanticHit {
@@ -17,15 +18,7 @@ export function rankChunks(
   limit: number,
 ): SemanticHit[] {
   return chunks
-    .map((indexed) => ({ indexed, similarity: dotProduct(indexed.vector, queryVector) }))
+    .map((indexed) => ({ indexed, similarity: cosineSimilarity(indexed.vector, queryVector) }))
     .sort((first, second) => second.similarity - first.similarity)
     .slice(0, limit);
-}
-
-function dotProduct(first: number[], second: number[]): number {
-  let sum = 0;
-  for (let index = 0; index < first.length; index += 1) {
-    sum += (first[index] ?? 0) * (second[index] ?? 0);
-  }
-  return sum;
 }
