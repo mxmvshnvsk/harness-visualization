@@ -153,6 +153,34 @@ export interface ContextRetrievedPayload {
   durationMs: number;
 }
 
+// Начало проверки опоры ответа с судьёй. У проверки свой трейс: исходный трейс — запись
+// сессии, его не трогаем. Здесь — ссылка на него.
+export interface GroundingCheckStartedPayload {
+  type: 'grounding_check_started';
+  sourceTracePath: string;
+  // null — в исходном трейсе нет id сессии.
+  sourceSessionId: string | null;
+  claimCount: number;
+  judgeModel: string;
+}
+
+// supported — показанное подтверждает claim; contradicted — противоречит; notFound — в показанном
+// об этом нет; unclear — ответ судьи не разобрался.
+export type JudgeVerdict = 'supported' | 'contradicted' | 'notFound' | 'unclear';
+
+// Мнение модели-судьи о claim. Мнение, а не проверка: судья сам недетерминирован и может ошибаться.
+export interface ClaimJudgedPayload {
+  type: 'claim_judged';
+  // Запрос к судье — в паре model_request и model_response с тем же requestId.
+  requestId: string;
+  claimNumber: number;
+  claim: string;
+  // Строки того, что видела модель в исходной сессии, — их судья видел рядом с claim.
+  evidence: string[];
+  verdict: JudgeVerdict;
+  explanation: string;
+}
+
 export interface PromptAssembledPayload {
   type: 'prompt_assembled';
   messages: ChatMessage[];
@@ -161,8 +189,9 @@ export interface PromptAssembledPayload {
 }
 
 // Зачем харнесс обращается к модели: шаг цикла агента или служебный запрос харнесса —
-// например, переформулировать вопрос пользователя в поисковый запрос (retrieval rewrite).
-export type ModelRequestPurpose = 'agentStep' | 'queryRewrite';
+// переформулировать вопрос пользователя в поисковый запрос (retrieval rewrite)
+// или оценить claim ответа как судья (check-grounding --judge, этап 5b.3).
+export type ModelRequestPurpose = 'agentStep' | 'queryRewrite' | 'groundingJudge';
 
 export interface ModelRequestPayload {
   type: 'model_request';
@@ -293,6 +322,8 @@ export type HarnessEventPayload =
   | NetworkRequestPayload
   | UserMessagePayload
   | QueryRewrittenPayload
+  | GroundingCheckStartedPayload
+  | ClaimJudgedPayload
   | ContextRetrievedPayload
   | PromptAssembledPayload
   | ModelRequestPayload

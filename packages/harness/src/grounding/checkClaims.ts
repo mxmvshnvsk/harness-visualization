@@ -11,5 +11,7 @@ export function checkClaims(answer: string, seenTexts: SeenText[]): ClaimCheck[]
     claim,
     quotes: extractQuotes(claim.text).map((quote) => locateQuote(quote, seenTexts)),
     similarity: null,
+    closestLines: [],
+    judge: null,
   }));
 }

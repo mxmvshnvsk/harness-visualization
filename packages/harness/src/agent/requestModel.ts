@@ -11,6 +11,10 @@ import type { ModelRequestPurpose } from '../events/harnessEvents.js';
 import { calculateCost } from '../tokenomics/calculateCost.js';
 import type { AgentDependencies } from './agentDependencies.js';
 
+// Запросу к модели нужны только провайдер, поток событий и цены — так его может вызывать
+// не только цикл агента, но и, например, судья в check-grounding (этап 5b.3).
+export type ModelRequestDependencies = Pick<AgentDependencies, 'provider' | 'events' | 'prices'>;
+
 // Шаг цикла агента или служебный запрос харнесса — это видно в событии model_request.
 export type ModelRequestStep =
   | { purpose: 'agentStep'; iteration: number }
@@ -23,7 +27,7 @@ export interface ModelExchange {
 
 export async function requestModel(
   request: ModelRequest,
-  dependencies: AgentDependencies,
+  dependencies: ModelRequestDependencies,
   step: ModelRequestStep,
 ): Promise<ModelExchange> {
   const { provider, events } = dependencies;
@@ -61,7 +65,7 @@ export async function requestModel(
 
 async function sendAndReportFailure(
   requestId: string,
-  dependencies: AgentDependencies,
+  dependencies: ModelRequestDependencies,
   send: () => Promise<RawHttpResponse>,
 ): Promise<RawHttpResponse> {
   try {
@@ -75,7 +79,7 @@ async function sendAndReportFailure(
 function parseAndReportFailure(
   requestId: string,
   rawResponse: RawHttpResponse,
-  dependencies: AgentDependencies,
+  dependencies: ModelRequestDependencies,
 ): ModelReply {
   try {
     return dependencies.provider.parseReply(rawResponse);
@@ -89,7 +93,7 @@ function reportModelError(
   requestId: string,
   error: unknown,
   rawResponse: RawHttpResponse | null,
-  dependencies: AgentDependencies,
+  dependencies: ModelRequestDependencies,
 ): void {
   const isProviderError = error instanceof ModelProviderError;
   dependencies.events.emit({

@@ -1,6 +1,7 @@
 // Типы проверки claims (утверждений) ответа — уровни 2 и 3 проверки опоры ответа (этап 5b).
 // Уровень 1 — ссылки на источники (referenceTypes.ts).
 
+import type { JudgeVerdict } from '../events/harnessEvents.js';
 import type { SourceLevel } from './referenceTypes.js';
 
 // Claim — одно утверждение ответа: предложение, пункт списка или строка таблицы.
@@ -42,9 +43,21 @@ export interface SimilarityMatch {
   seen: SeenText;
 }
 
+// Мнение модели-судьи (этап 5b.3).
+export interface JudgeOpinion {
+  verdict: JudgeVerdict;
+  explanation: string;
+  // Событие claim_judged в трейсе проверки.
+  eventRequestId: string;
+}
+
 export interface ClaimCheck {
   claim: Claim;
   quotes: QuoteCheck[];
   // null — сходство не считалось (например, модель эмбеддингов не скачана).
   similarity: SimilarityMatch | null;
+  // Несколько ближайших строк, от самой близкой; их видит судья.
+  closestLines: SimilarityMatch[];
+  // null — судью не звали (нет флага --judge).
+  judge: JudgeOpinion | null;
 }

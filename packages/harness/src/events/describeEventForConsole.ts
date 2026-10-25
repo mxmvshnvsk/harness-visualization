@@ -72,6 +72,18 @@ const EVENT_DESCRIBERS: EventDescribers = {
   prompt_assembled: describePromptAssembled,
   model_request: describeModelRequest,
   query_rewritten: describeQueryRewritten,
+  grounding_check_started: (event) => [
+    styleText(
+      'bold',
+      `Grounding check с судьёй (judge, ${event.judgeModel}) по трейсу ${event.sourceTracePath}: ${String(event.claimCount)} claims`,
+    ),
+  ],
+  claim_judged: (event) => [
+    styleText(
+      'magenta',
+      `Судья о claim ${String(event.claimNumber)}: ${event.verdict} — ${shortenForPreview(event.explanation)}`,
+    ),
+  ],
   model_response: describeModelResponse,
   model_error: (event) => [styleText('red', `Ошибка модели: ${event.message}`)],
   tool_call: (event) => [
@@ -162,6 +174,9 @@ function describePromptAssembled(event: EventOfType<'prompt_assembled'>): string
 
 function describeModelRequest(event: EventOfType<'model_request'>): string[] {
   const target = `${event.method} ${event.url} · effort ${event.reasoningEffort}`;
+  if (event.purpose === 'groundingJudge') {
+    return [styleText('cyan', `Харнесс → модель (судья: оценить claim, без тулов): ${target}`)];
+  }
   if (event.purpose === 'queryRewrite') {
     return [
       styleText(

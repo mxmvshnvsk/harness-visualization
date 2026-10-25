@@ -2,7 +2,14 @@
 // он опирается: дословные цитаты (5b.1) и ближайший кусок увиденного по сходству (5b.2).
 
 import { styleText } from 'node:util';
-import type { ClaimCheck, QuoteCheck, SeenText, SimilarityMatch } from './claimTypes.js';
+import type { JudgeVerdict } from '../events/harnessEvents.js';
+import type {
+  ClaimCheck,
+  JudgeOpinion,
+  QuoteCheck,
+  SeenText,
+  SimilarityMatch,
+} from './claimTypes.js';
 
 const CLAIM_PREVIEW_LENGTH = 110;
 const PASSAGE_PREVIEW_LENGTH = 80;
@@ -13,6 +20,13 @@ export interface ClaimsReportOptions {
   // Почему сходство не считалось; null — считалось.
   similaritySkippedReason: string | null;
 }
+
+const VERDICT_LABELS: Record<JudgeVerdict, string> = {
+  supported: 'подтверждает (supported)',
+  contradicted: 'противоречит (contradicted)',
+  notFound: 'в показанном нет (notFound)',
+  unclear: 'ответ не разобрался (unclear)',
+};
 
 const LEVEL_LABELS: Record<SeenText['level'], string> = {
   full: 'целиком',
@@ -45,6 +59,10 @@ export function describeClaimsReport(claims: ClaimCheck[], options: ClaimsReport
     lines.push(...describeClaim(checked, options.similarityThreshold));
   }
   lines.push('', describeQuotesSummary(claims), describeSimilaritySummary(claims, options));
+  const judgeSummary = describeJudgeSummary(claims);
+  if (judgeSummary !== null) {
+    lines.push(judgeSummary);
+  }
   return lines;
 }
 
@@ -56,7 +74,18 @@ function describeClaim(checked: ClaimCheck, threshold: number): string[] {
   if (checked.similarity !== null) {
     lines.push(describeSimilarity(checked.similarity, threshold));
   }
+  if (checked.judge !== null) {
+    lines.push(describeJudge(checked.judge));
+  }
   return lines;
+}
+
+// Мнение — другим цветом и с пометкой, чтобы его не спутали с проверкой кодом.
+function describeJudge(opinion: JudgeOpinion): string {
+  return styleText(
+    'magenta',
+    `     ⚖ мнение судьи: ${VERDICT_LABELS[opinion.verdict]} — ${opinion.explanation}`,
+  );
 }
 
 function describeSimilarity(match: SimilarityMatch, threshold: number): string {
@@ -74,6 +103,24 @@ function describeSimilarity(match: SimilarityMatch, threshold: number): string {
 function describeSeen(seen: SeenText): string {
   const caller = seen.calledBy === 'harness' ? 'подмешал харнесс' : 'вызвала модель';
   return `#${String(seen.eventSequence)} ${seen.toolName} (${caller}), ${LEVEL_LABELS[seen.level]}`;
+}
+
+function describeJudgeSummary(claims: ClaimCheck[]): string | null {
+  const opinions = claims.flatMap((checked) => (checked.judge === null ? [] : [checked.judge]));
+  if (opinions.length === 0) {
+    return null;
+  }
+  const counts = (Object.keys(VERDICT_LABELS) as JudgeVerdict[])
+    .map((verdict) => ({
+      verdict,
+      count: opinions.filter((opinion) => opinion.verdict === verdict).length,
+    }))
+    .filter((item) => item.count > 0)
+    .map((item) => `${VERDICT_LABELS[item.verdict]} ${String(item.count)}`);
+  return styleText(
+    'magenta',
+    `Мнение судьи (не проверка): ${counts.join(', ')}. Судья — тоже модель и может ошибаться.`,
+  );
 }
 
 function describeSimilaritySummary(claims: ClaimCheck[], options: ClaimsReportOptions): string {

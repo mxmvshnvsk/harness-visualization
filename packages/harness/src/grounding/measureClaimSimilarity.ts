@@ -12,6 +12,10 @@ import type { ClaimCheck, SeenText, SimilarityMatch } from './claimTypes.js';
 import { LEVEL_STRENGTH } from './findQuotes.js';
 import { splitSeenTextIntoLines } from './splitSeenTextIntoLines.js';
 
+// Сколько ближайших строк сохранять для судьи: одна строка часто без контекста
+// («до трёх дней» — чего?), три — уже видно, о чём речь.
+const CLOSEST_LINES_COUNT = 3;
+
 interface SeenPassage {
   passage: string;
   documentId: string | null;
@@ -29,10 +33,10 @@ export async function measureClaimSimilarity(
   }
   const claimVectors = await embedder.embedQueries(claims.map((checked) => checked.claim.text));
   const passageVectors = await embedder.embedPassages(passages.map((item) => item.passage));
-  return claims.map((checked, index) => ({
-    ...checked,
-    similarity: findClosest(claimVectors[index] ?? [], passages, passageVectors),
-  }));
+  return claims.map((checked, index) => {
+    const closestLines = rankLines(claimVectors[index] ?? [], passages, passageVectors);
+    return { ...checked, similarity: closestLines[0] ?? null, closestLines };
+  });
 }
 
 // Одну и ту же строку модель могла получить несколько раз — snippet-ом в выдаче и в документе
@@ -50,17 +54,18 @@ function collectPassages(seenTexts: SeenText[]): SeenPassage[] {
   return [...byText.values()];
 }
 
-function findClosest(
+function rankLines(
   claimVector: number[],
   passages: SeenPassage[],
   passageVectors: number[][],
-): SimilarityMatch | null {
-  let best: SimilarityMatch | null = null;
-  passages.forEach((item, index) => {
-    const score = cosineSimilarity(claimVector, passageVectors[index] ?? []);
-    if (best === null || score > best.score) {
-      best = { score, passage: item.passage, documentId: item.documentId, seen: item.seen };
-    }
-  });
-  return best;
+): SimilarityMatch[] {
+  return passages
+    .map((item, index) => ({
+      score: cosineSimilarity(claimVector, passageVectors[index] ?? []),
+      passage: item.passage,
+      documentId: item.documentId,
+      seen: item.seen,
+    }))
+    .sort((first, second) => second.score - first.score)
+    .slice(0, CLOSEST_LINES_COUNT);
 }
