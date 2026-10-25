@@ -1,8 +1,15 @@
-// Печатает в консоль раздел отчёта про claims (утверждения) ответа: по каждому — на что
-// он опирается: дословные цитаты (5b.1) и ближайший кусок увиденного по сходству (5b.2).
+// Печатает в консоль раздел отчёта про claims (утверждения) ответа: по каждому — итоговый
+// уровень опоры по проверкам кодом (5b.4), дословные цитаты (5b.1), ближайшая строка
+// увиденного по сходству (5b.2) и отдельно — мнение судьи (5b.3).
 
 import { styleText } from 'node:util';
 import type { JudgeVerdict } from '../events/harnessEvents.js';
+import {
+  CLAIM_SUPPORT_LEVELS,
+  claimSupportLevel,
+  disagreesWithJudge,
+  type ClaimSupportLevel,
+} from './claimSupportLevel.js';
 import type {
   ClaimCheck,
   JudgeOpinion,
@@ -20,6 +27,20 @@ export interface ClaimsReportOptions {
   // Почему сходство не считалось; null — считалось.
   similaritySkippedReason: string | null;
 }
+
+interface SupportLevelStyle {
+  icon: string;
+  color: Parameters<typeof styleText>[0];
+  label: string;
+}
+
+const SUPPORT_LEVEL_STYLES: Record<ClaimSupportLevel, SupportLevelStyle> = {
+  quoted: { icon: '❝', color: 'green', label: 'цитата найдена дословно' },
+  quoteNotFound: { icon: '✗', color: 'red', label: 'цитаты нет в увиденном' },
+  close: { icon: '≈', color: 'green', label: 'про то же по сходству' },
+  far: { icon: '?', color: 'yellow', label: 'далеко по сходству' },
+  unchecked: { icon: '·', color: 'dim', label: 'не проверялось' },
+};
 
 const VERDICT_LABELS: Record<JudgeVerdict, string> = {
   supported: 'подтверждает (supported)',
@@ -44,6 +65,10 @@ export function describeClaimsReport(claims: ClaimCheck[], options: ClaimsReport
       'dim',
       '  Разбиение грубое: по предложениям, пунктам списка и строкам таблиц; заголовки и подписи пропущены.',
     ),
+    styleText(
+      'dim',
+      `  Значок у claim — самый сильный уровень опоры по проверкам кодом: ${describeLegend()}. Мнение судьи — отдельно.`,
+    ),
   ];
   if (options.similaritySkippedReason === null) {
     lines.push(
@@ -58,18 +83,23 @@ export function describeClaimsReport(claims: ClaimCheck[], options: ClaimsReport
   for (const checked of claims) {
     lines.push(...describeClaim(checked, options.similarityThreshold));
   }
-  lines.push('', describeQuotesSummary(claims), describeSimilaritySummary(claims, options));
+  lines.push(
+    '',
+    describeLevelsSummary(claims, options.similarityThreshold),
+    describeQuotesSummary(claims),
+    describeSimilaritySummary(claims, options),
+  );
   const judgeSummary = describeJudgeSummary(claims);
   if (judgeSummary !== null) {
-    lines.push(judgeSummary);
+    lines.push(judgeSummary, ...describeDisagreements(claims, options.similarityThreshold));
   }
   return lines;
 }
 
 function describeClaim(checked: ClaimCheck, threshold: number): string[] {
-  const lines = [
-    `  ${String(checked.claim.number)}. ${shorten(checked.claim.text, CLAIM_PREVIEW_LENGTH)}`,
-  ];
+  const style = SUPPORT_LEVEL_STYLES[claimSupportLevel(checked, threshold)];
+  const number = styleText(style.color, `${style.icon} ${String(checked.claim.number)}.`);
+  const lines = [`  ${number} ${shorten(checked.claim.text, CLAIM_PREVIEW_LENGTH)}`];
   lines.push(...checked.quotes.map(describeQuote));
   if (checked.similarity !== null) {
     lines.push(describeSimilarity(checked.similarity, threshold));
@@ -103,6 +133,46 @@ function describeSimilarity(match: SimilarityMatch, threshold: number): string {
 function describeSeen(seen: SeenText): string {
   const caller = seen.calledBy === 'harness' ? 'подмешал харнесс' : 'вызвала модель';
   return `#${String(seen.eventSequence)} ${seen.toolName} (${caller}), ${LEVEL_LABELS[seen.level]}`;
+}
+
+function describeLegend(): string {
+  return CLAIM_SUPPORT_LEVELS.map(
+    (level) => `${SUPPORT_LEVEL_STYLES[level].icon} ${SUPPORT_LEVEL_STYLES[level].label}`,
+  ).join(', ');
+}
+
+function describeLevelsSummary(claims: ClaimCheck[], threshold: number): string {
+  const parts = CLAIM_SUPPORT_LEVELS.map((level) => ({
+    level,
+    count: claims.filter((checked) => claimSupportLevel(checked, threshold) === level).length,
+  }))
+    .filter((item) => item.count > 0)
+    .map((item) => {
+      const style = SUPPORT_LEVEL_STYLES[item.level];
+      return styleText(style.color, `${style.icon} ${style.label} ${String(item.count)}`);
+    });
+  return `Опора claims по проверкам кодом: ${parts.join(', ')}.`;
+}
+
+// Расхождения кода и судьи — главное, на что стоит посмотреть глазами.
+function describeDisagreements(claims: ClaimCheck[], threshold: number): string[] {
+  const disagreements = claims.filter((checked) =>
+    disagreesWithJudge(checked, claimSupportLevel(checked, threshold)),
+  );
+  if (disagreements.length === 0) {
+    return [styleText('dim', 'Код и судья не расходятся ни в одном claim.')];
+  }
+  return [
+    styleText(
+      'bold',
+      `Код и судья расходятся в ${String(disagreements.length)} claims — посмотрите их глазами:`,
+    ),
+    ...disagreements.map((checked) => {
+      const style = SUPPORT_LEVEL_STYLES[claimSupportLevel(checked, threshold)];
+      const verdict = checked.judge === null ? '' : VERDICT_LABELS[checked.judge.verdict];
+      return `  ${String(checked.claim.number)}. код: ${style.label}; судья: ${verdict}`;
+    }),
+  ];
 }
 
 function describeJudgeSummary(claims: ClaimCheck[]): string | null {
