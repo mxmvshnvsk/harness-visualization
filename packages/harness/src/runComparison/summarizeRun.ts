@@ -5,6 +5,7 @@ import type { HarnessEvent } from '../events/harnessEvents.js';
 import { checkGrounding } from '../grounding/checkGrounding.js';
 import { collectSeenSources, normalizeReference } from '../grounding/collectSeenSources.js';
 import type { SourceLevel } from '../grounding/referenceTypes.js';
+import { classifyCacheWarmth, type CacheWarmth } from '../tokenomics/cacheWarmth.js';
 import type { ComparisonQuestion } from './comparisonQuestions.js';
 
 const READ_DOCUMENT_ACTION = 'read_document';
@@ -21,6 +22,8 @@ export interface RunSummary {
   // null — цена хотя бы одного запроса неизвестна.
   costUsd: number | null;
   durationMs: number;
+  // Прогрет ли кэш к первому запросу — то есть чужой сессией, а не этой; null — запросов не было.
+  firstRequestCache: CacheWarmth | null;
   // Сколько тулов попросила модель (без поиска харнессом до запроса).
   toolCalls: number;
   // Документы, которые модель прочитала целиком, по порядку.
@@ -43,6 +46,7 @@ export function summarizeRun(
   return {
     failed,
     ...readSessionTotals(events),
+    firstRequestCache: readFirstRequestCache(events),
     toolCalls: events.filter((event) => event.type === 'tool_call').length,
     documentsRead: collectDocumentsRead(events),
     expectedSeen: collectSeenSources(events).get(expectedId)?.level ?? 'notSeen',
@@ -75,6 +79,11 @@ function readSessionTotals(events: HarnessEvent[]): SessionTotals {
     costUsd: finished.modelCost?.total ?? null,
     durationMs: finished.durationMs,
   };
+}
+
+function readFirstRequestCache(events: HarnessEvent[]): CacheWarmth | null {
+  const firstResponse = events.find((event) => event.type === 'model_response');
+  return firstResponse === undefined ? null : classifyCacheWarmth(firstResponse.reply.usage);
 }
 
 function findAnswer(events: HarnessEvent[]): string | null {

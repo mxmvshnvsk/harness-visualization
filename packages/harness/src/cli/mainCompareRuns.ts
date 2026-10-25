@@ -28,13 +28,14 @@ import { runCliSession } from './runCliSession.js';
 const MODES: RetrievalMode[] = ['tool', 'auto'];
 const DEFAULT_RUNS = 3;
 const MAX_RUNS = 10;
-const COLUMN_WIDTHS = [8, 11, 10, 22, 13, 11, 10, 8, 12];
+const COLUMN_WIDTHS = [8, 11, 10, 22, 13, 15, 11, 10, 8, 12];
 const COLUMN_TITLES = [
   'режим',
   'запросов',
   'тулов',
   'вход, токенов',
   'из кэша',
+  'прогрет к 1-му',
   'USD',
   'прочитан',
   'назван',
@@ -68,6 +69,14 @@ async function main(): Promise<void> {
       'bold',
       `Повторные прогоны: ${options.questions.length} вопр. × ${MODES.length} режима × ` +
         `${options.runs} = ${totalSessions} сессий · ${model.model} · effort ${model.defaultReasoningEffort}`,
+    ),
+  );
+  console.log(
+    styleText(
+      'dim',
+      '«Прогрет к 1-му» — в скольких прогонах кэш промпта был прогрет уже к первому запросу: ' +
+        'начало запроса недавно отправляла предыдущая сессия или другая программа с тем же ключом. ' +
+        'Такой прогон дешевле не из-за режима.',
     ),
   );
   const context: ComparisonContext = {
@@ -168,9 +177,10 @@ function describeProgress(
   const cost =
     summary.costUsd === null ? 'стоимость неизвестна' : `${summary.costUsd.toFixed(6)} USD`;
   const seconds = (summary.durationMs / 1000).toFixed(1);
+  const cache = summary.firstRequestCache === 'warm' ? 'кэш прогрет' : 'кэш холодный';
   return (
     `${head}: запросов ${summary.modelRequests}, вход ${formatNumber(summary.inputTokens)}, ` +
-    `${cost}, ${seconds} с — ${tracePath}`
+    `${cost}, ${seconds} с, ${cache} — ${tracePath}`
   );
 }
 
@@ -189,6 +199,7 @@ function describeAggregate(mode: RetrievalMode, aggregate: RunsAggregate): strin
     describeSpread(aggregate.toolCalls, String),
     describeSpread(aggregate.inputTokens, formatNumber),
     describeSpread(aggregate.cacheHitShare, formatPercent),
+    ofRuns(aggregate.firstRequestWarm),
     aggregate.costUsd === null ? '?' : aggregate.costUsd.median.toFixed(6),
     ofRuns(aggregate.expectedReadFully),
     ofRuns(aggregate.expectedCited),
@@ -198,6 +209,9 @@ function describeAggregate(mode: RetrievalMode, aggregate: RunsAggregate): strin
   ];
 }
 
+// «Прогрет к 1-му» — кэш промпта прогрет уже к первому запросу сессии, то есть
+// предыдущей сессией или другой программой с тем же ключом, а не этой сессией.
+// Такой прогон дешевле не из-за режима — это нужно видеть, сравнивая стоимость.
 // ✗2 у режима — две сессии из прогонов прервались ошибкой; их трейсы — в строках хода работы.
 // «2» — если все прогоны совпали, иначе «2 (2–3)»: медиана и разброс.
 function describeSpread(spread: Spread, format: (value: number) => string): string {

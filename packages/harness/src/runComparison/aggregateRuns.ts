@@ -20,6 +20,8 @@ export interface RunsAggregate {
   // null — хотя бы у одного прогона стоимость неизвестна.
   costUsd: Spread | null;
   costUsdTotal: number | null;
+  // В скольких прогонах кэш был прогрет уже к первому запросу.
+  firstRequestWarm: number;
   expectedReadFully: number;
   expectedCited: number;
   // null — в вопросах нет противоречия.
@@ -44,6 +46,7 @@ export function aggregateRuns(summaries: RunSummary[]): RunsAggregate {
     cacheHitShare: spreadOf(summaries.map(cacheHitShareOf)),
     costUsd: knownCosts.length === costs.length ? spreadOf(knownCosts) : null,
     costUsdTotal: knownCosts.length === costs.length ? sum(knownCosts) : null,
+    firstRequestWarm: summaries.filter((summary) => summary.firstRequestCache === 'warm').length,
     expectedReadFully: summaries.filter((summary) => summary.expectedSeen === 'full').length,
     expectedCited: summaries.filter((summary) => summary.expectedCited).length,
     mentionsContradiction:
