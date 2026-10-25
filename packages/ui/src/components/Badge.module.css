@@ -1,0 +1,44 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid currentcolor;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.neutral {
+  color: var(--muted);
+  border-color: var(--line);
+}
+
+.error {
+  color: var(--error);
+}
+
+.judge {
+  color: var(--judge);
+}
+
+.permission {
+  color: var(--permission);
+}
+
+.retrieval {
+  color: var(--retrieval);
+}
+
+.dotted {
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--accent);
+}

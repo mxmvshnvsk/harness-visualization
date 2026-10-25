@@ -1,0 +1,55 @@
+.card {
+  background: var(--raised);
+  border: 1.5px solid var(--permission);
+  border-radius: var(--radius-card);
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kicker {
+  font-size: 13px;
+  color: var(--permission);
+  font-weight: var(--weight-strong);
+}
+
+.action {
+  font-size: 18px;
+  font-weight: var(--weight-medium);
+}
+
+.tool {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.track {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--line);
+}
+
+.left {
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--permission);
+  transition: width 1s linear;
+}
+
+.note {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.error {
+  font-size: 14px;
+  color: var(--error);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}

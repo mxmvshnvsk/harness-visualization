@@ -1,0 +1,38 @@
+.button {
+  min-height: 44px;
+  padding: 0 20px;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  background: transparent;
+  font-size: 15px;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.accent {
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: var(--weight-strong);
+}
+
+.ink {
+  background: var(--ink);
+  color: var(--ink-text);
+}
+
+.danger {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.quiet {
+  border-color: var(--line);
+  color: var(--muted);
+  font-size: 14px;
+}

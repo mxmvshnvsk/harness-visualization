@@ -10,6 +10,14 @@ import { openEventStream } from '../sse/openEventStream.js';
 import { formatEnd, formatEvent, parseLastEventId } from '../sse/sseMessages.js';
 import type { TraceCatalog } from './TraceCatalog.js';
 
+// Последнее сообщение потока трейса (event: end).
+export interface TraceStreamEnd {
+  file: string;
+  eventCount: number;
+  // Строки трейса, которые не разобрались и пропущены.
+  skippedLines: number;
+}
+
 interface TraceParams {
   file: string;
 }
@@ -36,13 +44,12 @@ export function registerTraceRoutes(app: FastifyInstance, catalog: TraceCatalog)
           socket.write(formatEvent(event));
         }
       }
-      socket.end(
-        formatEnd({
-          file,
-          eventCount: contents.events.length,
-          skippedLines: contents.skippedLines,
-        }),
-      );
+      const end: TraceStreamEnd = {
+        file,
+        eventCount: contents.events.length,
+        skippedLines: contents.skippedLines,
+      };
+      socket.end(formatEnd(end));
       return reply;
     },
   );

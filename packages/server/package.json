@@ -5,6 +5,11 @@
   "description": "Fastify-сервер: запуск сессий харнесса и поток их событий в браузер (SSE)",
   "license": "MIT",
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "build": "tsc --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit"

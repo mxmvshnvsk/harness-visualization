@@ -1,0 +1,94 @@
+/*
+  Токены дизайна — из мокапа этапа 8.0 (docs/plan.md, «Этап 8: решения»).
+  Тема — по системной настройке. Толщина шрифта тоже токен: светлый текст на тёмном фоне
+  кажется жирнее, поэтому в тёмной теме начертания на ступень тоньше.
+*/
+
+:root {
+  color-scheme: light dark;
+
+  --font-text: 'Onest', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --radius-card: 24px;
+  --radius-inner: 16px;
+  --radius-small: 10px;
+  --radius-pill: 999px;
+
+  --bg: #f4f1ea;
+  --surface: #fffdf9;
+  --raised: #ffffff;
+  --text: #1f1d1a;
+  --muted: #6b6556;
+  --line: #e5dfd3;
+  --accent: #c8461a;
+  --accent-text: #ffffff;
+  --accent-soft: #f0ece3;
+  --ink: #1f1d1a;
+  --ink-text: #fffdf9;
+  --selected: #1f1d1a;
+  --selected-text: #fffdf9;
+  --selected-line: #1f1d1a;
+  --track: #1f1d1a;
+
+  /* Группы событий: у каждой свой цвет, контраст текста не ниже 4.5:1. */
+  --dialog: #2f6f55;
+  --model: #2f5bb7;
+  --tool: #94570c;
+  --permission: #a3367f;
+  --retrieval: #17727b;
+  --judge: #6a4bb0;
+  --error: #b42318;
+  --meta: #6b6556;
+
+  --weight-strong: 600;
+  --weight-medium: 500;
+
+  /* Стекло и переливы — только для пустого состояния. */
+  --glass: rgb(255 253 249 / 55%);
+  --glass-line: rgb(255 255 255 / 80%);
+  --blob-a: #b9a7f5;
+  --blob-b: #9cc8f2;
+  --blob-c: #f6c3d9;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #171614;
+    --surface: #1f1e1b;
+    --raised: #282623;
+    --text: #e6e1d8;
+    --muted: #a39d92;
+    --line: #38352f;
+    --accent: #ff8a4c;
+    --accent-text: #1a0f07;
+    --accent-soft: #2b2925;
+    --ink: #e6e1d8;
+    --ink-text: #171614;
+    --selected: #3a3732;
+    --selected-text: #f0ece4;
+    --selected-line: #6a645a;
+    --track: #a39d92;
+
+    --dialog: #7cc4a1;
+    --model: #8fb0f2;
+    --tool: #d4b57e;
+    --permission: #e58fcb;
+    --retrieval: #6cc7cf;
+    --judge: #b7a3f0;
+    --error: #f28b7d;
+    --meta: #a39d92;
+
+    --weight-strong: 500;
+    --weight-medium: 400;
+
+    --glass: rgb(36 36 40 / 50%);
+    --glass-line: rgb(255 255 255 / 12%);
+    --blob-a: #5b46b8;
+    --blob-b: #2c6fa8;
+    --blob-c: #8e3c6e;
+
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}

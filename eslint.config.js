@@ -5,6 +5,7 @@
 import eslint from '@eslint/js';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import prettierConfig from 'eslint-config-prettier';
+import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -73,6 +74,15 @@ export default defineConfig([
       },
     },
     rules: typeScriptRules,
+  },
+
+  // Интерфейс: код для браузера и правила хуков React (зависимости useEffect, порядок вызовов).
+  {
+    files: ['packages/ui/src/**/*.{ts,tsx}'],
+    extends: [reactHooks.configs.flat.recommended],
+    languageOptions: {
+      globals: globals.browser,
+    },
   },
 
   {

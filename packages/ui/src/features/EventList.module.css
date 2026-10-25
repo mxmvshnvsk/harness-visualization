@@ -1,0 +1,113 @@
+.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.toggle {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+  padding-bottom: 10px;
+}
+
+.row {
+  border-top: 1px solid var(--line);
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: 36px 64px 170px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-height: 40px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.number,
+.time {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.type {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: var(--weight-medium);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.text {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.row[data-group='dialog'] .type {
+  color: var(--dialog);
+}
+
+.row[data-group='model'] .type {
+  color: var(--model);
+}
+
+.row[data-group='tool'] .type {
+  color: var(--tool);
+}
+
+.row[data-group='permission'] .type {
+  color: var(--permission);
+}
+
+.row[data-group='retrieval'] .type {
+  color: var(--retrieval);
+}
+
+.row[data-group='judge'] .type {
+  color: var(--judge);
+}
+
+.row[data-group='error'] .type,
+.row[data-group='error'] .text {
+  color: var(--error);
+}
+
+.row[data-group='meta'] .type {
+  color: var(--meta);
+}
+
+.json {
+  margin: 4px 0 12px;
+  padding: 12px;
+  border-radius: var(--radius-small);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  max-height: 50vh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (width <= 640px) {
+  .summary {
+    grid-template-columns: 30px minmax(0, 1fr);
+  }
+
+  .time,
+  .text {
+    display: none;
+  }
+}
