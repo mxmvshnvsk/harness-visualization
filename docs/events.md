@@ -6,12 +6,13 @@
 
 ## Общие поля
 
-| Поле        | Что это                                |
-| ----------- | -------------------------------------- |
-| `type`      | тип события, см. ниже                  |
-| `sequence`  | порядковый номер в сессии, начиная с 1 |
-| `sessionId` | короткий идентификатор сессии          |
-| `timestamp` | время в ISO 8601, UTC                  |
+| Поле        | Что это                                                                                                 |
+| ----------- | ------------------------------------------------------------------------------------------------------- |
+| `type`      | тип события, см. ниже                                                                                   |
+| `sequence`  | порядковый номер в сессии, начиная с 1                                                                  |
+| `sessionId` | короткий идентификатор сессии                                                                           |
+| `timestamp` | время в ISO 8601, UTC                                                                                   |
+| `agentId`   | только у событий субагента (этап 6c) — его `subagentId` из `subagent_started`; нет поля — главный агент |
 
 ## События
 
@@ -48,6 +49,8 @@
 | `memory_updated`          | модель изменила память тулом `memory`                                                                         | `command` (`create`, `str_replace`, `insert`, `delete`, `rename`), `path`, `newPath` (у `rename`)                                                                                                    |
 | `progress_updated`        | модель прислала план тулом `update_progress`, харнесс записал `progress.md` (этап 6b)                         | `path`, `version` (с 1 в сессии), `goal`, `steps` (`title`, `status` — `pending`, `in_progress`, `done`, `blocked`; `note`)                                                                          |
 | `skill_loaded`            | инструкция скилла попала в prompt (этап 6b)                                                                   | `name`, `trigger` (`always` — харнесс при старте, `model` — тул `load_skill`, `user` — команда `/имя`), `files`                                                                                      |
+| `subagent_started`        | главный агент поручил задачу субагенту тулом `delegate_task` (этап 6c); событие главного агента               | `subagentId`, `agent` (имя из `subagents.agents`), `parentToolCallId` (вызов `delegate_task`), `task`, `toolNames`, `maxIterations`, `reasoningEffort`                                               |
+| `subagent_finished`       | субагент закончил: отчёт ушёл главному как результат `delegate_task` или не дошёл до отчёта                   | `subagentId`, `agent`, `parentToolCallId`, `status` (`done`, `failed`), `report`, `errorMessage`, `durationMs`, `modelRequests`, `usage`, `modelCost`                                                |
 | `assistant_message`       | харнесс отдал ответ пользователю                                                                              | `text`                                                                                                                                                                                               |
 | `awaiting_question`       | ответ отдан, сессия ждёт следующего вопроса того же диалога (этап 6.1)                                        | `turn` — сколько ходов уже было                                                                                                                                                                      |
 | `session_finished`        | сессия закончилась                                                                                            | `durationMs`, `modelRequests`, `usage`, `modelCost`, `toolCosts`                                                                                                                                     |
@@ -71,6 +74,20 @@ assistant_message
 ```
 
 Каждый следующий `model_request` несёт в `body.messages` всю историю: ответы модели с `tool_calls` и результаты тулов с ролью `tool`. Модель ничего не помнит между запросами — помнит харнесс.
+
+## Субагенты в событиях
+
+Поручение (этап 6c) — обычный вызов тула главного агента, а между `tool_call` и `tool_result` — целый цикл субагента. Его события — те же типы, что у главного, с полем `agentId`:
+
+```
+tool_call delegate_task (call_7) → permission_evaluated
+subagent_started (subagentId researcher-1, parentToolCallId call_7)
+  prompt_assembled, model_request, tool_call … — у каждого agentId: researcher-1
+subagent_finished (report)
+tool_result delegate_task (call_7) — content: отчёт
+```
+
+Несколько `delegate_task` в одном шаге харнесс запускает одновременно (`subagents.parallel`), и события субагентов в трейсе перемешаны — разбирать их по `agentId`. Остальные тулы — всегда по очереди. `session_finished` считает токены и стоимость всех агентов, `subagent_finished` — только своего субагента.
 
 ## Два слоя ответа модели
 

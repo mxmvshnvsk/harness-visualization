@@ -192,6 +192,8 @@ const permissionsSchema = z.object({
     write: permissionDecisionSchema,
     delete: permissionDecisionSchema,
     network: permissionDecisionSchema,
+    // Поручить задачу субагенту (этап 6c). В конфигах до 6c этого класса нет — allow.
+    delegate: permissionDecisionSchema.default('allow'),
   }),
   // Решения для конкретных тулов — важнее классов действий.
   tools: z.record(z.string(), permissionDecisionSchema).default({}),
@@ -291,6 +293,25 @@ const groundingSettingsSchema = z.object({
   similarityThreshold: z.number().min(0).max(1).default(0.87),
 });
 
+// Субагент (этап 6c): кому главный агент может поручить задачу тулом delegate_task.
+const subagentSchema = z.object({
+  // Что умеет — это описание читает модель главного агента, выбирая, кому поручить.
+  description: z.string().min(1),
+  // Своя инструкция субагенту — в его system prompt после общих правил.
+  instructions: z.string().default(''),
+  // Тулы субагента — по именам из тулов сессии. delegate_task среди них не бывает: глубина одна.
+  tools: z.array(z.string().min(1)).min(1),
+  maxIterations: z.number().int().min(1).max(50).default(6),
+  reasoningEffort: z.enum(REASONING_EFFORTS).default('low'),
+});
+
+const subagentsSettingsSchema = z.object({
+  // Несколько delegate_task в одном шаге — параллельно; остальные тулы всегда по очереди.
+  parallel: z.boolean().default(true),
+  // Нет субагентов — нет и тула delegate_task.
+  agents: z.record(z.string().regex(/^[a-z][a-z0-9_-]*$/u), subagentSchema).default({}),
+});
+
 export const harnessSettingsSchema = z.object({
   model: modelSettingsSchema,
   agent: agentSettingsSchema,
@@ -320,6 +341,7 @@ export const harnessSettingsSchema = z.object({
   }),
   grounding: groundingSettingsSchema.default({ similarityThreshold: 0.87 }),
   skills: skillsSettingsSchema.default({ directory: 'skills', always: [], manual: [] }),
+  subagents: subagentsSettingsSchema.default({ parallel: true, agents: {} }),
   server: serverSettingsSchema.default({
     port: 4317,
     permissionTimeoutSeconds: 120,
@@ -352,4 +374,6 @@ export type ServerSettings = z.infer<typeof serverSettingsSchema>;
 export type GroundingSettings = z.infer<typeof groundingSettingsSchema>;
 export type RetrievalSettings = z.infer<typeof retrievalSettingsSchema>;
 export type SkillsSettings = z.infer<typeof skillsSettingsSchema>;
+export type SubagentsSettings = z.infer<typeof subagentsSettingsSchema>;
+export type SubagentSettings = z.infer<typeof subagentSchema>;
 export type RetrievalMode = RetrievalSettings['mode'];

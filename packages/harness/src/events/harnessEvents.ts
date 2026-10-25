@@ -29,6 +29,9 @@ export interface EventMetadata {
   sessionId: string;
   // Время в формате ISO 8601, UTC.
   timestamp: string;
+  // Чьё это событие: субагента (этап 6c) — его id из subagent_started. Нет поля — главного агента;
+  // в трейсах до 6c поля нет нигде.
+  agentId?: string;
 }
 
 export interface SessionStartedPayload {
@@ -409,6 +412,42 @@ export interface ProgressUpdatedPayload {
   steps: { title: string; status: StepStatus; note: string | null }[];
 }
 
+// Главный агент поручил задачу субагенту тулом delegate_task (этап 6c). Само событие — от
+// главного агента (без agentId); события субагента дальше идут с agentId = subagentId.
+// Главный агент получит только отчёт.
+export interface SubagentStartedPayload {
+  type: 'subagent_started';
+  // Его события дальше несут agentId с этим значением.
+  subagentId: string;
+  // Кто из описанных в harness.config.json (subagents.agents).
+  agent: string;
+  // Вызов delegate_task у главного агента: по нему видно, какой шаг породил субагента.
+  parentToolCallId: string;
+  task: string;
+  // Тулы, которые харнесс дал субагенту.
+  toolNames: string[];
+  maxIterations: number;
+  reasoningEffort: ReasoningEffort;
+}
+
+export type SubagentStatus = 'done' | 'failed';
+
+export interface SubagentFinishedPayload {
+  type: 'subagent_finished';
+  subagentId: string;
+  agent: string;
+  parentToolCallId: string;
+  status: SubagentStatus;
+  // Отчёт субагента — он и уходит главному как результат delegate_task; null — не дошёл до отчёта.
+  report: string | null;
+  // Почему не дошёл: лимит шагов, ошибка модели; null — отчёт есть.
+  errorMessage: string | null;
+  durationMs: number;
+  modelRequests: number;
+  usage: TokenUsage;
+  modelCost: SessionCost | null;
+}
+
 export interface AwaitingQuestionPayload {
   type: 'awaiting_question';
   // Сколько ходов диалога уже было.
@@ -470,6 +509,8 @@ export type HarnessEventPayload =
   | MemoryLoadedPayload
   | MemoryUpdatedPayload
   | ProgressUpdatedPayload
+  | SubagentStartedPayload
+  | SubagentFinishedPayload
   | SessionFinishedPayload
   | ErrorPayload;
 

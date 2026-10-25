@@ -79,6 +79,11 @@ const DESCRIBERS: Describers = {
     `память: ${event.command} ${event.path}${event.newPath === null ? '' : ` → ${event.newPath}`}`,
   progress_updated: (event) =>
     `план v${String(event.version)}: ${event.goal} — сделано ${String(event.steps.filter((step) => step.status === 'done').length)} из ${String(event.steps.length)}`,
+  subagent_started: (event) => `${event.subagentId}: «${event.task}»`,
+  subagent_finished: (event) =>
+    event.status === 'done'
+      ? `${event.subagentId}: отчёт, ${plural(event.modelRequests, MODEL_REQUESTS)} к модели`
+      : `${event.subagentId}: без отчёта — ${event.errorMessage ?? ''}`,
   awaiting_question: (event) => `ход ${String(event.turn)} закончен, ждём следующий вопрос`,
   session_finished: (event) =>
     [

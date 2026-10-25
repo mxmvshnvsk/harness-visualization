@@ -139,11 +139,11 @@ async function runTool(
     case 'ask': {
       const answer = await askPermission(toolCall, preparedCall.actionDescription, dependencies);
       return answer.approved
-        ? executePreparedCall(preparedCall, dependencies)
+        ? executePreparedCall(preparedCall, toolCall, dependencies)
         : denial(preparedCall.actionDescription, answer.answeredBy);
     }
     case 'allow':
-      return executePreparedCall(preparedCall, dependencies);
+      return executePreparedCall(preparedCall, toolCall, dependencies);
   }
 }
 
@@ -177,11 +177,15 @@ async function askPermission(
 
 async function executePreparedCall(
   preparedCall: PreparedToolCall,
+  toolCall: ToolCall,
   dependencies: AgentDependencies,
 ): Promise<ToolOutcome> {
   const startedAt = performance.now();
   try {
-    const output = await preparedCall.execute(dependencies.toolContext);
+    const output = await preparedCall.execute({
+      ...dependencies.toolContext,
+      toolCallId: toolCall.id,
+    });
     return {
       status: 'success',
       content: output.content,

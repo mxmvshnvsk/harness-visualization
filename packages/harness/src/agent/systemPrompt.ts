@@ -44,7 +44,7 @@ export function buildSystemPrompt(now: Date, parts: SystemPromptParts): string {
 
 // Инструкции пишет автор сервера, а не пользователь, — модель должна это видеть.
 // Харнесс вставляет их в системный промпт, то есть доверяет им почти как своим.
-function describeMcpInstructions(mcpInstructions: McpServerInstructions[]): string[] {
+export function describeMcpInstructions(mcpInstructions: McpServerInstructions[]): string[] {
   if (mcpInstructions.length === 0) {
     return [];
   }
@@ -56,7 +56,7 @@ function describeMcpInstructions(mcpInstructions: McpServerInstructions[]): stri
   ];
 }
 
-function describeToday(now: Date): string {
+export function describeToday(now: Date): string {
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const humanDate = new Intl.DateTimeFormat('ru-RU', {
     weekday: 'long',

@@ -221,6 +221,28 @@ const EVENT_DESCRIBERS: EventDescribers = {
       `Ход ${String(event.turn)} закончен — история диалога остаётся для следующего вопроса.`,
     ),
   ],
+  subagent_started: (event) => [
+    styleText(
+      'magenta',
+      `Харнесс запускает субагента ${event.subagentId}: «${shortenForPreview(event.task)}»`,
+    ),
+    styleText(
+      'dim',
+      `    тулы: ${event.toolNames.join(', ')} · до ${String(event.maxIterations)} шагов · effort ${event.reasoningEffort}`,
+    ),
+  ],
+  subagent_finished: (event) => [
+    styleText(
+      event.status === 'done' ? 'magenta' : 'red',
+      event.status === 'done'
+        ? `Субагент ${event.subagentId} → главный агент: отчёт ${formatNumber(event.report?.length ?? 0)} символов`
+        : `Субагент ${event.subagentId} не вернул отчёт: ${event.errorMessage ?? ''}`,
+    ),
+    styleText(
+      'dim',
+      `    ${String(event.modelRequests)} запросов к модели · ${formatUsage(event.usage)} · ${formatMoney(event.modelCost)} · ${formatNumber(event.durationMs)} мс`,
+    ),
+  ],
   session_finished: describeSessionFinished,
   error: (event) => [styleText('red', `Ошибка: ${event.message}`)],
 };
@@ -229,7 +251,11 @@ export function describeEventForConsole(event: HarnessEvent): string[] {
   // TypeScript не может сам связать тип события с его функцией в таблице,
   // хотя по построению таблицы они всегда совпадают, — поэтому приводим тип явно.
   const describe = EVENT_DESCRIBERS[event.type] as (event: HarnessEvent) => string[];
-  return describe(event);
+  const lines = describe(event);
+  // События субагента (этап 6c) — с его id в начале строки: в консоли они идут вперемешку.
+  return event.agentId === undefined
+    ? lines
+    : lines.map((line) => `${styleText('magenta', `[${event.agentId}]`)} ${line}`);
 }
 
 function describeWorkspacePrepared(event: EventOfType<'workspace_prepared'>): string[] {

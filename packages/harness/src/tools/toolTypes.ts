@@ -7,6 +7,9 @@ import type { Workspace } from '../workspace/Workspace.js';
 // То, к чему тулу разрешён доступ. Тул не получает ничего сверх этого.
 export interface ToolContext {
   workspace: Workspace;
+  // Id вызова, который попросила модель, — харнесс добавляет его к каждому выполнению.
+  // Нужен тулу delegate_task (этап 6c): субагент знает, какой вызов его породил.
+  toolCallId?: string;
 }
 
 export interface ToolOutput {

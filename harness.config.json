@@ -98,7 +98,8 @@
       "read": "allow",
       "write": "allow",
       "delete": "ask",
-      "network": "allow"
+      "network": "allow",
+      "delegate": "allow"
     },
     "tools": {},
     "rules": [
@@ -175,6 +176,26 @@
     "directory": "skills",
     "always": [],
     "manual": ["meeting-summary"]
+  },
+  "subagents": {
+    "parallel": true,
+    "agents": {
+      "researcher": {
+        "description": "Ищет и читает документы базы знаний и рабочей папки, возвращает факты со ссылками. Только чтение: ничего не пишет и не ходит в интернет.",
+        "instructions": "Сначала найди подходящие документы поиском, потом прочитай нужные целиком. В отчёт — только то, что прочитал сам.",
+        "tools": [
+          "kedr__search",
+          "kedr__semantic_search",
+          "kedr__read_document",
+          "kedr__list_documents",
+          "list_files",
+          "read_file",
+          "search_files"
+        ],
+        "maxIterations": 6,
+        "reasoningEffort": "low"
+      }
+    }
   },
   "mcpServers": [
     {

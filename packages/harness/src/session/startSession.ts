@@ -39,6 +39,7 @@ import { MEMO_PATH, MEMORY_DIRECTORY } from '../memory/memoryPaths.js';
 import { createProgressTool } from '../progress/createProgressTool.js';
 import { ProgressTracker } from '../progress/ProgressTracker.js';
 import { createSkillTools } from '../skills/createSkillTools.js';
+import { createDelegateTool } from '../subagents/createDelegateTool.js';
 import { loadSkills } from '../skills/loadSkills.js';
 import { SkillLibrary } from '../skills/SkillLibrary.js';
 import { prepareWorkspace } from '../workspace/prepareWorkspace.js';
@@ -309,7 +310,7 @@ function createAgentDependencies(
 
   const provider = new OpenAiCompatibleProvider(settings.model, modelApiKey, resources.fetchImpl);
   const { compactionModel } = settings.context;
-  return {
+  const dependencies: AgentDependencies = {
     provider,
     compactionProvider:
       compactionModel === null
@@ -331,7 +332,14 @@ function createAgentDependencies(
     memory: resources.memory,
     progress: resources.progress,
     budget: budgetSettings(settings.context),
+    parallelDelegation: settings.subagents.parallel,
   };
+  // Субагентам — тулы сессии, поэтому delegate_task регистрируется последним.
+  const delegateTool = createDelegateTool(settings.subagents, () => dependencies);
+  if (delegateTool !== null) {
+    tools.register(delegateTool);
+  }
+  return dependencies;
 }
 
 function budgetSettings(context: ContextSettings): BudgetSettings {
