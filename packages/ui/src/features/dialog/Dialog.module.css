@@ -345,3 +345,81 @@
     transition: none;
   }
 }
+
+/* Модель пишет шаг (этап 8d.3): рассуждение печатается раскрытым, потом сворачивается. */
+.live {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+.think {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.think summary {
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.think summary::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--phase-reasoning);
+}
+
+.think p {
+  margin: 0;
+  padding: 0 10px 8px;
+  font-style: italic;
+  white-space: pre-wrap;
+}
+
+.typed {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cursor {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  margin-left: 2px;
+  background: var(--accent);
+  vertical-align: -2px;
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cursor {
+    animation: none;
+  }
+}
+
+.status[data-phase='wait'] .pulse {
+  background: var(--phase-wait);
+}
+
+.status[data-phase='reasoning'] .pulse {
+  background: var(--phase-reasoning);
+}
+
+.status[data-phase='answer'] .pulse {
+  background: var(--phase-answer);
+}

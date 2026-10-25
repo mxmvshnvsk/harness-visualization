@@ -9,6 +9,7 @@ import { realAt, type Schedule } from '../../timeline/schedule';
 import type { TimelineClock } from '../../timeline/TimelineClock';
 import { useClockValue } from '../../timeline/useTimeline';
 import styles from './Dialog.module.css';
+import { LiveStep, typingStatus, useTyping } from './LiveStep';
 
 interface TurnViewProps {
   turn: DialogTurn;
@@ -48,13 +49,32 @@ export function TurnView({
           </button>
         </div>
       ) : (
-        <div className={styles.status} aria-live="polite">
-          <span className={styles.pulse} aria-hidden="true" />
-          <span>{turnStatus(events, shown)}…</span>
-          <Elapsed turn={turn} events={events} live={live} clock={clock} schedule={schedule} />
-        </div>
+        <Pending
+          turn={turn}
+          events={events}
+          shown={shown}
+          live={live}
+          clock={clock}
+          schedule={schedule}
+        />
       )}
     </article>
+  );
+}
+
+// Ответа ещё нет: что печатает модель (этап 8d.3) и строка «что харнесс делает сейчас».
+function Pending(props: Omit<TurnViewProps, 'onJump'>): ReactElement {
+  const { turn, events, shown, live, clock, schedule } = props;
+  const typing = useTyping({ events, shown, live, clock, schedule });
+  return (
+    <>
+      {typing !== null && <LiveStep typing={typing} />}
+      <div className={styles.status} aria-live="polite" data-phase={typing?.phase ?? ''}>
+        <span className={styles.pulse} aria-hidden="true" />
+        <span>{typing === null ? turnStatus(events, shown) : typingStatus(typing)}…</span>
+        <Elapsed turn={turn} events={events} live={live} clock={clock} schedule={schedule} />
+      </div>
+    </>
   );
 }
 

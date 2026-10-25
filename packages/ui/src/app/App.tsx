@@ -17,6 +17,7 @@ import {
 } from 'react';
 import { listSessions, listTraces, sessionEventsUrl, traceEventsUrl } from '../api/serverApi';
 import { useEventStream, type EventStream } from '../api/useEventStream';
+import { LiveDeltasContext } from '../api/liveDeltas';
 import { useServerList } from '../api/useServerList';
 import { Button } from '../components/Button';
 import { Drawer } from '../components/Drawer';
@@ -78,32 +79,34 @@ export function App(): ReactElement {
       {/* Пока открыта лаборатория, поток спрятан, но живёт: вид, плеер и диалог те же. */}
       <div hidden={lab !== null}>
         {/* key: другая сессия или трейс — повтор, выбор в инспекторе и диалог начинаются заново. */}
-        <OpenStream
-          key={streamUrl(opened)}
-          events={stream.events}
-          sessionId={sessionId}
-          traceFile={opened.kind === 'trace' ? opened.file : null}
-          live={opened.kind === 'session' && stream.state !== 'ended'}
-          header={
-            <Topbar
-              {...describeSelection(opened, stream.events, traces.items)}
-              stream={stream}
-              onOpenSources={() => {
-                setDrawerOpen(true);
-              }}
-              onOpenLab={openLab}
-            />
-          }
-          prompt={
-            sessionId !== null && pending !== null ? (
-              <PermissionCard
-                sessionId={sessionId}
-                pending={pending}
-                askedAt={findAskedAt(stream.events, pending.toolCallId)}
+        <LiveDeltasContext.Provider value={stream.deltas}>
+          <OpenStream
+            key={streamUrl(opened)}
+            events={stream.events}
+            sessionId={sessionId}
+            traceFile={opened.kind === 'trace' ? opened.file : null}
+            live={opened.kind === 'session' && stream.state !== 'ended'}
+            header={
+              <Topbar
+                {...describeSelection(opened, stream.events, traces.items)}
+                stream={stream}
+                onOpenSources={() => {
+                  setDrawerOpen(true);
+                }}
+                onOpenLab={openLab}
               />
-            ) : null
-          }
-        />
+            }
+            prompt={
+              sessionId !== null && pending !== null ? (
+                <PermissionCard
+                  sessionId={sessionId}
+                  pending={pending}
+                  askedAt={findAskedAt(stream.events, pending.toolCallId)}
+                />
+              ) : null
+            }
+          />
+        </LiveDeltasContext.Provider>
         <Drawer open={drawerOpen} label="Сессии и трейсы" onClose={closeDrawer}>
           {sources}
         </Drawer>
