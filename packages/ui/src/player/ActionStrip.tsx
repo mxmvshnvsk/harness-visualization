@@ -49,6 +49,13 @@ export function ActionStrip({
           }}
         />
       ))}
+      {questionMarks(schedule).map((at, index, marks) =>
+        marks.length > 1 ? (
+          <span key={at} className={styles.mark} style={{ left: `${String((at / total) * 100)}%` }}>
+            вопрос {index + 1}
+          </span>
+        ) : null,
+      )}
       <div ref={headRef} className={styles.head} />
       <div className={styles.ghost} data-ghost="line" />
       <div className={styles.ghostLabel} data-ghost="label" />
@@ -132,6 +139,21 @@ function actionAt(schedule: Schedule, time: number): string | null {
     found = back ? (item.action.whatBack ?? item.action.what) : item.action.what;
   }
   return found;
+}
+
+// Где начинается каждый вопрос диалога: первый — сообщение пользователя, следующие — обратный
+// полёт после «читает ответ…».
+function questionMarks(schedule: Schedule): number[] {
+  const marks: number[] = [];
+  for (const item of schedule.actions) {
+    if (item.action.kind === 'message' && item.action.from === 'user') {
+      marks.push(item.outFrom);
+    }
+    if (item.action.id.startsWith('reading:') && item.backFrom !== null) {
+      marks.push(item.backFrom);
+    }
+  }
+  return marks.sort((left, right) => left - right);
 }
 
 function segmentsOf(schedule: Schedule): Segment[] {

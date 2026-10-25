@@ -54,7 +54,8 @@ export function modelHostOf(events: readonly HarnessEvent[]): string | null {
     return null;
   }
   try {
-    return new URL(started.baseUrl).host;
+    // hostname, без порта: в network_request хост записан без него.
+    return new URL(started.baseUrl).hostname;
   } catch {
     return null;
   }
@@ -123,6 +124,21 @@ const HANDLERS: Handlers = {
     );
   },
   user_message: (builder, event, at) => {
+    // Следующий вопрос диалога закрывает ожидание: пользователь читал ответ и спросил ещё.
+    const reading = findOpen(builder, 'reading:');
+    if (reading !== null) {
+      closeExchange(
+        builder,
+        reading,
+        { event, at },
+        {
+          back: 'вопрос',
+          whatBack: 'Пользователь спрашивает ещё',
+          detailBack: `«${event.text}»`,
+        },
+      );
+      return;
+    }
     addAction(
       builder,
       { event, at },
@@ -137,16 +153,19 @@ const HANDLERS: Handlers = {
     );
   },
   assistant_message: (builder, event, at) => {
-    addAction(
+    // Ответ отдан — пользователь читает его и, может быть, спросит ещё (диалог, этап 6.1).
+    // Если вопроса так и не будет, в конце это станет просто сообщением.
+    openExchange(
       builder,
+      `reading:${String(event.sequence)}`,
       { event, at },
       {
-        kind: 'message',
         route: ['loop', 'user'],
         group: 'dialog',
         out: 'ответ',
+        busy: 'читает ответ…',
         what: 'Пользователь получает ответ',
-        detail: shorten(event.text),
+        detail: 'полный ответ — в колонке «Диалог»',
       },
     );
   },
@@ -348,7 +367,26 @@ export function buildActions(
       ((builder: Builder, event: HarnessEvent, at: number) => void) | undefined;
     handle?.(builder, event, Date.parse(event.timestamp) - startedAt);
   }
+  settleReading(builder, events.at(-1));
   return builder.actions;
+}
+
+// Последний ответ: сессия ждёт вопроса — пользователь «читает» и дальше; иначе вопроса уже
+// не будет, и ответ — обычное сообщение, без ожидания у пользователя.
+function settleReading(builder: Builder, last: HarnessEvent | undefined): void {
+  const key = findOpen(builder, 'reading:');
+  if (key === null || last?.type === 'awaiting_question') {
+    return;
+  }
+  const action = builder.open.get(key);
+  if (action !== undefined) {
+    Object.assign(action, { kind: 'message', busy: null });
+  }
+  builder.open.delete(key);
+}
+
+function findOpen(builder: Builder, prefix: string): string | null {
+  return [...builder.open.keys()].find((key) => key.startsWith(prefix)) ?? null;
 }
 
 type ExchangeStart = Pick<FlowAction, 'route' | 'group' | 'out' | 'busy' | 'what' | 'detail'>;

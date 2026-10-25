@@ -1,4 +1,5 @@
-// Приложение-плеер (этап 8c): шапка с открытым потоком, виды на всю ширину, плеер внизу.
+// Приложение-плеер (этап 8c): шапка с открытым потоком, виды, плеер внизу и колонка «Диалог»
+// справа (этап 6.1).
 // Сессии, трейсы и запуск — в выезжающей панели, а пока ничего не открыто — на стартовом экране.
 // Всё на экране выводится из списка событий потока — своего состояния сессии интерфейс не хранит.
 
@@ -22,14 +23,15 @@ import { EventList } from '../features/EventList';
 import { FlowView } from '../features/flow/FlowView';
 import { InspectorView } from '../features/inspector/InspectorView';
 import { TokenomicsLine } from '../features/TokenomicsLine';
-import { NextQuestionCard } from '../features/NextQuestionCard';
+import { DialogPanel } from '../features/dialog/DialogPanel';
 import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
 import { PlayerBar } from '../player/PlayerBar';
 import { projectSession } from '../projections/projectSession';
 import { buildActions, modelHostOf } from '../timeline/actions';
-import { buildSchedule } from '../timeline/schedule';
+import { buildSchedule, type Schedule } from '../timeline/schedule';
+import type { TimelineClock } from '../timeline/TimelineClock';
 import { useTimeline } from '../timeline/useTimeline';
 import styles from './App.module.css';
 import { Sidebar } from './Sidebar';
@@ -66,52 +68,37 @@ export function App(): ReactElement {
     return <StartScreen>{sources}</StartScreen>;
   }
   return (
-    <div className={styles.page}>
-      <Topbar
-        {...describeSelection(selection, stream.events, traces.items)}
-        stream={stream}
-        onOpenSources={() => {
-          setDrawerOpen(true);
-        }}
-      />
-      {sessionId !== null && (
-        <SessionPrompts sessionId={sessionId} pending={pending} stream={stream} />
-      )}
-      {/* key: другая сессия или трейс — выбор в инспекторе начинается заново. */}
-      <StreamViews
+    <>
+      {/* key: другая сессия или трейс — повтор, выбор в инспекторе и диалог начинаются заново. */}
+      <OpenStream
         key={streamUrl(selection)}
         events={stream.events}
+        sessionId={sessionId}
         live={selection.kind === 'session' && stream.state !== 'ended'}
+        header={
+          <Topbar
+            {...describeSelection(selection, stream.events, traces.items)}
+            stream={stream}
+            onOpenSources={() => {
+              setDrawerOpen(true);
+            }}
+          />
+        }
+        prompt={
+          sessionId !== null && pending !== null ? (
+            <PermissionCard
+              sessionId={sessionId}
+              pending={pending}
+              askedAt={findAskedAt(stream.events, pending.toolCallId)}
+            />
+          ) : null
+        }
       />
       <Drawer open={drawerOpen} label="Сессии и трейсы" onClose={closeDrawer}>
         {sources}
       </Drawer>
-    </div>
+    </>
   );
-}
-
-interface SessionPromptsProps {
-  sessionId: string;
-  pending: ReturnType<typeof usePendingPermission>;
-  stream: EventStream<StreamEnd>;
-}
-
-// Чего живая сессия ждёт от человека: разрешения на действие или следующего вопроса диалога.
-function SessionPrompts({ sessionId, pending, stream }: SessionPromptsProps): ReactElement | null {
-  if (pending !== null) {
-    return (
-      <PermissionCard
-        sessionId={sessionId}
-        pending={pending}
-        askedAt={findAskedAt(stream.events, pending.toolCallId)}
-      />
-    );
-  }
-  const last = stream.events.at(-1);
-  if (stream.state !== 'ended' && last?.type === 'awaiting_question') {
-    return <NextQuestionCard key={last.turn} sessionId={sessionId} turn={last.turn} />;
-  }
-  return null;
 }
 
 // Сессия закончилась — её статус в списке поменялся, а в traces/ появился трейс.
@@ -182,14 +169,97 @@ const VIEWS = [
 
 type ViewName = (typeof VIEWS)[number]['value'];
 
-interface StreamViewsProps {
+interface OpenStreamProps {
   events: HarnessEvent[];
+  // Сессия сервера — у неё есть диалог; null — трейс.
+  sessionId: string | null;
+  live: boolean;
+  header: ReactNode;
+  // Чего сессия ждёт от человека прямо сейчас: разрешения на действие.
+  prompt: ReactNode;
+}
+
+// Открытая сессия или трейс: слева шапка, виды и плеер, справа колонка «Диалог».
+// Все виды показывают события до курсора повтора — повтор и перемотка работают в каждом.
+function OpenStream({ events, sessionId, live, header, prompt }: OpenStreamProps): ReactElement {
+  const [viewName, setViewName] = useState<ViewName>('flow');
+  // На узком экране колонка диалога ложится поверх — там она по умолчанию свёрнута.
+  const [dialogOpen, setDialogOpen] = useState(() => window.innerWidth > 1000);
+  const { clock, cursor, schedule, shown, view } = useReplay(events, live);
+  const liveStartedAt = live && events[0] !== undefined ? Date.parse(events[0].timestamp) : null;
+  return (
+    <div className={styles.shell} data-dialog={dialogOpen ? 'open' : 'closed'}>
+      <div className={styles.page}>
+        {header}
+        {/* Колонка свёрнута — вопрос о разрешении над видами, чтобы его не пропустить. */}
+        {!dialogOpen && prompt}
+        <div className={styles.views}>
+          <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
+          {viewName === 'flow' && (
+            <FlowView clock={clock} schedule={schedule} liveStartedAt={liveStartedAt} />
+          )}
+          {viewName === 'inspector' && (
+            <InspectorView
+              view={view}
+              events={events}
+              shown={cursor}
+              clock={clock}
+              schedule={schedule}
+            />
+          )}
+          {viewName === 'events' && <EventList events={shown} />}
+        </div>
+      </div>
+      {dialogOpen ? (
+        <DialogPanel
+          events={events}
+          shown={cursor}
+          sessionId={sessionId}
+          live={live}
+          clock={clock}
+          schedule={schedule}
+          request={prompt}
+          onCollapse={() => {
+            setDialogOpen(false);
+          }}
+        />
+      ) : (
+        <button
+          type="button"
+          className={styles.openDialog}
+          onClick={() => {
+            setDialogOpen(true);
+          }}
+        >
+          ← Диалог
+        </button>
+      )}
+      <PlayerDock view={view} clock={clock} schedule={schedule} live={live} />
+    </div>
+  );
+}
+
+interface PlayerDockProps {
+  view: ReturnType<typeof projectSession>;
+  clock: TimelineClock;
+  schedule: Schedule;
   live: boolean;
 }
 
-// Все виды показывают события до курсора повтора — повтор и перемотка работают в каждом.
-function StreamViews({ events, live }: StreamViewsProps): ReactElement {
-  const [viewName, setViewName] = useState<ViewName>('flow');
+// Док внизу слева: строка токеномики и плеер; справа от него — поле ввода диалога.
+function PlayerDock({ view, clock, schedule, live }: PlayerDockProps): ReactElement {
+  return (
+    <div className={styles.dock}>
+      <div className={styles.dockInner}>
+        <TokenomicsLine totals={view.totals} />
+        <PlayerBar clock={clock} schedule={schedule} live={live} />
+      </div>
+    </div>
+  );
+}
+
+// Повтор: действия, расписание, часы и сколько событий показано; вид сессии — на этот момент.
+function useReplay(events: HarnessEvent[], live: boolean) {
   const modelHost = useMemo(() => modelHostOf(events), [events]);
   const actions = useMemo(() => buildActions(events, { modelHost }), [events, modelHost]);
   const schedule = useMemo(() => buildSchedule(actions), [actions]);
@@ -197,31 +267,7 @@ function StreamViews({ events, live }: StreamViewsProps): ReactElement {
   const shown = useMemo(() => events.slice(0, cursor), [events, cursor]);
   // Проекция — чистая функция событий: пересчитываем, только когда изменился срез.
   const view = useMemo(() => projectSession(shown), [shown]);
-  const liveStartedAt = live && events[0] !== undefined ? Date.parse(events[0].timestamp) : null;
-  return (
-    <div className={styles.views}>
-      <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
-      {viewName === 'flow' && (
-        <FlowView clock={clock} schedule={schedule} liveStartedAt={liveStartedAt} />
-      )}
-      {viewName === 'inspector' && (
-        <InspectorView
-          view={view}
-          events={events}
-          shown={cursor}
-          clock={clock}
-          schedule={schedule}
-        />
-      )}
-      {viewName === 'events' && <EventList events={shown} />}
-      <div className={styles.dock}>
-        <div className={styles.dockInner}>
-          <TokenomicsLine totals={view.totals} />
-          <PlayerBar clock={clock} schedule={schedule} live={live} />
-        </div>
-      </div>
-    </div>
-  );
+  return { clock, cursor, schedule, shown, view };
 }
 
 function streamUrl(selection: Selection | null): string | null {

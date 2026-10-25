@@ -1,12 +1,37 @@
-/* Плеер: шапка, вид на всю ширину; снизу место под док плеера, который висит поверх. */
-.page {
+/* Открытая сессия: слева шапка, виды и плеер, справа колонка «Диалог» на всю высоту.
+   Плеер и поле ввода диалога — на одной нижней линии. */
+.shell {
+  --dialog-width: 400px;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--dialog-width);
   min-height: 100vh;
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 28px var(--space-page) 260px;
+}
+
+.shell[data-dialog='closed'] {
+  --dialog-width: 0px;
+}
+
+.page {
+  min-width: 0;
+  padding: 28px 32px 260px var(--space-page);
   display: flex;
   flex-direction: column;
   gap: var(--space-block);
+}
+
+.openDialog {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 5;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  cursor: pointer;
 }
 
 .topbar {
@@ -65,10 +90,10 @@
 .dock {
   position: fixed;
   left: 0;
-  right: 0;
+  right: var(--dialog-width);
   bottom: 0;
   z-index: 4;
-  padding: 14px var(--space-page) calc(16px + env(safe-area-inset-bottom, 0px));
+  padding: 14px 32px calc(16px + env(safe-area-inset-bottom, 0px)) var(--space-page);
   background: var(--glass);
   border-top: 1px solid var(--glass-line);
   backdrop-filter: blur(24px) saturate(1.5);
@@ -129,6 +154,26 @@
   max-width: 56ch;
   color: var(--muted);
   font-size: 16px;
+}
+
+/* Узкий экран: колонка диалога — поверх, по кнопке. */
+@media (width <= 1000px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .shell > aside {
+    position: fixed;
+    inset: 0 0 0 auto;
+    z-index: 8;
+    width: min(420px, 100vw);
+    height: 100%;
+    box-shadow: var(--shadow);
+  }
+
+  .dock {
+    right: 0;
+  }
 }
 
 @media (width <= 860px) {

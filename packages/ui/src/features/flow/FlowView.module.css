@@ -19,7 +19,7 @@
   width: 100%;
   height: auto;
   /* Схема целиком над доком плеера: не выше окна за вычетом шапки и плеера. */
-  max-height: max(420px, calc(100vh - 470px));
+  max-height: max(400px, calc(100vh - 520px));
   display: block;
   border-radius: var(--radius-card);
   background:
