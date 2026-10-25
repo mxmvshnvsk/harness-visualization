@@ -84,6 +84,7 @@
     "limits": { "demo": 12000, "stress": 6000, "real": 1000000 },
     "toolResultLimits": { "demo": 1500, "stress": 800, "real": 25000 },
     "thresholdPercent": 80,
+    "clearTargetPercent": 60,
     "charsPerToken": 3.24
   },
   "workspace": {

@@ -63,6 +63,16 @@ describe('projectStages', () => {
     ]);
   });
 
+  it('активный этап — тот, где последнее показанное событие', () => {
+    const stages = projectStages(session().events);
+
+    expect(activeStage(stages, 0)).toBeNull();
+    // Показаны первые 5 событий: последнее — tool_call из шага 1.
+    expect(activeStage(stages, 5)?.title).toBe('Шаг 1 · agentStep');
+  });
+});
+
+describe('projectStages: контекст', () => {
   it('обрезанный харнессом результат — своя строка шага с размерами', () => {
     const log = session().add({
       type: 'tool_result_truncated',
@@ -82,11 +92,20 @@ describe('projectStages', () => {
     expect(rows.at(-1)?.text).toMatch(/^обрезан харнессом: ≈2\s006 → ≈1\s500 токенов/);
   });
 
-  it('активный этап — тот, где последнее показанное событие', () => {
-    const stages = projectStages(session().events);
+  it('очистка старых результатов — строка шага с тем, что убрано', () => {
+    const log = session().add({
+      type: 'tool_results_cleared',
+      cleared: [{ toolCallId: 'call-1', toolName: 'kedr__search', tokens: 1500 }],
+      beforeTokens: 5100,
+      afterTokens: 3600,
+      thresholdTokens: 4800,
+      targetTokens: 3600,
+      preset: 'stress',
+    });
+    const text = projectStages(log.events)
+      .flatMap((stage) => stage.rows)
+      .at(-1)?.text;
 
-    expect(activeStage(stages, 0)).toBeNull();
-    // Показаны первые 5 событий: последнее — tool_call из шага 1.
-    expect(activeStage(stages, 5)?.title).toBe('Шаг 1 · agentStep');
+    expect(text).toMatch(/^харнесс убрал старые результаты тулов \(1: kedr__search\)/);
   });
 });

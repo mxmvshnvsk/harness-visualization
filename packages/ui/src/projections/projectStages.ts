@@ -89,6 +89,10 @@ const DESCRIBE: Describers = {
     code: event.toolName,
     text: `обрезан харнессом: ≈${format(event.originalTokens)} → ≈${format(event.keptTokens)} токенов (лимит на результат ${format(event.limitTokens)})`,
   }),
+  tool_results_cleared: (event) => ({
+    code: null,
+    text: `харнесс убрал старые результаты тулов (${String(event.cleared.length)}: ${event.cleared.map((item) => item.toolName).join(', ')}): prompt ≈${format(event.beforeTokens)} → ≈${format(event.afterTokens)}, порог ${format(event.thresholdTokens)}; начало prompt изменилось — кэш дальше не совпадёт`,
+  }),
   assistant_message: (event) => ({ code: null, text: shorten(event.text) }),
   awaiting_question: (event) => ({
     code: null,

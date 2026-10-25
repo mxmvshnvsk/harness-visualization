@@ -314,6 +314,20 @@ export interface ToolResultTruncatedPayload {
   preset: string;
 }
 
+// Харнесс убрал старые результаты тулов, чтобы prompt не перерос порог (этап 6.4). Вызовы и
+// ответы модели остались, вместо результатов — заглушки. Начало prompt изменилось — кэш
+// провайдера с первого убранного результата не совпадёт.
+export interface ToolResultsClearedPayload {
+  type: 'tool_results_cleared';
+  cleared: { toolCallId: string; toolName: string; tokens: number }[];
+  // Оценка prompt до и после, порог и цель очистки, ≈ токенов.
+  beforeTokens: number;
+  afterTokens: number;
+  thresholdTokens: number;
+  targetTokens: number;
+  preset: string;
+}
+
 export interface AwaitingQuestionPayload {
   type: 'awaiting_question';
   // Сколько ходов диалога уже было.
@@ -368,6 +382,7 @@ export type HarnessEventPayload =
   | AssistantMessagePayload
   | AwaitingQuestionPayload
   | ToolResultTruncatedPayload
+  | ToolResultsClearedPayload
   | SessionFinishedPayload
   | ErrorPayload;
 

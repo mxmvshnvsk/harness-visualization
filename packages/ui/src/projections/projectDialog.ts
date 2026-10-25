@@ -99,4 +99,6 @@ const STATUSES: Partial<Record<HarnessEvent['type'], (event: HarnessEvent) => st
   tool_call: (event) =>
     event.type === 'tool_call' ? `вызывает ${event.toolName}` : 'вызывает тул',
   tool_result: () => 'результат тула — в историю',
+  tool_result_truncated: () => 'харнесс обрезает большой результат тула',
+  tool_results_cleared: () => 'харнесс освобождает место в контексте',
 };

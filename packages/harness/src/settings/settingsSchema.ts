@@ -98,6 +98,9 @@ const contextSettingsSchema = z.object({
     .default({ demo: 1500, stress: 800, real: 25000 }),
   // Порог — доля лимита, с которой харнесс начнёт освобождать место (этапы 6.4–6.5).
   thresholdPercent: z.number().min(10).max(100).default(80),
+  // До какой доли лимита чистить старые результаты тулов, если порог пройден (этап 6.4):
+  // сразу пачкой, чтобы кэш prompt ломался реже.
+  clearTargetPercent: z.number().min(5).max(100).default(60),
   // Символов на токен в оценке разбивки (context/promptBudget.ts): подобрано по трейсам.
   charsPerToken: z.number().positive().default(3.24),
 });
@@ -286,6 +289,7 @@ export const harnessSettingsSchema = z.object({
     limits: { demo: 12000, stress: 6000, real: 1000000 },
     toolResultLimits: { demo: 1500, stress: 800, real: 25000 },
     thresholdPercent: 80,
+    clearTargetPercent: 60,
     charsPerToken: 3.24,
   }),
   workspace: workspaceSettingsSchema,

@@ -56,6 +56,8 @@ const DESCRIBERS: Describers = {
   assistant_message: (event) => event.text,
   tool_result_truncated: (event) =>
     `${event.toolName}: обрезан харнессом ≈${String(event.originalTokens)} → ≈${String(event.keptTokens)} токенов`,
+  tool_results_cleared: (event) =>
+    `убрано результатов тулов: ${String(event.cleared.length)}, prompt ≈${String(event.beforeTokens)} → ≈${String(event.afterTokens)}`,
   awaiting_question: (event) => `ход ${String(event.turn)} закончен, ждём следующий вопрос`,
   session_finished: (event) =>
     [

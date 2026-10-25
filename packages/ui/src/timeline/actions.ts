@@ -335,6 +335,19 @@ const HANDLERS: Handlers = {
       },
     );
   },
+  tool_results_cleared: (builder, event, at) => {
+    addInside(
+      builder,
+      { event, at },
+      {
+        node: 'context',
+        group: 'model',
+        out: `убрано: ${String(event.cleared.length)} · ≈${String(event.beforeTokens)} → ≈${String(event.afterTokens)}`,
+        what: 'Харнесс убрал старые результаты тулов',
+        detail: `prompt дорос до порога ${String(event.thresholdTokens)} — вместо результатов заглушки; начало prompt изменилось, кэш дальше не совпадёт`,
+      },
+    );
+  },
   network_request: (builder, event, at) => {
     if (event.host === builder.context.modelHost) {
       return;

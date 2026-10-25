@@ -110,6 +110,16 @@ const EVENT_DESCRIBERS: EventDescribers = {
       `    Харнесс обрезал результат ${event.toolName}: ≈${formatNumber(event.originalTokens)} → ≈${formatNumber(event.keptTokens)} токенов (лимит на результат ${formatNumber(event.limitTokens)}, пресет ${event.preset})`,
     ),
   ],
+  tool_results_cleared: (event) => [
+    styleText(
+      'yellow',
+      `Харнесс убрал старые результаты тулов (${String(event.cleared.length)}): prompt ≈${formatNumber(event.beforeTokens)} → ≈${formatNumber(event.afterTokens)} токенов, порог ${formatNumber(event.thresholdTokens)}, цель ${formatNumber(event.targetTokens)} (${event.preset})`,
+    ),
+    styleText(
+      'dim',
+      `    убраны: ${event.cleared.map((item) => `${item.toolName} ≈${formatNumber(item.tokens)}`).join(', ')} — начало prompt изменилось, кэш с этого места не совпадёт`,
+    ),
+  ],
   awaiting_question: (event) => [
     styleText(
       'dim',

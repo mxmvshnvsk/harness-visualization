@@ -41,6 +41,8 @@ export interface BudgetSettings {
   // Сколько токенов может занять один результат тула; больше — обрезка (этап 6.3).
   toolResultMaxTokens: number;
   thresholdPercent: number;
+  // До какой доли лимита чистить старые результаты тулов (этап 6.4).
+  clearTargetPercent: number;
   charsPerToken: number;
 }
 

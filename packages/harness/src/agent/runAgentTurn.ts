@@ -15,6 +15,8 @@ import type {
   ToolCall,
 } from '../model/chatTypes.js';
 import type { AgentDependencies } from './agentDependencies.js';
+import { clearOldToolResults } from '../context/clearOldToolResults.js';
+import { estimatePromptBudget } from '../context/promptBudget.js';
 import { executeToolCall } from './executeToolCall.js';
 import { requestModel } from './requestModel.js';
 import {
@@ -51,6 +53,7 @@ export async function runAgentTurn(
   events.emit({ type: 'prompt_assembled', messages: [...messages], toolNames: tools.names() });
 
   for (let iteration = 1; iteration <= options.maxIterations; iteration += 1) {
+    freeContextSpace(messages, dependencies, options.reasoningEffort);
     const { reply } = await requestModel(
       { messages, tools: tools.definitions(), reasoningEffort: options.reasoningEffort },
       dependencies,
@@ -105,6 +108,37 @@ async function prepareRetrievalQuery(
 // Модель не помнит прошлых запросов: всё, что она должна знать, харнесс кладёт в начало истории.
 function systemMessage(mcpInstructions: McpServerInstructions[]): ChatMessage {
   return { role: 'system', content: buildSystemPrompt(new Date(), mcpInstructions) };
+}
+
+// Перед запросом к модели: prompt дорос до порога — убрать старые результаты тулов (этап 6.4).
+function freeContextSpace(
+  messages: ChatMessage[],
+  dependencies: AgentDependencies,
+  reasoningEffort: ReasoningEffort,
+): void {
+  const { budget, provider, tools, events } = dependencies;
+  // Оценка — по телу запроса, как его соберёт провайдер: той же формулой, что бюджет.
+  const estimateTotal = (): number =>
+    estimatePromptBudget(
+      provider.prepareRequest({ messages, tools: tools.definitions(), reasoningEffort }).body,
+      budget,
+    ).estimate.total;
+  const thresholdTokens = Math.round((budget.limitTokens * budget.thresholdPercent) / 100);
+  const targetTokens = Math.round((budget.limitTokens * budget.clearTargetPercent) / 100);
+  const clearing = clearOldToolResults(messages, estimateTotal, {
+    thresholdTokens,
+    targetTokens,
+    charsPerToken: budget.charsPerToken,
+  });
+  if (clearing !== null) {
+    events.emit({
+      type: 'tool_results_cleared',
+      ...clearing,
+      thresholdTokens,
+      targetTokens,
+      preset: budget.preset,
+    });
+  }
 }
 
 // Ответ модели становится частью истории — вместе с рассуждениями и просьбами вызвать тулы.
