@@ -3,7 +3,7 @@
 // событиях записанной сессии (examples/traces).
 
 import { useState, type ReactElement } from 'react';
-import { ThemeSwitch } from '../../app/ThemeSwitch';
+import { ThemeToggle } from '../../components/ThemeToggle';
 import { Button } from '../../components/Button';
 import type { McpCourse } from '../../projections/projectMcpCourse';
 import { CourseNav } from '../rag/course/StepShell';
@@ -28,7 +28,7 @@ export function McpLab({ onBack }: { onBack: () => void }): ReactElement {
         <Button variant="quiet" onClick={onBack}>
           ← К сессиям
         </Button>
-        <ThemeSwitch />
+        <ThemeToggle />
       </header>
       <div>
         <h1 className={styles.title}>Лаборатория MCP</h1>

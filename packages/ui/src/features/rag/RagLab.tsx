@@ -4,7 +4,7 @@
 
 import type { LabBase } from '@harness-visualization/mcp-server/lab';
 import { useState, type ReactElement } from 'react';
-import { ThemeSwitch } from '../../app/ThemeSwitch';
+import { ThemeToggle } from '../../components/ThemeToggle';
 import { Button } from '../../components/Button';
 import { Segmented } from '../../components/Segmented';
 import { COURSE_STEPS } from './course/courseContent';
@@ -39,7 +39,7 @@ export function RagLab({ onBack }: { onBack: () => void }): ReactElement {
         <Button variant="quiet" onClick={onBack}>
           ← К сессиям
         </Button>
-        <ThemeSwitch />
+        <ThemeToggle />
       </header>
       <div>
         <h1 className={styles.title}>Лаборатория RAG</h1>

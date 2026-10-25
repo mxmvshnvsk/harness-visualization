@@ -18,6 +18,8 @@ import { useEventStream, type EventStream } from '../api/useEventStream';
 import { useServerList } from '../api/useServerList';
 import { Button } from '../components/Button';
 import { Drawer } from '../components/Drawer';
+import { Menu } from '../components/Menu';
+import { nextTheme, THEME_TEXT, ThemeToggle, ThemeToggleButton } from '../components/ThemeToggle';
 import { Segmented } from '../components/Segmented';
 import { EventList } from '../features/EventList';
 import { ContextView } from '../features/context/ContextView';
@@ -41,7 +43,7 @@ import type { TimelineClock } from '../timeline/TimelineClock';
 import { useTimeline } from '../timeline/useTimeline';
 import styles from './App.module.css';
 import { Sidebar } from './Sidebar';
-import { ThemeSwitch } from './ThemeSwitch';
+import { useTheme } from './theme';
 import { useSelection, type LabName, type Selection } from './useSelection';
 import { ViewLinksContext, type SearchLink, type ViewLinks } from './viewLinks';
 
@@ -163,49 +165,84 @@ interface TopbarProps {
   onOpenLab: (lab: LabName) => void;
 }
 
-// Шапка: что открыто, и кнопки, открывающие панель с сессиями, трейсами и запуском.
+// Шапка в один ряд: что открыто — слева, справа тема иконкой, «Лаборатории ▾», «Сессии и трейсы»
+// и главное действие «Новый вопрос». На узком экране всё, кроме него, — в меню «⋯».
+// Кнопка «← Диалог» — плавающая, шапка оставляет под неё место.
 function Topbar({ onOpenSources, onOpenLab, ...header }: TopbarProps): ReactElement {
+  const [theme, setTheme] = useTheme();
+  const labs = LAB_ENTRIES.map((entry) => ({
+    label: entry.title,
+    hint: entry.short,
+    onSelect: () => {
+      onOpenLab(entry.lab);
+    },
+  }));
   return (
     <header className={styles.topbar}>
       <StreamHeader {...header} />
       <div className={styles.toolbar}>
-        <ThemeSwitch />
-        <Button
-          variant="quiet"
-          onClick={() => {
-            onOpenLab('rag');
-          }}
-        >
-          Лаборатория RAG
-        </Button>
-        <Button
-          variant="quiet"
-          onClick={() => {
-            onOpenLab('mcp');
-          }}
-        >
-          Лаборатория MCP
-        </Button>
-        <Button variant="quiet" onClick={onOpenSources}>
-          Сессии и трейсы
-        </Button>
+        <span className={styles.wideOnly}>
+          <ThemeToggleButton choice={theme} onChange={setTheme} />
+        </span>
+        <span className={styles.wideOnly}>
+          <Menu label="Лаборатории" trigger={<>Лаборатории ▾</>} sections={[{ items: labs }]} />
+        </span>
+        <span className={styles.wideOnly}>
+          <Button variant="quiet" onClick={onOpenSources}>
+            Сессии и трейсы
+          </Button>
+        </span>
         <Button variant="accent" onClick={onOpenSources}>
           Новый вопрос
         </Button>
+        <span className={styles.narrowOnly}>
+          <Menu
+            label="Ещё"
+            shape="icon"
+            trigger={<MoreIcon />}
+            sections={[
+              { items: [{ label: 'Сессии и трейсы', onSelect: onOpenSources }] },
+              { title: 'лаборатории', items: labs },
+              {
+                items: [
+                  {
+                    label: THEME_TEXT[theme],
+                    hint: 'нажмите, чтобы сменить',
+                    onSelect: () => {
+                      setTheme(nextTheme(theme));
+                    },
+                  },
+                ],
+              },
+            ]}
+          />
+        </span>
       </div>
     </header>
   );
 }
 
-const LAB_ENTRIES: readonly { lab: LabName; title: string; text: string }[] = [
+function MoreIcon(): ReactElement {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="5" cy="12" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <circle cx="19" cy="12" r="1.8" />
+    </svg>
+  );
+}
+
+const LAB_ENTRIES: readonly { lab: LabName; title: string; short: string; text: string }[] = [
   {
     lab: 'rag',
     title: 'Лаборатория RAG',
+    short: 'поиск, векторы, проверка ответа',
     text: 'Как агент ищет в базе знаний, что такое векторы и почему найденное не гарантирует верный ответ.',
   },
   {
     lab: 'mcp',
     title: 'Лаборатория MCP',
+    short: 'тулы, протокол, цена, доверие',
     text: 'Что такое тул для модели, как харнесс говорит с MCP-сервером, сколько стоят тулы и можно ли верить серверу.',
   },
 ];
@@ -220,7 +257,7 @@ function StartScreen(props: {
       <div className={styles.startIntro}>
         <div className={styles.startTop}>
           <span className={styles.eyebrow}>Harness Visualization</span>
-          <ThemeSwitch />
+          <ThemeToggle />
         </div>
         <h1 className={styles.startTitle}>Как вопрос проходит через харнесс</h1>
         <p className={styles.startText}>

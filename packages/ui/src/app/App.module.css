@@ -36,17 +36,25 @@
 
 .topbar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 14px 18px;
 }
 
+/* Диалог свёрнут — справа плавающая «← Диалог»: шапка оставляет под неё место. */
+.shell[data-dialog='closed'] .topbar {
+  padding-right: 136px;
+}
+
 .toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex: none;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+}
+
+.narrowOnly {
+  display: none;
 }
 
 .startTop {
@@ -239,5 +247,35 @@
 
   .page {
     padding-bottom: 300px;
+  }
+}
+
+/* Узкий экран: в шапке — «Новый вопрос» и «⋯», «← Диалог» — внизу справа над плеером. */
+@media (width <= 760px) {
+  .topbar {
+    flex-direction: column;
+  }
+
+  .shell[data-dialog='closed'] .topbar {
+    padding-right: 0;
+  }
+
+  .toolbar {
+    align-self: stretch;
+    justify-content: flex-end;
+  }
+
+  .wideOnly {
+    display: none;
+  }
+
+  .narrowOnly {
+    display: block;
+  }
+
+  .openDialog {
+    top: auto;
+    right: 16px;
+    bottom: 132px;
   }
 }
