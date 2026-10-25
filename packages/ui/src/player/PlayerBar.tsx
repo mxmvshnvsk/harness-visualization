@@ -3,31 +3,87 @@
 // прямо в DOM по кадрам часов — React их не перерисовывает.
 
 import { useEffect, useRef, type ReactElement } from 'react';
+import { Segmented } from '../components/Segmented';
 import { realAt, stepTime, type Schedule } from '../timeline/schedule';
 import type { TimelineClock } from '../timeline/TimelineClock';
 import { useClockValue } from '../timeline/useTimeline';
 import { ActionStrip } from './ActionStrip';
 import styles from './PlayerBar.module.css';
 
-const SPEEDS = [0.5, 1, 2, 4] as const;
+// Скорости — группой кнопок: все видны сразу и переключаются одним нажатием.
+const SPEED_OPTIONS = [0.5, 1, 2, 4].map((value) => ({
+  value: String(value),
+  label: `${String(value).replace('.', ',')}×`,
+}));
 
 interface PlayerBarProps {
   clock: TimelineClock;
   schedule: Schedule;
   // Живая сессия: «к концу» значит «вживую».
   live: boolean;
+  // Свёрнут — одна строка: воспроизведение, лента и позиция.
+  collapsed: boolean;
+  onToggle: () => void;
 }
 
-export function PlayerBar({ clock, schedule, live }: PlayerBarProps): ReactElement {
+export function PlayerBar(props: PlayerBarProps): ReactElement {
+  const { clock, schedule, live, collapsed, onToggle } = props;
+  if (collapsed) {
+    return (
+      <div className={styles.collapsed}>
+        <PlayButton clock={clock} />
+        <div className={styles.stripCell}>
+          <ActionStrip clock={clock} schedule={schedule} />
+        </div>
+        <Position clock={clock} schedule={schedule} />
+        <ToggleButton collapsed onToggle={onToggle} />
+      </div>
+    );
+  }
   return (
     <div className={styles.bar}>
       <div className={styles.buttons}>
         <Transport clock={clock} schedule={schedule} />
         <FollowAndSpeed clock={clock} live={live} />
         <Position clock={clock} schedule={schedule} />
+        <ToggleButton collapsed={false} onToggle={onToggle} />
       </div>
       <ActionStrip clock={clock} schedule={schedule} />
     </div>
+  );
+}
+
+function ToggleButton({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}): ReactElement {
+  return (
+    <IconButton
+      label={collapsed ? 'Развернуть плеер' : 'Свернуть плеер'}
+      path={collapsed ? 'm6 15 6-6 6 6' : 'm6 9 6 6 6-6'}
+      onClick={onToggle}
+    />
+  );
+}
+
+function PlayButton({ clock }: { clock: TimelineClock }): ReactElement {
+  const playing = useClockValue(clock, (state) => state.playing);
+  return (
+    <IconButton
+      label={playing ? 'Пауза' : 'Воспроизвести'}
+      path={playing ? 'M9 6v12M15 6v12' : 'M8 5v14l11-7L8 5Z'}
+      primary
+      onClick={() => {
+        if (playing) {
+          clock.pause();
+        } else {
+          clock.play();
+        }
+      }}
+    />
   );
 }
 
@@ -39,7 +95,6 @@ function Transport({
   clock: TimelineClock;
   schedule: Schedule;
 }): ReactElement {
-  const playing = useClockValue(clock, (state) => state.playing);
   const step = (direction: 'forward' | 'back'): void => {
     clock.seek(stepTime(schedule, clock.getState().time, direction));
   };
@@ -59,18 +114,7 @@ function Transport({
           step('back');
         }}
       />
-      <IconButton
-        label={playing ? 'Пауза' : 'Воспроизвести'}
-        path={playing ? 'M9 6v12M15 6v12' : 'M8 5v14l11-7L8 5Z'}
-        primary
-        onClick={() => {
-          if (playing) {
-            clock.pause();
-          } else {
-            clock.play();
-          }
-        }}
-      />
+      <PlayButton clock={clock} />
       <IconButton
         label="Шаг вперёд"
         path="m7 6 8 6-8 6V6ZM18 6v12"
@@ -97,21 +141,15 @@ function FollowAndSpeed({ clock, live }: { clock: TimelineClock; live: boolean }
       >
         {live ? 'вживую' : 'к концу'}
       </button>
-      <label className={styles.speed}>
-        <span className={styles.visuallyHidden}>Скорость</span>
-        <select
-          value={speed}
-          onChange={(event) => {
-            clock.setSpeed(Number(event.target.value));
-          }}
-        >
-          {SPEEDS.map((value) => (
-            <option key={value} value={value}>
-              {String(value).replace('.', ',')}×
-            </option>
-          ))}
-        </select>
-      </label>
+      <Segmented
+        label="Скорость"
+        options={SPEED_OPTIONS}
+        value={String(speed)}
+        onChange={(value) => {
+          clock.setSpeed(Number(value));
+        }}
+        size="small"
+      />
     </>
   );
 }
@@ -154,8 +192,8 @@ function IconButton({ label, path, onClick, primary = false }: IconButtonProps):
       onClick={onClick}
     >
       <svg
-        width="18"
-        height="18"
+        width="16"
+        height="16"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

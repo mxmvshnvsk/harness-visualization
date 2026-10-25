@@ -189,7 +189,7 @@
 .followChip {
   position: fixed;
   left: 50%;
-  bottom: calc(210px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--dock-space, 150px) + 16px + env(safe-area-inset-bottom, 0px));
   z-index: 5;
   transform: translateX(-50%);
   min-height: 44px;

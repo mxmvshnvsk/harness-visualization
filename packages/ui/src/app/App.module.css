@@ -14,7 +14,7 @@
 
 .page {
   min-width: 0;
-  padding: 28px 32px 260px var(--space-page);
+  padding: 28px 32px 200px var(--space-page);
   display: flex;
   flex-direction: column;
   gap: var(--space-block);
@@ -93,7 +93,7 @@
   right: var(--dialog-width);
   bottom: 0;
   z-index: 4;
-  padding: 14px 32px calc(16px + env(safe-area-inset-bottom, 0px)) var(--space-page);
+  padding: 10px 32px calc(12px + env(safe-area-inset-bottom, 0px)) var(--space-page);
   background: var(--glass);
   border-top: 1px solid var(--glass-line);
   backdrop-filter: blur(24px) saturate(1.5);
@@ -104,7 +104,21 @@
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
+}
+
+/* Плеер свёрнут в строку — внизу страницы нужно меньше места под док.
+   --dock-space — высота дока: по ней над ним встают плавающие кнопки. */
+.shell {
+  --dock-space: 150px;
+}
+
+.shell[data-player='collapsed'] {
+  --dock-space: 64px;
+}
+
+.shell[data-player='collapsed'] .page {
+  padding-bottom: 96px;
 }
 
 /* Стартовый экран */

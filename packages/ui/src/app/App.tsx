@@ -184,36 +184,23 @@ interface OpenStreamProps {
 // Открытая сессия или трейс: слева шапка, виды и плеер, справа колонка «Диалог».
 // Все виды показывают события до курсора повтора — повтор и перемотка работают в каждом.
 function OpenStream({ events, sessionId, live, header, prompt }: OpenStreamProps): ReactElement {
-  const [viewName, setViewName] = useState<ViewName>('flow');
   // На узком экране колонка диалога ложится поверх — там она по умолчанию свёрнута.
   const [dialogOpen, setDialogOpen] = useState(() => window.innerWidth > 1000);
-  const { clock, cursor, schedule, shown, view } = useReplay(events, live);
+  const replay = useReplay(events, live);
+  const { clock, cursor, schedule, view } = replay;
+  const [playerCollapsed, togglePlayer] = usePlayerCollapsed();
   const liveStartedAt = live && events[0] !== undefined ? Date.parse(events[0].timestamp) : null;
   return (
-    <div className={styles.shell} data-dialog={dialogOpen ? 'open' : 'closed'}>
+    <div
+      className={styles.shell}
+      data-dialog={dialogOpen ? 'open' : 'closed'}
+      data-player={playerCollapsed ? 'collapsed' : 'open'}
+    >
       <div className={styles.page}>
         {header}
         {/* Колонка свёрнута — вопрос о разрешении над видами, чтобы его не пропустить. */}
         {!dialogOpen && prompt}
-        <div className={styles.views}>
-          <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
-          {viewName === 'flow' && (
-            <FlowView clock={clock} schedule={schedule} liveStartedAt={liveStartedAt} />
-          )}
-          {viewName === 'inspector' && (
-            <InspectorView
-              view={view}
-              events={events}
-              shown={cursor}
-              clock={clock}
-              schedule={schedule}
-            />
-          )}
-          {viewName === 'context' && (
-            <ContextView events={events} shown={cursor} clock={clock} schedule={schedule} />
-          )}
-          {viewName === 'events' && <EventList events={shown} />}
-        </div>
+        <ViewSwitch events={events} replay={replay} liveStartedAt={liveStartedAt} />
       </div>
       {dialogOpen ? (
         <DialogPanel
@@ -239,7 +226,47 @@ function OpenStream({ events, sessionId, live, header, prompt }: OpenStreamProps
           ← Диалог
         </button>
       )}
-      <PlayerDock view={view} clock={clock} schedule={schedule} live={live} />
+      <PlayerDock
+        view={view}
+        clock={clock}
+        schedule={schedule}
+        live={live}
+        collapsed={playerCollapsed}
+        onToggle={togglePlayer}
+      />
+    </div>
+  );
+}
+
+interface ViewSwitchProps {
+  events: HarnessEvent[];
+  replay: ReturnType<typeof useReplay>;
+  liveStartedAt: number | null;
+}
+
+// Переключатель видов и сам выбранный вид.
+function ViewSwitch({ events, replay, liveStartedAt }: ViewSwitchProps): ReactElement {
+  const [viewName, setViewName] = useState<ViewName>('flow');
+  const { clock, cursor, schedule, shown, view } = replay;
+  return (
+    <div className={styles.views}>
+      <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
+      {viewName === 'flow' && (
+        <FlowView clock={clock} schedule={schedule} liveStartedAt={liveStartedAt} />
+      )}
+      {viewName === 'inspector' && (
+        <InspectorView
+          view={view}
+          events={events}
+          shown={cursor}
+          clock={clock}
+          schedule={schedule}
+        />
+      )}
+      {viewName === 'context' && (
+        <ContextView events={events} shown={cursor} clock={clock} schedule={schedule} />
+      )}
+      {viewName === 'events' && <EventList events={shown} />}
     </div>
   );
 }
@@ -249,18 +276,51 @@ interface PlayerDockProps {
   clock: TimelineClock;
   schedule: Schedule;
   live: boolean;
+  collapsed: boolean;
+  onToggle: () => void;
 }
 
-// Док внизу слева: строка токеномики и плеер; справа от него — поле ввода диалога.
-function PlayerDock({ view, clock, schedule, live }: PlayerDockProps): ReactElement {
+// Док внизу слева: строка токеномики и плеер. Свёрнутый — одна строка без токеномики.
+function PlayerDock(props: PlayerDockProps): ReactElement {
+  const { view, collapsed } = props;
   return (
     <div className={styles.dock}>
       <div className={styles.dockInner}>
-        <TokenomicsLine totals={view.totals} />
-        <PlayerBar clock={clock} schedule={schedule} live={live} />
+        {!collapsed && <TokenomicsLine totals={view.totals} />}
+        <PlayerBar
+          clock={props.clock}
+          schedule={props.schedule}
+          live={props.live}
+          collapsed={collapsed}
+          onToggle={props.onToggle}
+        />
       </div>
     </div>
   );
+}
+
+const PLAYER_KEY = 'hv-player-collapsed';
+
+// Свёрнут ли плеер — запоминается в браузере; хранилище недоступно — просто не запомним.
+function usePlayerCollapsed(): [boolean, () => void] {
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(PLAYER_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const toggle = (): void => {
+    setCollapsed((value) => {
+      try {
+        localStorage.setItem(PLAYER_KEY, String(!value));
+      } catch {
+        // Не запомнили — не страшно.
+      }
+      return !value;
+    });
+  };
+  return [collapsed, toggle];
 }
 
 // Повтор: действия, расписание, часы и сколько событий показано; вид сессии — на этот момент.

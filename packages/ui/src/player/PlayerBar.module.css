@@ -1,19 +1,35 @@
 .bar {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
 }
 
 .buttons {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px 12px;
+  gap: 8px;
+}
+
+/* Свёрнутый плеер — одна строка: воспроизведение, лента, позиция, «развернуть». */
+.collapsed {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stripCell {
+  flex: 1;
+  min-width: 0;
+}
+
+.collapsed .position {
+  margin-left: 0;
 }
 
 .icon {
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
   flex: none;
   display: flex;
   align-items: center;
@@ -38,17 +54,17 @@
 }
 
 .primary {
-  width: 52px;
-  height: 52px;
+  width: 38px;
+  height: 38px;
   border-color: transparent;
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: var(--accent-text);
-  box-shadow: 0 8px 26px -8px color-mix(in srgb, var(--accent) 75%, transparent);
+  box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--accent) 75%, transparent);
 }
 
 .follow {
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 30px;
+  padding: 0 12px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   background: transparent;
@@ -61,17 +77,6 @@
   background: var(--selected);
   border-color: transparent;
   color: var(--selected-text);
-}
-
-.speed select {
-  min-height: 36px;
-  padding: 0 12px;
-  min-width: 72px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--line);
-  background: transparent;
-  font-family: var(--font-mono);
-  font-size: 13px;
 }
 
 .position {
