@@ -57,6 +57,8 @@
 | `pipeline_step_started`   | начался шаг оркестрации                                                                                       | `stepId`, `title`, `kind`                                                                                                                                                                                                                                                           |
 | `pipeline_step_finished`  | шаг закончен                                                                                                  | `stepId`, `status` (`done`, `warning`, `failed`), `summary`, `durationMs`                                                                                                                                                                                                           |
 | `orchestration_finished`  | оркестрация закончена                                                                                         | `mode`, `status` (`done`, `failed`), `tasks`, `reworks` (возвраты на доработку), `durationMs`                                                                                                                                                                                       |
+| `task_reviewed`           | оркестратор-суперагент принял отчёт субагента или вернул на доработку (этап 6d.2)                             | `subagentId`, `taskId` (задача плана или `null`), `verdict` (`accepted`, `rework`), `comment`, `round` (какой по счёту отчёт принимали)                                                                                                                                             |
+| `subagent_resumed`        | субагент дорабатывает: замечание оркестратора ушло в его же историю                                           | `subagentId`, `agent`, `feedback`, `round` (номер будущего отчёта); дальше — его события и `subagent_finished` с `round`                                                                                                                                                            |
 | `assistant_message`       | харнесс отдал ответ пользователю                                                                              | `text`                                                                                                                                                                                                                                                                              |
 | `awaiting_question`       | ответ отдан, сессия ждёт следующего вопроса того же диалога (этап 6.1)                                        | `turn` — сколько ходов уже было                                                                                                                                                                                                                                                     |
 | `session_finished`        | сессия закончилась                                                                                            | `durationMs`, `modelRequests`, `usage`, `modelCost`, `toolCosts`                                                                                                                                                                                                                    |
@@ -116,6 +118,27 @@ pipeline_step_started (verify) → pipeline_step_finished (какие докум
 assistant_message
 orchestration_finished
 ```
+
+Суперагент — порядок решает модель-оркестратор: шагов заранее нет (`steps` пустой), план он записывает тулом `plan_tasks`, поручает — `delegate_task` с `taskId`, принимает — `review_report`. Тулы оркестратора — только эти три и `kedr__list_documents` (`orchestration.superagent.orchestratorTools`); читают документы исполнители. Ход вопроса:
+
+```text
+user_message
+orchestration_started (mode superagent, steps [])
+model_request → tool_call plan_tasks → plan_created (author model) → tool_result
+model_request → tool_call delegate_task ×2 (taskId task-1, task-2) — одновременно
+  subagent_started … subagent_finished — у каждого
+tool_result delegate_task: «Отчёт researcher-1: …»
+model_request → tool_call review_report ×2
+  task_reviewed (researcher-1, accepted)
+  task_reviewed (researcher-2, rework, comment) → subagent_resumed (round 2) → … → subagent_finished (round 2)
+tool_result review_report: «Отчёт researcher-2 после доработки: …»
+model_request → tool_call review_report → task_reviewed (researcher-2, accepted)
+model_request → ответ текстом
+assistant_message
+orchestration_finished (tasks 2, reworks 1)
+```
+
+Доработка — продолжение той же истории субагента: он видит своё поручение, прочитанное и прошлый отчёт. Вернуть один отчёт можно не больше `orchestration.superagent.maxReworks` раз (по умолчанию 1).
 
 Поручения в пайплайне даёт код, а не модель: у `subagent_started` пустой `parentToolCallId` и поле `stepId` — шаг, на котором дано поручение. `delegate_task` модели в режиме оркестрации не даётся.
 

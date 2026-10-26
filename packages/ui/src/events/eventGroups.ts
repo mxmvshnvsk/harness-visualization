@@ -43,6 +43,8 @@ const EVENT_GROUPS: Record<HarnessEventType, EventGroup> = {
   subagent_finished: 'tool',
   // Оркестрация (этап 6d) — работа харнесса, как цикл агента.
   orchestration_started: 'meta',
+  task_reviewed: 'tool',
+  subagent_resumed: 'tool',
   plan_created: 'meta',
   pipeline_step_started: 'meta',
   pipeline_step_finished: 'meta',

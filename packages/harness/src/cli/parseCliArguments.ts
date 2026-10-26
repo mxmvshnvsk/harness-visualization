@@ -7,7 +7,8 @@
 //   pnpm chat --retrieval auto --retrieval-tool kedr__hybrid_search "вопрос" — каким тулом ищет харнесс
 //   pnpm chat --fresh "вопрос"        — начать с чистой рабочей папки (пересоздать из примеров)
 //   pnpm chat --subagents "вопрос"    — дать модели субагентов (этап 6c), даже если в настройках выключены
-//   pnpm chat --orchestration pipeline "вопрос" — оркестрация (этап 6d): pipeline — шаги задаёт код
+//   pnpm chat --orchestration pipeline "вопрос" — оркестрация (этап 6d): pipeline — шаги задаёт код,
+//                                       superagent — план, поручения и приёмку решает модель
 //   pnpm chat --no-demo "вопрос"      — агент без демо-проекта: без «Кедр Софт», MCP, базы знаний,
 //                                       скиллов и памяти; пустая песочница, файлы и веб
 //   pnpm chat --verbose "вопрос"      — печатать и полные события в JSON
@@ -75,8 +76,8 @@ export function parseCliArguments(argumentList: string[]): CliOptions {
   };
 }
 
-// Пока готов только пайплайн; суперагент и гибрид — шаги 6d.2 и 6d.3.
-const ORCHESTRATION_MODES = ['pipeline'] as const;
+// Готовы пайплайн и суперагент; гибрид — шаг 6d.3.
+const ORCHESTRATION_MODES = ['pipeline', 'superagent'] as const;
 
 function parseOrchestration(value: string): OrchestrationMode {
   const mode = ORCHESTRATION_MODES.find((item) => item === value);

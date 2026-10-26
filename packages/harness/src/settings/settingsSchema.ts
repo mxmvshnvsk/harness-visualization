@@ -333,7 +333,20 @@ const pipelineSettingsSchema = z.object({
   researcherTools: z.array(z.string().min(1)).min(1).default(['kedr__read_document']),
 });
 
+// Суперагент (этап 6d.2): план, поручения и приёмка решает модель-оркестратор.
+const superagentSettingsSchema = z.object({
+  // Сколько раз можно вернуть отчёт одного субагента на доработку.
+  maxReworks: z.number().int().min(0).max(5).default(1),
+  // Свои тулы оркестратора кроме plan_tasks, delegate_task и review_report: только посмотреть,
+  // какие документы есть, — читают исполнители.
+  orchestratorTools: z.array(z.string().min(1)).default(['kedr__list_documents']),
+});
+
 const orchestrationSettingsSchema = z.object({
+  superagent: superagentSettingsSchema.default({
+    maxReworks: 1,
+    orchestratorTools: ['kedr__list_documents'],
+  }),
   pipeline: pipelineSettingsSchema.default({
     searchTool: null,
     maxDocuments: 3,
@@ -373,6 +386,7 @@ export const harnessSettingsSchema = z.object({
   skills: skillsSettingsSchema.default({ directory: 'skills', always: [], manual: [] }),
   subagents: subagentsSettingsSchema.default({ enabled: false, parallel: true, agents: {} }),
   orchestration: orchestrationSettingsSchema.default({
+    superagent: { maxReworks: 1, orchestratorTools: ['kedr__list_documents'] },
     pipeline: {
       searchTool: null,
       maxDocuments: 3,
@@ -392,6 +406,7 @@ export const harnessSettingsSchema = z.object({
 export type HarnessSettings = z.infer<typeof harnessSettingsSchema>;
 export type ModelSettings = z.infer<typeof modelSettingsSchema>;
 export type PipelineSettings = z.infer<typeof pipelineSettingsSchema>;
+export type SuperagentSettings = z.infer<typeof superagentSettingsSchema>;
 export type ContextSettings = z.infer<typeof contextSettingsSchema>;
 export type ReasoningStyle = ModelSettings['reasoningStyle'];
 export type ModelPrices = z.infer<typeof modelPricesSchema>;

@@ -96,7 +96,18 @@ const ORCHESTRATION_DESCRIBERS: Pick<
   | 'pipeline_step_started'
   | 'pipeline_step_finished'
   | 'orchestration_finished'
+  | 'task_reviewed'
+  | 'subagent_resumed'
 > = {
+  task_reviewed: (event) => [
+    styleText(
+      event.verdict === 'accepted' ? 'magenta' : 'yellow',
+      `Приёмка ${event.subagentId}${event.taskId === null ? '' : ` (${event.taskId})`}: ${event.verdict === 'accepted' ? 'принято' : 'вернуть на доработку'} — ${shortenForPreview(event.comment)}`,
+    ),
+  ],
+  subagent_resumed: (event) => [
+    styleText('yellow', `Субагент ${event.subagentId} дорабатывает (отчёт ${String(event.round)})`),
+  ],
   orchestration_started: (event) => [
     styleText('bold', `Оркестрация: ${ORCHESTRATION_MODE_NAMES[event.mode]}`),
     ...event.steps.map((step, index) =>

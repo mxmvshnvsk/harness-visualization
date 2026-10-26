@@ -183,13 +183,21 @@ async function runRequestedTools(
   }
 }
 
+// Работа субагентов идёт одновременно: поручения и доработки после приёмки (этап 6d.2).
+const PARALLEL_TOOLS = new Set([DELEGATE_TOOL_NAME, 'review_report']);
+
 // Группы вызовов: внутри группы — одновременно. Каждый обычный тул — отдельная группа.
 function groupForExecution(toolCalls: ToolCall[], parallelDelegation: boolean): ToolCall[][] {
   const groups: ToolCall[][] = [];
   for (const toolCall of toolCalls) {
     const previous = groups.at(-1);
-    const delegates = toolCall.name === DELEGATE_TOOL_NAME;
-    if (parallelDelegation && delegates && previous?.[0]?.name === DELEGATE_TOOL_NAME) {
+    const delegates = PARALLEL_TOOLS.has(toolCall.name);
+    if (
+      parallelDelegation &&
+      delegates &&
+      previous !== undefined &&
+      PARALLEL_TOOLS.has(previous[0]?.name ?? '')
+    ) {
       previous.push(toolCall);
     } else {
       groups.push([toolCall]);

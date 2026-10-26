@@ -82,6 +82,9 @@ const DESCRIBERS: Describers = {
   iteration_limit_reached: (event) =>
     `лимит ${String(event.limit)} шагов (${event.setting}): последний шаг — без тулов`,
   subagent_started: (event) => `${event.subagentId}: «${event.task}»`,
+  task_reviewed: (event) =>
+    `${event.subagentId}: ${event.verdict === 'accepted' ? 'принято' : 'на доработку'} — ${event.comment}`,
+  subagent_resumed: (event) => `${event.subagentId} дорабатывает: «${event.feedback}»`,
   orchestration_started: (event) =>
     `${event.mode}: ${event.steps.map((step) => step.title).join(' → ')}`,
   plan_created: (event) =>

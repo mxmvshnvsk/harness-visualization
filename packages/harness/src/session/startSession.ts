@@ -47,6 +47,7 @@ import { Workspace } from '../workspace/Workspace.js';
 import { announceSession } from './announceSession.js';
 import type { OrchestrationMode } from '../events/harnessEvents.js';
 import { runPipelineTurn, type PipelineOptions } from '../orchestration/runPipelineTurn.js';
+import { runSuperagentTurn, type SuperagentOptions } from '../orchestration/runSuperagentTurn.js';
 import { startSessionRecording, type SessionRecording } from './sessionRecording.js';
 
 export interface SessionInput {
@@ -164,13 +165,10 @@ async function runDialog(
     retrieval: createRetrievalOptions(input),
   };
   const conversation: ChatMessage[] = [];
-  const pipeline = pipelineOf(input);
+  const runTurn = turnRunner(input, options, conversation);
   let question: string | null = input.question;
   for (let turn = 1; question !== null; turn += 1) {
-    // Пайплайн каждый вопрос проходит заново по тем же шагам: истории у него нет.
-    await (pipeline === null
-      ? runAgentTurn(question, dependencies, options, conversation)
-      : runPipelineTurn(question, dependencies, pipeline));
+    await runTurn(question, dependencies);
     if (hooks.nextQuestion === undefined) {
       return;
     }
@@ -391,6 +389,40 @@ function registerDelegateTool(input: SessionInput, dependencies: AgentDependenci
   if (tool !== null) {
     dependencies.tools.register(tool);
   }
+}
+
+type TurnRunner = (question: string, dependencies: AgentDependencies) => Promise<string>;
+
+// Кто ведёт ход: обычный агент, пайплайн (каждый вопрос — заново по тем же шагам, истории нет)
+// или оркестратор-суперагент (своя история диалога, как у агента).
+function turnRunner(
+  input: SessionInput,
+  options: Parameters<typeof runAgentTurn>[2],
+  conversation: ChatMessage[],
+): TurnRunner {
+  const pipeline = pipelineOf(input);
+  if (pipeline !== null) {
+    return (question, dependencies) => runPipelineTurn(question, dependencies, pipeline);
+  }
+  const superagent = superagentOf(input);
+  if (superagent !== null) {
+    return (question, dependencies) =>
+      runSuperagentTurn(question, dependencies, superagent, conversation);
+  }
+  return (question, dependencies) => runAgentTurn(question, dependencies, options, conversation);
+}
+
+function superagentOf(input: SessionInput): SuperagentOptions | null {
+  if (orchestrationOf(input) !== 'superagent') {
+    return null;
+  }
+  const { orchestration, subagents, agent } = input.loadedSettings.settings;
+  return {
+    settings: orchestration.superagent,
+    subagents,
+    reasoningEffort: input.reasoningEffort,
+    maxIterations: agent.maxIterations,
+  };
 }
 
 // Оркестрация — только в демо-проекте: исследователи читают базу знаний «Кедр Софт».

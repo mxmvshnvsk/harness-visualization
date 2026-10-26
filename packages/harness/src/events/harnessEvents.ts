@@ -465,6 +465,28 @@ export interface SubagentStartedPayload {
 
 export type SubagentStatus = 'done' | 'failed';
 
+// Оркестратор вернул отчёт на доработку (этап 6d.2): замечание ушло в историю того же субагента,
+// дальше — его события с тем же agentId и новый subagent_finished с round.
+export interface SubagentResumedPayload {
+  type: 'subagent_resumed';
+  subagentId: string;
+  agent: string;
+  feedback: string;
+  round: number;
+}
+
+// Приёмка отчёта оркестратором (этап 6d.2): принять или вернуть с замечанием.
+export interface TaskReviewedPayload {
+  type: 'task_reviewed';
+  subagentId: string;
+  // Задача плана, если оркестратор её указал.
+  taskId: string | null;
+  verdict: 'accepted' | 'rework';
+  comment: string;
+  // Какой по счёту отчёт принимали: 1 — первый.
+  round: number;
+}
+
 // Оркестрация (этап 6d): кто решает порядок шагов — код (pipeline), модель (superagent) или оба.
 export type OrchestrationMode = 'pipeline' | 'superagent' | 'hybrid';
 
@@ -535,6 +557,8 @@ export interface SubagentFinishedPayload {
   subagentId: string;
   agent: string;
   parentToolCallId: string;
+  // Номер отчёта после доработки (этап 6d.2): 2 — после первой; нет поля — первый отчёт.
+  round?: number;
   status: SubagentStatus;
   // Отчёт субагента — он и уходит главному как результат delegate_task; null — не дошёл до отчёта.
   report: string | null;
@@ -621,6 +645,8 @@ export type HarnessEventPayload =
   | IterationLimitReachedPayload
   | SubagentStartedPayload
   | SubagentFinishedPayload
+  | SubagentResumedPayload
+  | TaskReviewedPayload
   | OrchestrationStartedPayload
   | PlanCreatedPayload
   | PipelineStepStartedPayload

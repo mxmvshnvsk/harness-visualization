@@ -32,17 +32,39 @@ export interface SubagentOutcome {
   errorMessage: string | null;
 }
 
+// Работа субагента, которую можно продолжить: его история и тулы живут после отчёта, чтобы
+// оркестратор мог вернуть отчёт на доработку (этап 6d.2) — тот же субагент, та же история.
+export interface SubagentRun {
+  assignment: SubagentAssignment;
+  messages: ChatMessage[];
+  tools: ToolRegistry;
+  // Сколько раз отчитывался: 1 — первый отчёт, 2 — после первой доработки.
+  round: number;
+}
+
 export async function runSubagent(
   assignment: SubagentAssignment,
   dependencies: AgentDependencies,
-): Promise<SubagentOutcome> {
+): Promise<SubagentOutcome & { run: SubagentRun }> {
   const { subagentId, agent, settings, task, parentToolCallId, stepId } = assignment;
-  const tokenomics = new SessionTokenomics();
-  const events = dependencies.events.forAgent(subagentId, (event) => {
-    tokenomics.handleEvent(event);
-    assignment.onEvent?.(event);
-  });
   const tools = pickTools(dependencies.tools, assignment.toolNames ?? settings.tools);
+  const run: SubagentRun = {
+    assignment,
+    messages: [
+      {
+        role: 'system',
+        content: buildSubagentPrompt(new Date(), {
+          agent,
+          instructions: settings.instructions,
+          toolNames: tools.names(),
+          mcpInstructions: dependencies.mcpServerInstructions,
+        }),
+      },
+      { role: 'user', content: task },
+    ],
+    tools,
+    round: 1,
+  };
   dependencies.events.emit({
     type: 'subagent_started',
     subagentId,
@@ -54,14 +76,58 @@ export async function runSubagent(
     maxIterations: settings.maxIterations,
     reasoningEffort: settings.reasoningEffort,
   });
+  const outcome = await runRound(run, dependencies, true);
+  return { ...outcome, run };
+}
+
+// Доработка (этап 6d.2): замечание оркестратора — новым сообщением в историю того же субагента.
+// Он видит своё прошлое поручение, прочитанное и отчёт — и дорабатывает, а не начинает заново.
+export async function resumeSubagent(
+  run: SubagentRun,
+  feedback: string,
+  dependencies: AgentDependencies,
+): Promise<SubagentOutcome> {
+  run.round += 1;
+  const { subagentId, agent } = run.assignment;
+  run.messages.push({ role: 'user', content: feedback });
+  dependencies.events.emit({
+    type: 'subagent_resumed',
+    subagentId,
+    agent,
+    feedback,
+    round: run.round,
+  });
+  return runRound(run, dependencies, false);
+}
+
+// Один заход субагента: свой цикл, своя токеномика, отчёт событием subagent_finished.
+async function runRound(
+  run: SubagentRun,
+  dependencies: AgentDependencies,
+  first: boolean,
+): Promise<SubagentOutcome> {
+  const { assignment } = run;
+  const tokenomics = new SessionTokenomics();
+  const events = dependencies.events.forAgent(assignment.subagentId, (event) => {
+    tokenomics.handleEvent(event);
+    assignment.onEvent?.(event);
+  });
+  if (first) {
+    events.emit({
+      type: 'prompt_assembled',
+      messages: [...run.messages],
+      toolNames: run.tools.names(),
+    });
+  }
   const startedAt = performance.now();
-  const outcome = await runOwnLoop(assignment, { ...dependencies, events, tools });
+  const outcome = await runOwnLoop(run, { ...dependencies, events, tools: run.tools });
   const summary = tokenomics.summary();
   dependencies.events.emit({
     type: 'subagent_finished',
-    subagentId,
-    agent,
-    parentToolCallId,
+    subagentId: assignment.subagentId,
+    agent: assignment.agent,
+    parentToolCallId: assignment.parentToolCallId,
+    ...(first ? {} : { round: run.round }),
     status: outcome.report === null ? 'failed' : 'done',
     report: outcome.report,
     errorMessage: outcome.errorMessage,
@@ -75,28 +141,12 @@ export async function runSubagent(
 
 // Ошибка субагента — не ошибка сессии: главный получит её текстом вместо отчёта.
 async function runOwnLoop(
-  { agent, settings, task }: SubagentAssignment,
+  run: SubagentRun,
   dependencies: AgentDependencies,
 ): Promise<SubagentOutcome> {
-  const messages: ChatMessage[] = [
-    {
-      role: 'system',
-      content: buildSubagentPrompt(new Date(), {
-        agent,
-        instructions: settings.instructions,
-        toolNames: dependencies.tools.names(),
-        mcpInstructions: dependencies.mcpServerInstructions,
-      }),
-    },
-    { role: 'user', content: task },
-  ];
-  dependencies.events.emit({
-    type: 'prompt_assembled',
-    messages: [...messages],
-    toolNames: dependencies.tools.names(),
-  });
+  const { agent, settings } = run.assignment;
   try {
-    const report = await runAgentLoop(messages, dependencies, {
+    const report = await runAgentLoop(run.messages, dependencies, {
       reasoningEffort: settings.reasoningEffort,
       maxIterations: settings.maxIterations,
       limitSetting: `subagents.agents.${agent}.maxIterations`,

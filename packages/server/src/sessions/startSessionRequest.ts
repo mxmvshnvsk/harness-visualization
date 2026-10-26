@@ -16,8 +16,8 @@ export const startSessionRequestSchema = z.object({
   freshWorkspace: z.boolean().optional(),
   // Дать ли модели субагентов (этап 6c); нет поля — как в harness.config.json.
   subagents: z.boolean().optional(),
-  // Оркестрация (этап 6d): pipeline — шаги задаёт код; нет поля — обычный агент.
-  orchestration: z.enum(['pipeline']).optional(),
+  // Оркестрация (этап 6d): pipeline — шаги задаёт код, superagent — модель; нет поля — обычный агент.
+  orchestration: z.enum(['pipeline', 'superagent']).optional(),
   // false — агент без демо-проекта; нет поля — с демо-проектом «Кедр Софт».
   demoProject: z.boolean().optional(),
 });

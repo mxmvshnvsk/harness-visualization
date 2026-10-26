@@ -184,7 +184,7 @@ async function research(
   const notes = await Promise.all(
     documents.map(async (documentId, index): Promise<ResearchNote> => {
       const subagentId = `${agent}-${String(index + 1)}`;
-      const outcome = await runSubagent(
+      const { report, errorMessage } = await runSubagent(
         {
           subagentId,
           agent,
@@ -199,7 +199,7 @@ async function research(
         },
         dependencies,
       );
-      return { documentId, subagentId, ...outcome };
+      return { documentId, subagentId, report, errorMessage };
     }),
   );
   const failed = notes.filter((note) => note.report === null).length;
