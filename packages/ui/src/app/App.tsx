@@ -74,12 +74,15 @@ export function App(): ReactElement {
   const sources = (
     <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} />
   );
+  const startSources = (
+    <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} wide />
+  );
   const lab =
     selection?.kind === 'lab' ? (
       <LabScreen lab={selection.lab} back={opened} onBack={closeLab} onSelect={pick} />
     ) : null;
   if (opened === null) {
-    return lab ?? <StartScreen onOpenLab={openLab}>{sources}</StartScreen>;
+    return lab ?? <StartScreen onOpenLab={openLab}>{startSources}</StartScreen>;
   }
   return (
     <>
@@ -408,7 +411,19 @@ function labEntries(mode: UiMode): typeof LAB_ENTRIES {
   return mode === 'research' ? LAB_ENTRIES.filter((entry) => entry.teaching !== true) : LAB_ENTRIES;
 }
 
+const START_TEXT: Record<UiMode, { title: string; text: string }> = {
+  learn: {
+    title: 'Как вопрос проходит через харнесс',
+    text: 'Задайте вопрос агенту или откройте трейс — и посмотрите по шагам: prompt, модель, политика, тулы, ответ.',
+  },
+  research: {
+    title: 'Сессии и записи',
+    text: 'Свои сессии и записи Claude Code и OpenCode — по шагам: контекст, сырые запросы и ответы.',
+  },
+};
+
 // Пока ничего не открыто — вопрос агенту и списки прямо на экране, без панели.
+// Широкий экран: слева вопрос и списки, справа — лаборатории коротким списком.
 function StartScreen(props: {
   children: ReactNode;
   onOpenLab: (lab: LabName) => void;
@@ -416,38 +431,40 @@ function StartScreen(props: {
   const mode = useMode();
   return (
     <div className={styles.start}>
-      <div className={styles.startIntro}>
-        <div className={styles.startTop}>
+      <div className={styles.startTop}>
+        {/* Заголовок и подпись есть в обоих режимах, в одну строку: шапка не скачет. */}
+        <div className={styles.startIntro}>
           <span className={styles.eyebrow}>Harness Visualization</span>
-          <span className={styles.startControls}>
-            <ModeToggle />
-            <ThemeToggle />
-          </span>
+          <h1 className={styles.startTitle}>{START_TEXT[mode].title}</h1>
+          <p className={styles.startText}>{START_TEXT[mode].text}</p>
         </div>
-        <h1 className={styles.startTitle}>
-          {mode === 'research' ? 'Сессии и записи' : 'Как вопрос проходит через харнесс'}
-        </h1>
-        <p className={styles.startText} data-teaching>
-          Задайте вопрос агенту или откройте записанный трейс — и посмотрите по шагам: prompt,
-          модель, политика, тулы, ответ.
-        </p>
+        <span className={styles.startControls}>
+          <ModeToggle />
+          <ThemeToggle />
+        </span>
       </div>
-      <div className={styles.labs}>
-        {labEntries(mode).map((entry) => (
-          <button
-            key={entry.lab}
-            type="button"
-            className={styles.labEntry}
-            onClick={() => {
-              props.onOpenLab(entry.lab);
-            }}
-          >
-            <b>{entry.title} →</b>
-            <span>{mode === 'research' ? entry.short : entry.text}</span>
-          </button>
-        ))}
+      <div className={styles.startGrid}>
+        {props.children}
+        <aside className={`${styles.card} ${styles.labs}`}>
+          <h2 className={styles.labsTitle}>
+            {mode === 'research' ? 'Инструменты' : 'Лаборатории'}
+          </h2>
+          {labEntries(mode).map((entry) => (
+            <button
+              key={entry.lab}
+              type="button"
+              className={styles.labEntry}
+              title={entry.text}
+              onClick={() => {
+                props.onOpenLab(entry.lab);
+              }}
+            >
+              <b>{entry.title}</b>
+              <span>{entry.short}</span>
+            </button>
+          ))}
+        </aside>
       </div>
-      {props.children}
     </div>
   );
 }

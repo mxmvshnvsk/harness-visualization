@@ -51,10 +51,15 @@
 
 .startTop {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
+}
+
+@media (max-width: 760px) {
+  .startTop {
+    flex-direction: column;
+  }
 }
 
 .startControls {
@@ -80,6 +85,25 @@
   flex-direction: column;
   gap: 16px;
   min-width: 0;
+}
+
+/* Стартовый экран: вопрос на всю ширину колонки, сессии и трейсы — рядом. */
+.sourcesWide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+  min-width: 0;
+}
+
+.sourcesWide .formCard {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 760px) {
+  .sourcesWide {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .views {
@@ -130,18 +154,21 @@
 
 /* Стартовый экран */
 .start {
-  max-width: 720px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding: 64px var(--space-page) 80px;
+  /* Скрытые подсказки у правого края не должны раздвигать страницу на узком экране. */
+  overflow-x: clip;
+  padding: 28px var(--space-page) 80px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 24px;
 }
 
 .startIntro {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 4px;
+  min-width: 0;
 }
 
 .eyebrow {
@@ -164,47 +191,76 @@
 }
 
 .startTitle {
-  font-size: clamp(30px, 4vw, 42px);
-  letter-spacing: -0.025em;
-  line-height: 1.1;
-  text-wrap: balance;
+  font-size: clamp(22px, 2.4vw, 28px);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .startText {
   margin: 0;
-  max-width: 56ch;
   color: var(--muted);
-  font-size: 16px;
+  font-size: 14.5px;
+}
+
+/* Подпись в двух режимах разной длины: на узком экране место под две строки — шапка не скачет. */
+@media (max-width: 1000px) {
+  .startText {
+    min-height: 3em;
+  }
+}
+
+.startGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .startGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .labs {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: 16px;
+}
+
+.labsTitle {
+  margin: 0 0 8px;
+  font-size: 15px;
 }
 
 .labEntry {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 16px 20px;
+  gap: 1px;
+  padding: 9px 10px;
   text-align: left;
   font: inherit;
   color: var(--text);
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: var(--radius-inner);
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  background: transparent;
   cursor: pointer;
+}
+
+.labEntry b {
+  font-weight: 500;
 }
 
 .labEntry span {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12.5px;
 }
 
 .labEntry:hover {
-  border-color: var(--selected-line);
+  border-color: var(--line);
+  background: var(--raised);
 }
 
 .labEntry:focus-visible {

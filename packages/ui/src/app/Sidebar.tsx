@@ -14,12 +14,20 @@ interface SidebarProps {
   traces: ServerList<TraceSummary>;
   selection: Selection | null;
   onSelect: (selection: Selection) => void;
+  // Стартовый экран: вопрос на всю ширину, сессии и трейсы — рядом в две колонки.
+  wide?: boolean;
 }
 
-export function Sidebar({ sessions, traces, selection, onSelect }: SidebarProps): ReactElement {
+export function Sidebar({
+  sessions,
+  traces,
+  selection,
+  onSelect,
+  wide = false,
+}: SidebarProps): ReactElement {
   return (
-    <div className={styles.sources}>
-      <section className={styles.card}>
+    <div className={wide ? styles.sourcesWide : styles.sources}>
+      <section className={`${styles.card} ${styles.formCard}`}>
         <SessionForm
           onStarted={(sessionId) => {
             onSelect({ kind: 'session', sessionId });
