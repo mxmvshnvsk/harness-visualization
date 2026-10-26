@@ -4,6 +4,7 @@
 // Идея — как у субагентов Claude Code (Anthropic): https://code.claude.com/docs/en/sub-agents
 
 import type { AgentDependencies } from '../agent/agentDependencies.js';
+import type { HarnessEvent } from '../events/harnessEvents.js';
 import { runAgentLoop } from '../agent/agentLoop.js';
 import type { ChatMessage } from '../model/chatTypes.js';
 import type { SubagentSettings } from '../settings/settingsSchema.js';
@@ -20,6 +21,10 @@ export interface SubagentAssignment {
   parentToolCallId: string;
   // Шаг оркестрации, если поручил код (этап 6d).
   stepId?: string;
+  // Свои тулы вместо тулов из настроек субагента — их выбирает код оркестрации (этап 6d).
+  toolNames?: readonly string[];
+  // Видит события субагента — так код оркестрации узнаёт, что он прочитал.
+  onEvent?: (event: HarnessEvent) => void;
 }
 
 export interface SubagentOutcome {
@@ -35,8 +40,9 @@ export async function runSubagent(
   const tokenomics = new SessionTokenomics();
   const events = dependencies.events.forAgent(subagentId, (event) => {
     tokenomics.handleEvent(event);
+    assignment.onEvent?.(event);
   });
-  const tools = pickTools(dependencies.tools, settings.tools);
+  const tools = pickTools(dependencies.tools, assignment.toolNames ?? settings.tools);
   dependencies.events.emit({
     type: 'subagent_started',
     subagentId,

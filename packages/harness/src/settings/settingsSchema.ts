@@ -328,6 +328,9 @@ const pipelineSettingsSchema = z.object({
   maxDocuments: z.number().int().min(1).max(8).default(3),
   // Кто исследует документ — имя из subagents.agents.
   researcher: z.string().min(1).default('researcher'),
+  // Тулы исследователя в пайплайне — уже, чем у субагента: только прочитать свой документ.
+  // С тулами поиска он выходит за документ и делает работу соседей (прогон a3cc5fd1).
+  researcherTools: z.array(z.string().min(1)).min(1).default(['kedr__read_document']),
 });
 
 const orchestrationSettingsSchema = z.object({
@@ -335,6 +338,7 @@ const orchestrationSettingsSchema = z.object({
     searchTool: null,
     maxDocuments: 3,
     researcher: 'researcher',
+    researcherTools: ['kedr__read_document'],
   }),
 });
 
@@ -369,7 +373,12 @@ export const harnessSettingsSchema = z.object({
   skills: skillsSettingsSchema.default({ directory: 'skills', always: [], manual: [] }),
   subagents: subagentsSettingsSchema.default({ enabled: false, parallel: true, agents: {} }),
   orchestration: orchestrationSettingsSchema.default({
-    pipeline: { searchTool: null, maxDocuments: 3, researcher: 'researcher' },
+    pipeline: {
+      searchTool: null,
+      maxDocuments: 3,
+      researcher: 'researcher',
+      researcherTools: ['kedr__read_document'],
+    },
   }),
   server: serverSettingsSchema.default({
     port: 4317,

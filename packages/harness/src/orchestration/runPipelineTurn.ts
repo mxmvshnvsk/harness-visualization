@@ -14,6 +14,7 @@ import type { AgentDependencies } from '../agent/agentDependencies.js';
 import { requestModel } from '../agent/requestModel.js';
 import { retrieveContext } from '../agent/retrieveContext.js';
 import type {
+  HarnessEvent,
   OrchestrationStep,
   PipelineStepStatus,
   PlannedTask,
@@ -49,6 +50,8 @@ export const PIPELINE_STEPS: OrchestrationStep[] = [
 
 // Id документа базы знаний в выдаче поиска: «regulations/vacation — Регламент…».
 const RESULT_ID = /^([\w-]+\/[\w-]+) — /gmu;
+// Прочитанный документ: результат read_document начинается с «id: regulations/vacation».
+const DOCUMENT_HEADER = /^id: ([\w-]+\/[\w-]+)/u;
 // Id документа в ответе модели — в обратных кавычках.
 const CITED_ID = /`([\w-]+\/[\w-]+)`/gu;
 
@@ -73,7 +76,7 @@ export async function runPipelineTurn(
     );
     tasks = documents.length;
     announcePlan(dependencies, documents, options.settings.researcher);
-    const notes = await step(dependencies, 'research', () =>
+    const { notes, read } = await step(dependencies, 'research', () =>
       research(question, documents, dependencies, options),
     );
     const prompt = await step(dependencies, 'collect', () =>
@@ -82,7 +85,9 @@ export async function runPipelineTurn(
     const answer = await step(dependencies, 'answer', () =>
       answerByNotes(prompt, dependencies, options),
     );
-    await step(dependencies, 'verify', () => Promise.resolve(verifyCitations(answer, documents)));
+    await step(dependencies, 'verify', () =>
+      Promise.resolve(verifyCitations(answer, documents, read)),
+    );
     events.emit({ type: 'assistant_message', text: answer });
     finish(dependencies, 'done', tasks, startedAt);
     return answer;
@@ -173,8 +178,9 @@ async function research(
   documents: string[],
   dependencies: AgentDependencies,
   options: PipelineOptions,
-): Promise<StepOutcome<ResearchNote[]>> {
+): Promise<StepOutcome<Research>> {
   const agent = options.settings.researcher;
+  const read = new Set<string>();
   const notes = await Promise.all(
     documents.map(async (documentId, index): Promise<ResearchNote> => {
       const subagentId = `${agent}-${String(index + 1)}`;
@@ -186,6 +192,10 @@ async function research(
           task: researchTask(question, documentId),
           parentToolCallId: '',
           stepId: 'research',
+          toolNames: options.settings.researcherTools,
+          onEvent: (event) => {
+            noteReadDocument(event, read);
+          },
         },
         dependencies,
       );
@@ -194,13 +204,30 @@ async function research(
   );
   const failed = notes.filter((note) => note.report === null).length;
   return {
-    value: notes,
+    value: { notes, read: [...read] },
     status: failed > 0 ? 'warning' : 'done',
     summary:
       documents.length === 0
         ? 'поручать нечего'
         : `конспектов ${String(notes.length - failed)} из ${String(notes.length)}`,
   };
+}
+
+interface Research {
+  notes: ResearchNote[];
+  // Какие документы исследователи прочитали на самом деле — не только порученные.
+  read: string[];
+}
+
+// Исследователь прочитал документ: успешный результат тула чтения начинается с его id.
+function noteReadDocument(event: HarnessEvent, read: Set<string>): void {
+  if (event.type !== 'tool_result' || event.status !== 'success') {
+    return;
+  }
+  const id = DOCUMENT_HEADER.exec(event.content)?.[1];
+  if (id !== undefined) {
+    read.add(id);
+  }
 }
 
 // Шаг 3. Собрать конспекты — работа кода: что попадёт к модели, решает он.
@@ -237,20 +264,25 @@ async function answerByNotes(
   };
 }
 
-// Шаг 5. Проверка кодом: названы ли изученные документы и нет ли ссылок на неизученные.
+// Шаг 5. Проверка кодом: названы ли изученные документы и нет ли ссылок на то, чего никто не читал.
+// Сверяет с прочитанным на деле, а не с планом: исследователь мог прочитать и другой документ.
 // Честна ровно настолько, насколько предсказуем формат: id без кавычек она не увидит (урок 11).
-function verifyCitations(answer: string, documents: string[]): StepOutcome<null> {
+function verifyCitations(answer: string, planned: string[], read: string[]): StepOutcome<null> {
   const cited = [...new Set([...answer.matchAll(CITED_ID)].map((match) => match[1] ?? ''))];
-  const unknown = cited.filter((id) => !documents.includes(id));
-  const silent = documents.filter((id) => !cited.includes(id));
+  const offPlan = cited.filter((id) => !planned.includes(id) && read.includes(id));
+  const unread = cited.filter((id) => !planned.includes(id) && !read.includes(id));
+  const silent = planned.filter((id) => !cited.includes(id));
   const parts = [
     `названы: ${cited.length === 0 ? 'ни одного' : cited.join(', ')}`,
-    ...(unknown.length === 0 ? [] : [`не изучались: ${unknown.join(', ')}`]),
+    ...(offPlan.length === 0
+      ? []
+      : [`не из плана, но прочитаны исследователями: ${offPlan.join(', ')}`]),
+    ...(unread.length === 0 ? [] : [`нигде не читались: ${unread.join(', ')}`]),
     ...(silent.length === 0 ? [] : [`изучены, но не названы: ${silent.join(', ')}`]),
   ];
   return {
     value: null,
-    status: unknown.length > 0 || cited.length === 0 ? 'warning' : 'done',
+    status: unread.length > 0 || cited.length === 0 ? 'warning' : 'done',
     summary: parts.join('; '),
   };
 }
