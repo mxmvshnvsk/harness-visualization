@@ -9,6 +9,7 @@ import { join, resolve } from 'node:path';
 import type { AgentDependencies, ConfirmAction } from '../agent/agentDependencies.js';
 import type { RetrievalOptions } from '../agent/retrieveContext.js';
 import { runAgentTurn } from '../agent/runAgentTurn.js';
+import { runBranchTurn, type BranchStart } from '../branch/runBranchTurn.js';
 import type { DeltaListener, EventListener, EventStream } from '../events/EventStream.js';
 import {
   closeMcpServers,
@@ -75,6 +76,8 @@ export interface SessionInput {
   // null — рабочая папка из harness.config.json; иначе своя папка сессии
   // (у pnpm compare-runs — временная, чтобы заметки одного прогона не влияли на другие).
   workspaceDirectory: string | null;
+  // Ветка (этап 9): первый ход — не новый вопрос, а продолжение чужой записи с шага N.
+  branch?: BranchStart | null;
 }
 
 // То, что зависит от того, кто запустил сессию.
@@ -169,7 +172,10 @@ async function runDialog(
   const runTurn = turnRunner(input, options, conversation);
   let question: string | null = input.question;
   for (let turn = 1; question !== null; turn += 1) {
-    await runTurn(question, dependencies);
+    const branch = turn === 1 ? (input.branch ?? null) : null;
+    await (branch === null
+      ? runTurn(question, dependencies)
+      : runBranchTurn(branch, dependencies, options, conversation));
     if (hooks.nextQuestion === undefined) {
       return;
     }

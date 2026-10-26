@@ -17,6 +17,10 @@
     "./evals": {
       "types": "./dist/evals/browserSafe.d.ts",
       "default": "./dist/evals/browserSafe.js"
+    },
+    "./branch": {
+      "types": "./dist/branch/browserSafe.d.ts",
+      "default": "./dist/branch/browserSafe.js"
     }
   },
   "scripts": {

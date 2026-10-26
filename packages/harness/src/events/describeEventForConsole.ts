@@ -202,6 +202,12 @@ const EVENT_DESCRIBERS: EventDescribers = {
       `Grounding check с судьёй (judge, ${event.judgeModel}) по трейсу ${event.sourceTracePath}: ${String(event.claimCount)} claims`,
     ),
   ],
+  branch_started: (event) => [
+    styleText(
+      'bold',
+      `⑂ Ветка от ${event.sourceTracePath}, шаг ${String(event.step)}: replay ${String(event.replayedSteps)} шагов из трейса, дальше — новый прогон (${event.change.kind === 'replay' ? 'ничего не меняли' : `результат ${event.change.toolName} изменён`})`,
+    ),
+  ],
   claim_judged: (event) => [
     styleText(
       'magenta',

@@ -38,6 +38,8 @@ const DESCRIBERS: Describers = {
     `${event.toolName}, query от ${event.queryAuthor}: ${event.status}, ${String(event.durationMs)} мс`,
   grounding_check_started: (event) =>
     `${event.sourceTracePath}: ${String(event.claimCount)} claims, судья ${event.judgeModel}`,
+  branch_started: (event) =>
+    `ветка от ${event.sourceTracePath}, шаг ${String(event.step)}: ${event.change.kind === 'replay' ? 'переиграть' : `результат ${event.change.toolName} изменён`}`,
   claim_judged: (event) => `#${String(event.claimNumber)} ${event.verdict}: ${event.claim}`,
   prompt_assembled: (event) =>
     `${String(event.messages.length)} messages, ${String(event.toolNames.length)} тулов`,

@@ -20,6 +20,7 @@ const EVENT_GROUPS: Record<HarnessEventType, EventGroup> = {
   query_rewritten: 'retrieval',
   context_retrieved: 'retrieval',
   grounding_check_started: 'judge',
+  branch_started: 'meta',
   claim_judged: 'judge',
   prompt_assembled: 'model',
   model_request: 'model',

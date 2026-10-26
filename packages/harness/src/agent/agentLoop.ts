@@ -24,6 +24,9 @@ export interface LoopOptions {
   maxIterations: number;
   // Где в настройках лимит шагов — для понятной ошибки.
   limitSetting: string;
+  // С какого шага начать: ветка (этап 9) продолжает чужую запись с шага N — шаги до него уже
+  // были и съели свою часть лимита.
+  startIteration?: number;
 }
 
 // Возвращает ответ модели текстом; история дописана ответами и результатами тулов.
@@ -33,7 +36,11 @@ export async function runAgentLoop(
   options: LoopOptions,
 ): Promise<string> {
   const { tools } = dependencies;
-  for (let iteration = 1; iteration <= options.maxIterations; iteration += 1) {
+  for (
+    let iteration = options.startIteration ?? 1;
+    iteration <= options.maxIterations;
+    iteration += 1
+  ) {
     const last = iteration === options.maxIterations;
     if (last) {
       askToFinish(messages, dependencies, options);

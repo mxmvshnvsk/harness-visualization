@@ -15,6 +15,7 @@
     "rag-index": "pnpm --filter @harness-visualization/mcp-server... run build && cross-env NODE_USE_ENV_PROXY=1 node packages/mcp-server/dist/mainRagIndex.js",
     "compare-runs": "pnpm run build && node packages/harness/dist/cli/mainCompareRuns.js",
     "eval": "pnpm run build && node packages/harness/dist/cli/mainEval.js",
+    "branch": "pnpm run build && node packages/harness/dist/cli/mainBranch.js",
     "compare-search": "pnpm --filter @harness-visualization/mcp-server... run build && node packages/mcp-server/dist/mainCompareSearch.js",
     "serve": "pnpm run build && node packages/server/dist/main.js",
     "dev": "pnpm --filter @harness-visualization/server... run build && node scripts/dev.mjs",

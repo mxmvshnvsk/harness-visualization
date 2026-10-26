@@ -187,6 +187,28 @@ export interface GroundingCheckStartedPayload {
   judgeModel: string;
 }
 
+// Ветка (этап 9): сессия продолжает чужую запись с шага step. Шаги до него — replay: история
+// берётся из тела model_request этого шага в исходном трейсе, без запросов к модели и без тулов.
+// С шага step — новый прогон: запросы, тулы и политика по-настоящему.
+export type BranchChange =
+  // Ничего не меняли — переиграть шаг: видно, насколько модель отвечает по-разному.
+  | { kind: 'replay' }
+  // Подменили результат тула, который модель получила до шага step.
+  | { kind: 'toolResult'; toolCallId: string; toolName: string; before: string; after: string };
+
+export interface BranchStartedPayload {
+  type: 'branch_started';
+  sourceTracePath: string;
+  // null — в исходном трейсе нет id сессии.
+  sourceSessionId: string | null;
+  // Шаг главного агента в исходной сессии (по порядку его запросов agentStep), с которого новый прогон.
+  step: number;
+  // Сколько шагов и сообщений истории взято из записи.
+  replayedSteps: number;
+  replayedMessages: number;
+  change: BranchChange;
+}
+
 // supported — показанное подтверждает claim; contradicted — противоречит; notFound — в показанном
 // об этом нет; unclear — ответ судьи не разобрался.
 export type JudgeVerdict = 'supported' | 'contradicted' | 'notFound' | 'unclear';
@@ -627,6 +649,7 @@ export type HarnessEventPayload =
   | UserMessagePayload
   | QueryRewrittenPayload
   | GroundingCheckStartedPayload
+  | BranchStartedPayload
   | ClaimJudgedPayload
   | ContextRetrievedPayload
   | PromptAssembledPayload
