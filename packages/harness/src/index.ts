@@ -48,7 +48,7 @@ export { branchSessionInput } from './branch/branchInput.js';
 export { convertClaudeCode } from './adapters/claudeCode.js';
 export { convertImported, detectImportFormat, IMPORT_PREFIXES } from './adapters/importTrace.js';
 export { writeImportedTrace } from './adapters/writeImportedTrace.js';
-export { runTokenLab, TOKEN_LAB_TEMPERATURES } from './tokenLab/runTokenLab.js';
+export { runTokenFork, runTokenLab, TOKEN_LAB_TEMPERATURES } from './tokenLab/runTokenLab.js';
 export { arenaRoot, prepareArenaRun } from './arena/arenaSession.js';
 export { networkClosedByPermissions, sandboxInfo } from './arena/nodeSandbox.js';
 export type { SandboxInfo } from './arena/nodeSandbox.js';

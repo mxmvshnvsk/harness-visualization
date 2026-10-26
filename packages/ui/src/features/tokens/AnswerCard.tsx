@@ -33,7 +33,11 @@ export function doubtOf(probability: number): number {
   return Math.round(Math.sqrt(Math.max(0, 1 - probability)) * 85);
 }
 
-export function AnswerCard(props: { view: TokenLabView; answer: TokenLabAnswer }): ReactElement {
+export function AnswerCard(props: {
+  view: TokenLabView;
+  answer: TokenLabAnswer;
+  onFork?: ForkHandler;
+}): ReactElement {
   const { answer } = props;
   const stats = tokenStats(answer.tokens);
   return (
@@ -44,7 +48,7 @@ export function AnswerCard(props: { view: TokenLabView; answer: TokenLabAnswer }
         {props.view.model} ·{' '}
         {props.view.reasoningEffort === 'off' ? 'без рассуждений' : 'с рассуждениями'}
       </p>
-      <TokenExplorer tokens={answer.tokens} />
+      <TokenExplorer tokens={answer.tokens} onFork={props.onFork} />
       <div className={styles.stats}>
         <Stat label="токенов в ответе" value={String(stats.count)} />
         <Stat
@@ -87,7 +91,16 @@ export function ReasoningCard({ answer }: { answer: TokenLabAnswer }): ReactElem
   );
 }
 
-export function TokenExplorer({ tokens }: { tokens: readonly TokenView[] }): ReactElement {
+// onFork — развилка (11.3): продолжить ответ с другого токена на этом месте.
+export type ForkHandler = (position: number, token: string) => void;
+
+export function TokenExplorer({
+  tokens,
+  onFork,
+}: {
+  tokens: readonly TokenView[];
+  onFork?: ForkHandler;
+}): ReactElement {
   const firstFork = tokens.findIndex((token) => token.probability < FORK_THRESHOLD);
   const [picked, setPicked] = useState(Math.max(0, firstFork));
   const [colored, setColored] = useState(true);
@@ -115,12 +128,19 @@ export function TokenExplorer({ tokens }: { tokens: readonly TokenView[] }): Rea
           раскраска по уверенности: гуще — модель сомневалась
         </label>
       </div>
-      {token !== undefined && <TokenOptions token={token} index={picked} count={tokens.length} />}
+      {token !== undefined && (
+        <TokenOptions token={token} index={picked} count={tokens.length} onFork={onFork} />
+      )}
     </div>
   );
 }
 
-function TokenOptions(props: { token: TokenView; index: number; count: number }): ReactElement {
+function TokenOptions(props: {
+  token: TokenView;
+  index: number;
+  count: number;
+  onFork: ForkHandler | undefined;
+}): ReactElement {
   const { token } = props;
   const shown = token.options.slice(0, 8);
   const rest = 1 - shown.reduce((sum, option) => sum + option.probability, 0);
@@ -137,6 +157,38 @@ function TokenOptions(props: { token: TokenView; index: number; count: number })
         logprob {token.logprob.toFixed(3)} → e^{token.logprob.toFixed(3)} ={' '}
         {formatProbability(token.probability)}
       </p>
+      {props.onFork !== undefined && (
+        <ForkButtons token={token} index={props.index} onFork={props.onFork} />
+      )}
+    </div>
+  );
+}
+
+// Развилка: самые вероятные из невыбранных вариантов — модель продолжит ответ с них.
+function ForkButtons(props: {
+  token: TokenView;
+  index: number;
+  onFork: ForkHandler;
+}): ReactElement {
+  const options = props.token.options
+    .filter((option) => option.text !== props.token.text && option.probability >= 0.001)
+    .slice(0, 4);
+  if (options.length === 0) {
+    return <p className={styles.muted}>Других заметных вариантов на этом месте нет.</p>;
+  }
+  return (
+    <div className={styles.presets}>
+      {options.map((option) => (
+        <button
+          key={option.text}
+          type="button"
+          className={styles.preset}
+          onClick={() => props.onFork(props.index, option.text)}
+        >
+          ⑂ продолжить с <code>{showToken(option.text)}</code> ·{' '}
+          {formatProbability(option.probability)}
+        </button>
+      ))}
     </div>
   );
 }

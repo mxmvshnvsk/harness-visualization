@@ -49,9 +49,12 @@ export class OpenAiCompatibleProvider implements ModelProvider {
   }
 
   prepareRequest(request: ModelRequest): PreparedHttpRequest {
+    const topLogprobs =
+      request.topLogprobs ??
+      (this.settings.topLogprobs > 0 ? this.settings.topLogprobs : undefined);
     return {
       method: 'POST',
-      url: buildUrl(this.settings.baseUrl, CHAT_COMPLETIONS_PATH),
+      url: buildUrl(this.baseUrlFor(request), CHAT_COMPLETIONS_PATH),
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': HARNESS_USER_AGENT,
@@ -62,18 +65,37 @@ export class OpenAiCompatibleProvider implements ModelProvider {
         ...this.settings.requestExtras,
         ...buildReasoningParameters(this.settings.reasoningStyle, request.reasoningEffort),
         model: this.settings.model,
-        messages: toWireMessages(request.messages, this.settings.reasoningStyle),
+        messages: [
+          ...toWireMessages(request.messages, this.settings.reasoningStyle),
+          // DeepSeek: последнее сообщение assistant с prefix: true — продолжить с этого начала.
+          ...(request.assistantPrefix === undefined
+            ? []
+            : [{ role: 'assistant', content: request.assistantPrefix, prefix: true }]),
+        ],
         ...buildToolsParameter(request.tools, request.toolChoice ?? 'auto'),
         max_tokens: this.settings.maxOutputTokens,
-        ...(request.topLogprobs === undefined
-          ? {}
-          : { logprobs: true, top_logprobs: request.topLogprobs }),
+        ...(topLogprobs === undefined ? {} : { logprobs: true, top_logprobs: topLogprobs }),
         ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
         stream: this.settings.stream,
         // Без этого в потоке нет usage — не узнаем ни токены, ни стоимость.
         ...(this.settings.stream ? { stream_options: { include_usage: true } } : {}),
       },
     };
+  }
+
+  // Продолжение с заданного начала — у DeepSeek только через бета-адрес API.
+  private baseUrlFor(request: ModelRequest): string {
+    if (request.assistantPrefix === undefined) {
+      return this.settings.baseUrl;
+    }
+    if (this.settings.prefixCompletionBaseUrl === null) {
+      throw new ModelProviderError(
+        'Провайдер не умеет продолжать с заданного начала: в harness.config.json нет model.prefixCompletionBaseUrl',
+        null,
+        null,
+      );
+    }
+    return this.settings.prefixCompletionBaseUrl;
   }
 
   async send(

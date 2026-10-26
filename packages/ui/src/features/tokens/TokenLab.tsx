@@ -3,8 +3,8 @@
 // Прогон — три запроса к модели (T = 1, 0 и 1.5) с logprobs; он же обычный трейс.
 
 import type { TokenLabResponse, TokenLabRunResponse } from '@harness-visualization/server';
-import { useMemo, useState, type ReactElement } from 'react';
-import { getTokenLab, getTokenLabRun, startTokenLabRun } from '../../api/serverApi';
+import { useCallback, useMemo, useState, type ReactElement } from 'react';
+import { getTokenLab, getTokenLabRun, startTokenFork, startTokenLabRun } from '../../api/serverApi';
 import { Button } from '../../components/Button';
 import { Segmented } from '../../components/Segmented';
 import { ThemeToggle } from '../../components/ThemeToggle';
@@ -12,7 +12,8 @@ import { HelpButton } from '../../help/HelpLinks';
 import { projectTokenLab, type TokenLabView } from '../../projections/projectTokenLab';
 import labStyles from '../rag/RagLab.module.css';
 import { useLoaded } from '../rag/useRagData';
-import { AnswerCard, ReasoningCard } from './AnswerCard';
+import { AnswerCard, ReasoningCard, type ForkHandler } from './AnswerCard';
+import { ForkCard, type ForkState } from './ForkCard';
 import { TemperatureCard } from './TemperatureCard';
 import styles from './TokenLab.module.css';
 
@@ -190,10 +191,13 @@ function RunBody(props: {
 }): ReactElement {
   const { view } = props;
   const base = view.answers.find((answer) => answer.temperature === 1) ?? view.answers[0];
+  const forks = useForks(props.file);
   return (
     <>
       {view.error !== null && <p className={styles.error}>{view.error}</p>}
-      {base !== undefined && <AnswerCard view={view} answer={base} />}
+      {base !== undefined && <AnswerCard view={view} answer={base} onFork={forks.start} />}
+      {base !== undefined &&
+        forks.items.map((fork) => <ForkCard key={fork.key} fork={fork} original={base} />)}
       {base !== undefined && base.reasoningTokens.length > 0 && <ReasoningCard answer={base} />}
       {view.answers.length > 1 && <TemperatureCard view={view} />}
       <p className={styles.muted}>
@@ -205,4 +209,33 @@ function RunBody(props: {
       </p>
     </>
   );
+}
+
+// Развилки прогона: каждая — свой запрос и свой трейс; новые — сверху.
+function useForks(file: string): { items: ForkState[]; start: ForkHandler } {
+  const [items, setItems] = useState<ForkState[]>([]);
+  const start = useCallback(
+    (position: number, token: string) => {
+      const key = `${String(position)}:${token}:${String(Date.now())}`;
+      const update = (patch: Partial<ForkState>): void => {
+        setItems((current) =>
+          current.map((item) => (item.key === key ? { ...item, ...patch } : item)),
+        );
+      };
+      setItems((current) => [
+        { key, position, token, status: 'running', run: null, error: null },
+        ...current,
+      ]);
+      startTokenFork({ file, position, token }).then(
+        (run) => update({ status: 'ready', run }),
+        (error: unknown) =>
+          update({
+            status: 'error',
+            error: error instanceof Error ? error.message : String(error),
+          }),
+      );
+    },
+    [file],
+  );
+  return { items, start };
 }

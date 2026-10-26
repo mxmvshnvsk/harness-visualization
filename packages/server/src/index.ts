@@ -15,6 +15,7 @@ export type { TraceOutcome, TraceStreamEnd } from './traces/traceRoutes.js';
 export type { GroundingClaim, GroundingReportResponse } from './rag/groundingReport.js';
 export type { McpCourseResponse } from './labs/mcpCourseRoutes.js';
 export type {
+  TokenLabForkRequest,
   TokenLabResponse,
   TokenLabRunRequest,
   TokenLabRunResponse,

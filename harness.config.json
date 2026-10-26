@@ -8,7 +8,9 @@
     "maxOutputTokens": 8192,
     "reasoningStyle": "deepseek",
     "defaultReasoningEffort": "high",
-    "requestExtras": {}
+    "requestExtras": {},
+    "topLogprobs": 0,
+    "prefixCompletionBaseUrl": "https://api.deepseek.com/beta"
   },
   "prices": {
     "deepseek-flash": {

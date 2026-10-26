@@ -3,7 +3,7 @@
 // температуры (проба 26.10.2026), поэтому ответы при T = 0, 1 и 1.5 показывают настоящие
 // распределения, а пересчёт в браузере делаем только от ответа при T = 1.
 
-import type { HarnessEvent, TokenLogprob } from '@harness-visualization/harness';
+import type { HarnessEvent, TokenLabFork, TokenLogprob } from '@harness-visualization/harness';
 
 export interface TokenChoice {
   text: string;
@@ -34,6 +34,8 @@ export interface TokenLabView {
   model: string;
   answers: TokenLabAnswer[];
   error: string | null;
+  // Развилка (11.3): от какого прогона и с какого токена; null — обычный прогон.
+  fork: TokenLabFork | null;
 }
 
 // Развилка — токен, который модель выбрала с вероятностью меньше половины.
@@ -46,12 +48,14 @@ export function projectTokenLab(events: readonly HarnessEvent[]): TokenLabView {
     model: '',
     answers: [],
     error: null,
+    fork: null,
   };
   const temperatures = new Map<string, number | null>();
   for (const event of events) {
     if (event.type === 'session_started') {
       view.reasoningEffort = event.reasoningEffort;
       view.model = event.model;
+      view.fork = event.tokenLab?.fork ?? null;
     } else if (event.type === 'user_message') {
       view.question = event.text;
     } else if (event.type === 'model_request') {

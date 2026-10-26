@@ -25,6 +25,12 @@ const modelSettingsSchema = z.object({
   // Поля, которые понимает только конкретный провайдер.
   // Добавляются в тело запроса как есть.
   requestExtras: z.record(z.string(), z.unknown()).default({}),
+  // Этап 11.4: вероятности токенов (logprobs) в каждом ответе — сколько альтернатив на позицию,
+  // 0 — не просить. Трейс заметно тяжелеет: тело ответа хранит их ещё и с байтами токенов.
+  topLogprobs: z.number().int().min(0).max(20).default(0),
+  // Этап 11.3: адрес API для продолжения с заданного начала ответа (prefix completion);
+  // у DeepSeek это бета — https://api.deepseek.com/beta. null — провайдер этого не умеет.
+  prefixCompletionBaseUrl: z.url().nullable().default(null),
 });
 
 const weekdaySchema = z.enum([

@@ -302,3 +302,32 @@
 .draws code[data-rare='true'] {
   border-color: var(--accent);
 }
+
+.columns2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 760px) {
+  .columns2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.replaced,
+.forked {
+  border-radius: 4px;
+  padding: 0 2px;
+  color: inherit;
+}
+
+.replaced {
+  background: color-mix(in srgb, var(--error) 22%, transparent);
+  text-decoration: line-through;
+}
+
+.forked {
+  background: var(--accent-soft);
+  outline: 1px solid var(--accent);
+}

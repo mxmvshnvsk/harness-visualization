@@ -20,6 +20,7 @@ import type {
   FreeRunRequest,
   ArenaTasksResponse,
   SessionOptionsResponse,
+  TokenLabForkRequest,
   TokenLabResponse,
   TokenLabRunRequest,
   TokenLabRunResponse,
@@ -128,6 +129,10 @@ export async function getTokenLab(): Promise<TokenLabResponse> {
 
 export async function getTokenLabRun(file: string): Promise<TokenLabRunResponse> {
   return getJson(`/api/token-lab/runs/${encodeURIComponent(file)}`);
+}
+
+export async function startTokenFork(request: TokenLabForkRequest): Promise<TokenLabRunResponse> {
+  return postJson<TokenLabRunResponse>('/api/token-lab/forks', request);
 }
 
 export async function startTokenLabRun(request: TokenLabRunRequest): Promise<TokenLabRunResponse> {
