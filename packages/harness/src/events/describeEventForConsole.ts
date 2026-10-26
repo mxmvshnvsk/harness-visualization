@@ -649,7 +649,7 @@ function describeAcceptance(event: AcceptanceCheckedPayload & EventMetadata): st
 function describeSessionMode(event: EventOfType<'session_started'>): string {
   const arena = event.arena ?? null;
   if (arena !== null) {
-    const tests = arena.runTests ? 'файлы и run_tests' : 'только файлы — «вслепую», без run_tests';
+    const tests = `${arena.runTests ? 'файлы и run_tests' : 'файлы без run_tests — «вслепую»'}${arena.runNode === true ? ', run_node с подтверждением' : ''}`;
     const network = arena.network === 'closed' ? 'сеть закрыта' : 'сеть открыта';
     return `Код-арена: задача ${arena.taskId ?? 'своя'}, ${tests}; контекст ${arena.contextPreset}, до ${String(arena.maxIterations)} шагов; тесты в Node ${arena.nodeVersion} с --permission, ${network}`;
   }

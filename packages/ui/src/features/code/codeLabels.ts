@@ -5,7 +5,7 @@ import type { CodeFile } from '../../projections/projectCode';
 
 export function describeArena(arena: ArenaRun): string {
   const task = arena.taskId === null ? 'своя задача' : `задача ${arena.taskId}`;
-  const tests = arena.runTests ? 'с run_tests' : 'вслепую, без run_tests';
+  const tests = `${arena.runTests ? 'с run_tests' : 'вслепую, без run_tests'}${arena.runNode === true ? ', run_node с подтверждением' : ''}`;
   const network = arena.network === 'closed' ? 'сеть закрыта' : 'сеть открыта';
   // Трейсы первых прогонов (до 26.10.2026, 12:40) пресета и лимита не записывали.
   const limits =

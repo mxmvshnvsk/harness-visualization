@@ -25,6 +25,7 @@ import type { BudgetSettings } from '../context/promptBudget.js';
 import type {
   ContextPreset,
   ContextSettings,
+  PermissionsSettings,
   RetrievalMode,
   SearchProviderName,
   SearchSettings,
@@ -56,6 +57,7 @@ import { startSessionRecording, type SessionRecording } from './sessionRecording
 import { arenaRoot, describeArenaRun, type ArenaSessionInput } from '../arena/arenaSession.js';
 import { checkAcceptance } from '../arena/checkAcceptance.js';
 import { createRunTestsTool } from '../arena/runTestsTool.js';
+import { createRunNodeTool } from '../arena/runNodeTool.js';
 
 export interface SessionInput {
   loadedSettings: LoadedSettings;
@@ -376,7 +378,7 @@ function createAgentDependencies(
     harnessOnlyTools,
     toolContext: { workspace: resources.workspace },
     confirmAction: hooks.confirmAction,
-    permissionPolicy: settings.permissions,
+    permissionPolicy: arenaPolicy(input, settings.permissions),
     mcpServerInstructions: resources.mcpServers.instructions,
     skills: resources.skills,
     memory: resources.memory,
@@ -394,10 +396,12 @@ function createAgentDependencies(
 // часть демо. Арене (этап 10) веб не нужен: файлы проекта и, если не «вслепую», запуск тестов.
 function ownToolsOf(input: SessionInput, resources: SessionResources, webTools: Tool[]): Tool[] {
   if (input.arena) {
-    const runTests = input.arena.runTests
-      ? [createRunTestsTool(input.loadedSettings.settings.arena)]
-      : [];
-    return [...createFileTools(), ...runTests];
+    const { arena } = input.loadedSettings.settings;
+    return [
+      ...createFileTools(),
+      ...(input.arena.runTests ? [createRunTestsTool(arena)] : []),
+      ...(input.arena.runNode ? [createRunNodeTool(arena)] : []),
+    ];
   }
   if (!input.demoProject) {
     return [...createFileTools(), ...webTools];
@@ -510,6 +514,15 @@ function subagentsOf(input: SessionInput): { agents: string[]; parallel: boolean
   const agents = Object.keys(settings.agents);
   const enabled = input.subagents ?? settings.enabled;
   return enabled && agents.length > 0 ? { agents, parallel: settings.parallel } : null;
+}
+
+// run_node — код модели на машине пользователя: по умолчанию каждый запуск спрашиваем.
+// Явное решение для run_node в permissions.tools harness.config.json главнее.
+function arenaPolicy(input: SessionInput, permissions: PermissionsSettings): PermissionsSettings {
+  if (!input.arena?.runNode) {
+    return permissions;
+  }
+  return { ...permissions, tools: { run_node: 'ask', ...permissions.tools } };
 }
 
 // Приёмка после хода (этап 10): агент ответил — харнесс сам гоняет видимые и скрытые тесты.

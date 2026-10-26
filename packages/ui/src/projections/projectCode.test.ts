@@ -118,6 +118,33 @@ describe('projectCode', () => {
   });
 });
 
+describe('projectCode: программы агента', () => {
+  it('запуски run_node — команда, код выхода и начало вывода; запрет — без вывода', () => {
+    const run = toolCall('n1', 'run_node', '{"file":"tmp.mjs","args":["--x"]}');
+    const denied = toolCall('n2', 'run_node', '{"file":"tmp.mjs"}');
+    const withRuns = arenaLog()
+      .add(toolCallEvent(run))
+      .add(
+        result('n1', 'run_node', 'Код выхода: 0.', {
+          file: 'tmp.mjs',
+          args: ['--x'],
+          exitCode: 0,
+          timedOut: false,
+          output: 'ok\n',
+        }),
+      )
+      .add(toolCallEvent(denied))
+      .add({ ...result('n2', 'run_node', 'Запрещено'), status: 'denied' } as HarnessEventPayload);
+    const view = projectCode(withRuns.events, withRuns.length);
+    expect(
+      view.programRuns.map((item) => [item.command, item.exitCode, item.output, item.status]),
+    ).toEqual([
+      ['node tmp.mjs --x', 0, 'ok\n', 'success'],
+      ['node tmp.mjs', null, null, 'denied'],
+    ]);
+  });
+});
+
 describe('lineDiff', () => {
   it('замена строки — удаление и добавление на её месте', () => {
     const lines = lineDiff('a\nb\nc\n', 'a\nB\nc\n');

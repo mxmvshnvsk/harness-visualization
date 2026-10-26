@@ -48,7 +48,7 @@ export { branchSessionInput } from './branch/branchInput.js';
 export { convertClaudeCode } from './adapters/claudeCode.js';
 export { writeImportedTrace } from './adapters/writeImportedTrace.js';
 export { arenaRoot, prepareArenaRun } from './arena/arenaSession.js';
-export { networkClosedByPermissions } from './arena/runNodeTests.js';
+export { networkClosedByPermissions } from './arena/nodeSandbox.js';
 export type { ArenaSessionInput } from './arena/arenaSession.js';
 export { arenaSessionInput } from './arena/arenaSessionInput.js';
 export { countTaskTests, listArenaTasks, readArenaTask } from './arena/arenaTasks.js';

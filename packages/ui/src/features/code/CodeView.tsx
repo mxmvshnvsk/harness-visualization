@@ -20,7 +20,7 @@ interface CodeViewProps {
 
 export function CodeView({ events, shown }: CodeViewProps): ReactElement {
   const view = useMemo(() => projectCode(events, shown), [events, shown]);
-  if (view.files.length === 0 && view.testRuns.length === 0 && view.acceptance === null) {
+  if (isEmpty(view)) {
     return (
       <div className={styles.empty}>
         <p>{describeNoCode(events)}</p>
@@ -39,8 +39,56 @@ export function CodeView({ events, shown }: CodeViewProps): ReactElement {
       {view.acceptance !== null && <AcceptanceCard acceptance={view.acceptance} />}
       <FilesCard files={view.files} />
       {view.testRuns.length > 0 && <TestRunsCard view={view} />}
+      {view.programRuns.length > 0 && <ProgramRunsCard view={view} />}
     </div>
   );
+}
+
+function isEmpty(view: View): boolean {
+  return (
+    view.files.length === 0 &&
+    view.testRuns.length === 0 &&
+    view.programRuns.length === 0 &&
+    view.acceptance === null
+  );
+}
+
+// Программы агента — run_node (этап 10.4): что запускал, разрешили ли, чем кончилось.
+function ProgramRunsCard({ view }: { view: View }): ReactElement {
+  return (
+    <section className={styles.card}>
+      <h3 className={styles.cardTitle}>Программы агента</h3>
+      <p className={styles.muted}>
+        run_node — свой скрипт агента на вашей машине, каждый запуск вы подтверждаете.
+      </p>
+      <ul className={styles.runs}>
+        {view.programRuns.map((run, index) => (
+          <li key={index} className={styles.run}>
+            <span className={styles.runHead}>
+              <b>шаг {run.step}</b>
+              <code>{run.command}</code>
+              <span className={run.exitCode === 0 ? styles.add : styles.del}>
+                {describeProgramRun(run)}
+              </span>
+            </span>
+            {run.output !== null && run.output !== '' && (
+              <pre className={styles.diff}>{run.output}</pre>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function describeProgramRun(run: View['programRuns'][number]): string {
+  if (run.status === 'denied') {
+    return 'запуск не разрешили';
+  }
+  if (run.output === null) {
+    return `не запустилась: ${run.status}`;
+  }
+  return run.timedOut ? 'не уложилась во время' : `код выхода ${String(run.exitCode)}`;
 }
 
 function FilesCard({ files }: { files: readonly CodeFile[] }): ReactElement {

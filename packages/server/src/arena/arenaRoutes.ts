@@ -83,6 +83,8 @@ export function registerArenaRoutes(app: FastifyInstance, options: SessionRoutes
         settings: settings.arena,
         taskId,
         runTests,
+        // Запуск подтверждают в «Диалоге», как разрешения других тулов.
+        runNode: true,
         contextPreset,
         maxIterations,
       });

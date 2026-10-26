@@ -76,6 +76,8 @@ export interface ArenaRun {
   directory: string;
   // false — режим «вслепую»: тула run_tests у модели нет.
   runTests: boolean;
+  // Был ли у модели run_node (этап 10.4); нет поля — трейсы до него, тула не было.
+  runNode?: boolean;
   // Пресет контекста и лимит шагов прогона: у арены свои (по умолчанию real и 25).
   contextPreset: 'demo' | 'stress' | 'real';
   maxIterations: number;

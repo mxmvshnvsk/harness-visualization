@@ -31,22 +31,41 @@ export interface TestRun {
   network: string | null;
 }
 
+// Запуск программы агентом — run_node (этап 10.4).
+export interface ProgramRun {
+  step: number;
+  command: string;
+  exitCode: number | null;
+  timedOut: boolean;
+  // Начало вывода; null — запуск не состоялся (пользователь не разрешил или ошибка тула).
+  output: string | null;
+  status: string;
+}
+
 export interface CodeView {
   arena: ArenaRun | null;
   files: CodeFile[];
   testRuns: TestRun[];
+  programRuns: ProgramRun[];
   acceptance: (AcceptanceCheckedPayload & { sequence: number }) | null;
 }
 
 interface Builder {
   step: number;
-  calls: Map<string, { name: string; path: string | null; content: string | null }>;
+  calls: Map<string, Call>;
   files: Map<string, CodeFile>;
   testRuns: TestRun[];
+  programRuns: ProgramRun[];
 }
 
 export function projectCode(events: readonly HarnessEvent[], shown: number): CodeView {
-  const builder: Builder = { step: 0, calls: new Map(), files: new Map(), testRuns: [] };
+  const builder: Builder = {
+    step: 0,
+    calls: new Map(),
+    files: new Map(),
+    testRuns: [],
+    programRuns: [],
+  };
   let arena: ArenaRun | null = null;
   let acceptance: CodeView['acceptance'] = null;
   for (const event of events.slice(0, shown)) {
@@ -65,6 +84,7 @@ export function projectCode(events: readonly HarnessEvent[], shown: number): Cod
     arena,
     files: sortFiles([...builder.files.values()]),
     testRuns: builder.testRuns,
+    programRuns: builder.programRuns,
     acceptance,
   };
 }
@@ -77,7 +97,12 @@ function apply(builder: Builder, event: HarnessEvent): void {
       name: event.toolName,
       path: stringField(event.arguments, 'path'),
       content: stringField(event.arguments, 'content'),
+      arguments: event.arguments,
     });
+  } else if (event.type === 'tool_result' && event.toolName === 'run_node') {
+    builder.programRuns.push(
+      programRunOf(builder.step, builder.calls.get(event.toolCallId), event),
+    );
   } else if (event.type === 'tool_result' && event.status === 'success') {
     const call = builder.calls.get(event.toolCallId);
     if (call !== undefined) {
@@ -86,7 +111,7 @@ function apply(builder: Builder, event: HarnessEvent): void {
   }
 }
 
-type Call = { name: string; path: string | null; content: string | null };
+type Call = { name: string; path: string | null; content: string | null; arguments: unknown };
 type ToolResult = Extract<HarnessEvent, { type: 'tool_result' }>;
 
 // Что делает с видом успешный результат каждого тула; остальные тулы вид не меняют.
@@ -154,6 +179,23 @@ function testRunOf(step: number, result: Extract<HarnessEvent, { type: 'tool_res
     })),
     timedOut: details.timedOut === true,
     network: stringField(details, 'network'),
+  };
+}
+
+// Команда — из аргументов вызова: у запрещённого запуска подробностей в результате нет.
+function programRunOf(step: number, call: Call | undefined, result: ToolResult): ProgramRun {
+  const details = result.details ?? {};
+  const file = stringField(call?.arguments, 'file');
+  const rawArgs = (call?.arguments as { args?: unknown } | undefined)?.args;
+  const args = Array.isArray(rawArgs) ? rawArgs.map(String) : [];
+  const output = stringField(details, 'output');
+  return {
+    step,
+    command: file === null ? 'node …' : ['node', file, ...args].join(' '),
+    exitCode: typeof details.exitCode === 'number' ? details.exitCode : null,
+    timedOut: details.timedOut === true,
+    output: result.status === 'success' ? (output ?? '').slice(0, 600) : null,
+    status: result.status,
   };
 }
 

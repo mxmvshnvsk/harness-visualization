@@ -530,7 +530,7 @@ const HANDLERS: Handlers = {
 // Куда уходит вызов от исполнения: к MCP-серверу, к процессу тестов (Код-арена, этап 10)
 // или никуда — свой тул выполняется внутри харнесса.
 function toolRoute(toolName: string, mcp: boolean): Route {
-  if (toolName === 'run_tests') {
+  if (toolName === 'run_tests' || toolName === 'run_node') {
     return ['policy', 'tools', 'sandbox'];
   }
   return mcp ? ['policy', 'tools', 'mcp'] : ['policy', 'tools'];
@@ -539,6 +539,9 @@ function toolRoute(toolName: string, mcp: boolean): Route {
 function toolBusy(toolName: string): string {
   if (toolName === 'run_tests') {
     return 'гоняет тесты…';
+  }
+  if (toolName === 'run_node') {
+    return 'выполняет программу…';
   }
   return delegates(toolName) ? 'работает субагент…' : 'выполняет…';
 }
@@ -569,6 +572,9 @@ function toolWhat(toolName: string, mcp: boolean): string {
   }
   if (toolName === 'run_tests') {
     return 'Харнесс запускает тесты в отдельном процессе Node — код в нём написала модель';
+  }
+  if (toolName === 'run_node') {
+    return 'Харнесс запускает программу агента в отдельном процессе Node';
   }
   return mcp ? `MCP-сервер выполняет ${toolName}` : `Харнесс выполняет ${toolName}`;
 }

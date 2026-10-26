@@ -48,6 +48,8 @@ async function main(): Promise<void> {
     settings: loadedSettings.settings.arena,
     taskId: values.task,
     runTests: !values.blind,
+    // В терминале есть кого спросить: каждый запуск run_node харнесс подтверждает у вас.
+    runNode: true,
     contextPreset: parsePreset(values.context),
     maxIterations: parseSteps(values['max-steps']),
   });
