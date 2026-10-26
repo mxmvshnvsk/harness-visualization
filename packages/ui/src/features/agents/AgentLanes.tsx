@@ -3,7 +3,7 @@
 
 import { useState, type ReactElement } from 'react';
 import type { AgentLane, AgentSegment, AgentsView } from '../../projections/projectAgents';
-import { agentName, formatSeconds } from './agentFormat';
+import { formatSeconds } from './agentFormat';
 import styles from './Agents.module.css';
 
 export function AgentLanes({ view }: { view: AgentsView }): ReactElement {
@@ -40,6 +40,16 @@ export function AgentLanes({ view }: { view: AgentsView }): ReactElement {
         <span>
           <i data-kind="wait" /> ждёт отчёта
         </span>
+        {view.lanes.some((lane) => lane.id === 'steps') && (
+          <span>
+            <i data-kind="step" /> шаг каркаса — его задал код
+          </span>
+        )}
+        {view.hasRework && (
+          <span>
+            <i data-kind="rework" /> доработка после возврата
+          </span>
+        )}
       </div>
     </section>
   );
@@ -56,9 +66,9 @@ function Lane(props: {
     <div className={styles.lane} data-color={lane.color}>
       <span className={styles.who}>
         <span className={styles.swatch} aria-hidden="true" />
-        {agentName(lane.id)}
+        {lane.label}
       </span>
-      <div className={styles.track} role="group" aria-label={agentName(lane.id)}>
+      <div className={styles.track} role="group" aria-label={lane.label}>
         {lane.segments.map((segment, index) => {
           const label = describe(lane, segment, now);
           return (
@@ -67,6 +77,7 @@ function Lane(props: {
               type="button"
               className={styles.segment}
               data-kind={segment.kind}
+              data-rework={segment.rework}
               style={placement(segment, total, now)}
               aria-label={label}
               onPointerEnter={() => {
@@ -98,7 +109,8 @@ function placement(
 function describe(lane: AgentLane, segment: AgentSegment, now: number): string {
   const end = segment.end ?? now;
   const still = segment.end === null ? ' (ещё идёт)' : '';
-  return `${agentName(lane.id)} · ${formatSeconds(segment.start)}–${formatSeconds(end)}${still}: ${segment.label}`;
+  const rework = segment.rework ? 'доработка · ' : '';
+  return `${lane.label} · ${formatSeconds(segment.start)}–${formatSeconds(end)}${still}: ${rework}${segment.label}`;
 }
 
 // Деления оси: 1, 2, 5, 10… секунд — не больше шести.

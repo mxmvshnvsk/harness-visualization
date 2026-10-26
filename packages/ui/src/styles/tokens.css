@@ -87,6 +87,9 @@
   --retrieval: #0f7480;
   --judge: #6a4bb0;
   --error: #b42318;
+  /* Статусы приёмки и шагов (этап 6d): всегда вместе со словом, не цветом одним. */
+  --status-good: #1a8f5e;
+  --status-warning: #9a6a00;
   --meta: #6b6c80;
 
   /*
@@ -163,6 +166,8 @@
   --retrieval: #85cfd1;
   --judge: #c4bce0;
   --error: #f28b7d;
+  --status-good: #3fbf83;
+  --status-warning: #e0a72a;
   --meta: #9a9e90;
 
   --card-tint: 0%;

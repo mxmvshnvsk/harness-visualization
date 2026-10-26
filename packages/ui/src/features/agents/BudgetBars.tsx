@@ -4,7 +4,7 @@
 
 import type { ReactElement } from 'react';
 import type { AgentsView } from '../../projections/projectAgents';
-import { agentName, formatTokens } from './agentFormat';
+import { formatTokens } from './agentFormat';
 import styles from './Agents.module.css';
 
 export function BudgetBars({ view }: { view: AgentsView }): ReactElement | null {
@@ -31,7 +31,7 @@ export function BudgetBars({ view }: { view: AgentsView }): ReactElement | null 
             <div key={lane.id} className={styles.bar} data-color={lane.color}>
               <span>
                 <span className={styles.swatch} aria-hidden="true" />
-                {agentName(lane.id)}
+                {lane.label}
                 {step === null ? '' : ` · шаг ${String(step)}`}
               </span>
               <span className={styles.barTrack}>

@@ -432,3 +432,30 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Оркестрация (этап 6d): шаги каркаса — работа кода, пунктиром; доработка — штриховкой цвета агента. */
+[data-color='code'] {
+  --agent: var(--text);
+}
+
+.segment[data-kind='step'] {
+  border: 1.5px dashed var(--agent);
+  background: transparent;
+}
+
+.segment[data-rework='true'] {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--agent) 0 5px,
+    color-mix(in srgb, var(--agent) 45%, transparent) 5px 10px
+  );
+}
+
+.legend i[data-kind='step'] {
+  border: 1.5px dashed var(--text);
+  background: transparent;
+}
+
+.legend i[data-kind='rework'] {
+  background: repeating-linear-gradient(135deg, var(--muted) 0 4px, transparent 4px 8px);
+}

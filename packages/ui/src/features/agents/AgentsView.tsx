@@ -10,7 +10,9 @@ import {
   type AgentsView as View,
 } from '../../projections/projectAgents';
 import { HelpButton } from '../../help/HelpLinks';
+import { projectOrchestration } from '../../projections/projectOrchestration';
 import { AgentLanes } from './AgentLanes';
+import { OrchestrationPanel } from './OrchestrationPanel';
 import { BudgetBars } from './BudgetBars';
 import { Handoffs } from './Handoffs';
 import { formatSeconds, formatTokens } from './agentFormat';
@@ -23,7 +25,8 @@ interface AgentsViewProps {
 
 export function AgentsView({ events, shown }: AgentsViewProps): ReactElement {
   const view = useMemo(() => projectAgents(events, shown), [events, shown]);
-  if (view.runs.length === 0) {
+  const orchestration = useMemo(() => projectOrchestration(events, shown), [events, shown]);
+  if (view.runs.length === 0 && orchestration === null) {
     return (
       <div className={styles.empty}>
         Главный агент ещё никому ничего не поручал — повтор до поручений не дошёл.
@@ -34,11 +37,14 @@ export function AgentsView({ events, shown }: AgentsViewProps): ReactElement {
     <div className={styles.screen}>
       <div className={styles.screenHead}>
         <p className={styles.muted}>
-          Главный агент и субагенты, которым он поручал задачи: у каждого своя история.
+          {orchestration === null
+            ? 'Главный агент и субагенты, которым он поручал задачи: у каждого своя история.'
+            : 'Оркестрация: кто решал порядок шагов, что кому поручили и что приняли. У каждого исполнителя своя история.'}
         </p>
         <HelpButton topic="subagents" />
       </div>
       <Tiles view={view} />
+      {orchestration !== null && <OrchestrationPanel view={orchestration} />}
       <AgentLanes view={view} />
       <Handoffs view={view} />
       <BudgetBars view={view} />

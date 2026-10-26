@@ -3,10 +3,11 @@
 // (повтор на «Потоке» идёт по порядку событий). Срез — до курсора: незаконченный отрезок тянется
 // до последнего показанного события.
 
-import type { HarnessEvent } from '@harness-visualization/harness';
+import type { HarnessEvent, OrchestrationMode } from '@harness-visualization/harness';
 import { projectSubagents, type AgentColor, type SubagentRun } from './projectSubagents';
 
-export type SegmentKind = 'model' | 'tool' | 'wait';
+// step — шаг каркаса оркестрации, который задал код (этап 6d).
+export type SegmentKind = 'model' | 'tool' | 'wait' | 'step';
 
 export interface AgentSegment {
   kind: SegmentKind;
@@ -14,6 +15,8 @@ export interface AgentSegment {
   start: number;
   end: number | null;
   label: string;
+  // Работа после возврата на доработку (этап 6d.2).
+  rework: boolean;
 }
 
 export interface AgentCall {
@@ -25,8 +28,9 @@ export interface AgentCall {
 }
 
 export interface AgentLane {
-  // main — главный агент, иначе id субагента.
+  // main — главный агент (или оркестратор), steps — шаги каркаса, иначе id субагента.
   id: string;
+  label: string;
   color: AgentColor;
   segments: AgentSegment[];
   modelRequests: number;
@@ -47,6 +51,9 @@ export interface AgentsView {
   // Лимит пресета из бюджета prompt; null — бюджета нет.
   limitTokens: number | null;
   charsPerToken: number;
+  // Режим оркестрации хода; null — обычный агент.
+  mode: OrchestrationMode | null;
+  hasRework: boolean;
 }
 
 const DEFAULT_CHARS_PER_TOKEN = 3.24;
@@ -55,6 +62,8 @@ interface Builder {
   startedAt: number;
   lanes: Map<string, AgentLane>;
   open: Map<string, AgentSegment>;
+  // Кто сейчас дорабатывает — его отрезки помечаются доработкой.
+  reworking: Set<string>;
   view: AgentsView;
 }
 
@@ -67,12 +76,15 @@ export function projectAgents(events: readonly HarnessEvent[], shown: number): A
     startedAt,
     lanes: new Map([['main', newLane('main', 'main')]]),
     open: new Map(),
+    reworking: new Set(),
     view: {
       lanes: [],
       runs,
       now: 0,
       limitTokens: null,
       charsPerToken: DEFAULT_CHARS_PER_TOKEN,
+      mode: null,
+      hasRework: false,
     },
   };
   for (const run of runs) {
@@ -83,13 +95,26 @@ export function projectAgents(events: readonly HarnessEvent[], shown: number): A
   }
   const last = visible.at(-1);
   builder.view.now = last === undefined ? 0 : Date.parse(last.timestamp) - startedAt;
+  const main = builder.lanes.get('main');
+  if (main !== undefined) {
+    main.label = MAIN_LABELS[builder.view.mode ?? 'agent'];
+  }
   builder.view.lanes = [...builder.lanes.values()];
   return builder.view;
 }
 
-function newLane(id: string, color: AgentColor): AgentLane {
+// Главный агент в оркестрации — оркестратор, а в пайплайне — только модель шага «ответ».
+const MAIN_LABELS: Record<OrchestrationMode | 'agent', string> = {
+  agent: 'главный агент',
+  pipeline: 'модель ответа',
+  superagent: 'оркестратор',
+  hybrid: 'оркестратор',
+};
+
+function newLane(id: string, color: AgentColor, label = id): AgentLane {
   return {
     id,
+    label,
     color,
     segments: [],
     modelRequests: 0,
@@ -102,6 +127,7 @@ function newLane(id: string, color: AgentColor): AgentLane {
 }
 
 function collect(builder: Builder, event: HarnessEvent): void {
+  collectOrchestration(builder, event);
   const lane = builder.lanes.get(event.agentId ?? 'main');
   if (lane === undefined) {
     return;
@@ -128,6 +154,52 @@ function collect(builder: Builder, event: HarnessEvent): void {
 
 type EventOf<Type extends HarnessEvent['type']> = Extract<HarnessEvent, { type: Type }>;
 
+// Оркестрация (этап 6d): шаги кода — своя дорожка, доработка — пометка на дорожке исполнителя.
+function collectOrchestration(builder: Builder, event: HarnessEvent): void {
+  const at = Date.parse(event.timestamp) - builder.startedAt;
+  if (event.type === 'orchestration_started') {
+    builder.view.mode = event.mode;
+  }
+  if (event.type === 'pipeline_step_started') {
+    const steps = stepsLane(builder);
+    const segment = {
+      kind: 'step' as const,
+      start: at,
+      end: null,
+      label: event.title,
+      rework: false,
+    };
+    steps.segments.push(segment);
+    builder.open.set(`step:${event.stepId}`, segment);
+  }
+  if (event.type === 'pipeline_step_finished') {
+    const segment = builder.open.get(`step:${event.stepId}`);
+    if (segment !== undefined) {
+      segment.end = at;
+      segment.label = `${segment.label} → ${event.summary}`;
+      builder.open.delete(`step:${event.stepId}`);
+    }
+  }
+  if (event.type === 'subagent_resumed') {
+    builder.reworking.add(event.subagentId);
+    builder.view.hasRework = true;
+  }
+  if (event.type === 'subagent_finished') {
+    builder.reworking.delete(event.subagentId);
+  }
+}
+
+// Дорожка шагов каркаса — первой, над агентами: порядок задаёт она.
+function stepsLane(builder: Builder): AgentLane {
+  const existing = builder.lanes.get('steps');
+  if (existing !== undefined) {
+    return existing;
+  }
+  const lane = newLane('steps', 'code', 'шаги каркаса');
+  builder.lanes = new Map([['steps', lane], ...builder.lanes]);
+  return lane;
+}
+
 function openModel(builder: Builder, lane: AgentLane, event: EventOf<'model_request'>, at: number) {
   const step = event.purpose === 'agentStep' ? event.iteration : null;
   const segment: AgentSegment = {
@@ -136,6 +208,7 @@ function openModel(builder: Builder, lane: AgentLane, event: EventOf<'model_requ
     end: null,
     label:
       step === null ? `служебный запрос: ${event.purpose}` : `шаг ${String(step)}: модель думает`,
+    rework: builder.reworking.has(lane.id),
   };
   lane.segments.push(segment);
   builder.open.set(`model:${event.requestId}`, segment);
@@ -178,15 +251,23 @@ function describeReply(event: EventOf<'model_response'>, laneId: string): string
   return laneId === 'main' ? 'ответ' : 'отчёт';
 }
 
+// Тулы, пока идут которые агент ждёт субагента: поручение и приёмка с доработкой (этап 6d.2).
+const WAITING_TOOLS = new Set(['delegate_task', 'review_report']);
+const WAITING_LABELS: Record<string, string> = {
+  delegate_task: 'ждёт отчёта субагента',
+  review_report: 'приёмка: принять или ждать доработки',
+};
+
 function openTool(builder: Builder, lane: AgentLane, event: EventOf<'tool_call'>, at: number) {
-  const delegates = event.toolName === 'delegate_task';
+  const delegates = WAITING_TOOLS.has(event.toolName);
   const segment: AgentSegment = {
     kind: delegates ? 'wait' : 'tool',
     start: at,
     end: null,
     label: delegates
-      ? 'ждёт отчёта субагента'
+      ? (WAITING_LABELS[event.toolName] ?? 'ждёт субагента')
       : `${event.toolName} ${shorten(event.argumentsText)}`,
+    rework: builder.reworking.has(lane.id),
   };
   lane.segments.push(segment);
   builder.open.set(`tool:${event.toolCallId}`, segment);
@@ -206,7 +287,7 @@ function closeTool(builder: Builder, lane: AgentLane, event: EventOf<'tool_resul
     segment.end = at;
     builder.open.delete(`tool:${event.toolCallId}`);
   }
-  if (event.toolName !== 'delegate_task') {
+  if (!WAITING_TOOLS.has(event.toolName)) {
     lane.toolResultTokens += Math.round(event.content.length / builder.view.charsPerToken);
   }
 }

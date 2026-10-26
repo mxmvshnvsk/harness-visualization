@@ -165,7 +165,7 @@ async function plan(context: HybridContext): Promise<StepOutcome<null>> {
   return {
     value: null,
     status: 'done',
-    summary: tasks.map((task) => `${task.taskId}: ${task.title}`).join('; '),
+    summary: `задач ${String(tasks.length)}: ${tasks.map((task) => task.taskId).join(', ')}`,
   };
 }
 
