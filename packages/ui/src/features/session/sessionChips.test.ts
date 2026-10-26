@@ -41,4 +41,16 @@ describe('sessionChips', () => {
       'effort high',
     ]);
   });
+
+  it('режим оркестрации — выделенным чипом, без чипа поиска', () => {
+    const started = sessionStarted('tool');
+    const log = new EventLog().add(
+      started.type === 'session_started' ? { ...started, orchestration: 'pipeline' } : started,
+    );
+
+    expect(sessionChips(log.events)).toEqual([
+      { label: 'оркестрация: пайплайн', on: true },
+      { label: 'effort high', on: false },
+    ]);
+  });
 });
