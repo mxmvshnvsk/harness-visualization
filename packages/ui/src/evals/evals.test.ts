@@ -53,6 +53,24 @@ describe('проверки кодом', () => {
     expect(runCodeCheck({ kind: 'maxToolCalls', value: 0 }, events).passed).toBe(false);
   });
 
+  it('поиск харнесса до ответа — не вызов тула моделью', () => {
+    const log = new EventLog().add({
+      type: 'context_retrieved',
+      toolName: 'kedr__semantic_search',
+      arguments: { query: '17 умножить на 23' },
+      queryAuthor: 'user',
+      userQuestion: 'сколько будет 17 умножить на 23',
+      status: 'success',
+      content: 'найдено',
+      durationMs: 5,
+    });
+    expect(runCodeCheck({ kind: 'noRetrieval' }, log.events)).toMatchObject({
+      passed: false,
+      detail: 'искал «17 умножить на 23»',
+    });
+    expect(runCodeCheck({ kind: 'noRetrieval' }, events).passed).toBe(true);
+  });
+
   it('судью без судьи не засчитывают ни в плюс, ни в минус', () => {
     const judge = runCodeCheck({ kind: 'judge', rubric: 'что-то' }, events);
     expect(judge.passed).toBeNull();
@@ -118,6 +136,15 @@ describe('pass@k и pass^k', () => {
       passAtK: true,
       passHatK: false,
     });
+  });
+
+  it('попыток меньше k — pass^k ещё неизвестен', () => {
+    const partial = { ...report, results: report.results.slice(0, 4) };
+    expect(summarizeCell(partial, 'flaky', 'tool')).toMatchObject({
+      passAtK: null,
+      passHatK: null,
+    });
+    expect(summarizeConfig(partial, 'tool').passHatK).toBe(1);
   });
 
   it('по конфигурации: доля задач и удачных попыток', () => {

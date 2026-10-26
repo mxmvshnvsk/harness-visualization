@@ -116,7 +116,8 @@
       "origin": "вопрос не про базу: искать не нужно",
       "checks": [
         { "kind": "answerIncludes", "anyOf": ["391"] },
-        { "kind": "maxToolCalls", "value": 0, "label": "не искал в базе и не звал тулы" },
+        { "kind": "maxToolCalls", "value": 0, "label": "модель не звала тулы" },
+        { "kind": "noRetrieval" },
         { "kind": "maxModelRequests", "value": 2 }
       ]
     }

@@ -60,6 +60,8 @@ export function runCodeCheck(check: EvalCheck, events: HarnessEvent[]): CheckRes
       return result(...checkTool(check, facts.toolCalls));
     case 'judge':
       return result(null, 'судью не звали');
+    case 'noRetrieval':
+      return result(...checkRetrieval(events));
     default:
       return result(...checkLimit(check, facts));
   }
@@ -115,6 +117,15 @@ function checkTool(check: EvalCheck, calls: string[]): Outcome {
   ).length;
   const detail = count === 0 ? 'ни разу' : `${String(count)} раз`;
   return [check.kind === 'toolCalled' ? count > 0 : count === 0, detail];
+}
+
+function checkRetrieval(events: HarnessEvent[]): Outcome {
+  const retrieved = events.find((event) => event.type === 'context_retrieved');
+  if (retrieved?.type !== 'context_retrieved') {
+    return [true, 'не искал'];
+  }
+  const query = retrieved.arguments['query'];
+  return [false, typeof query === 'string' ? `искал «${query}»` : 'искал'];
 }
 
 function checkLimit(check: EvalCheck, facts: TrialFacts): Outcome {

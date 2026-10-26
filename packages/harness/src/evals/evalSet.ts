@@ -25,6 +25,9 @@ export const evalCheckSchema = z.discriminatedUnion('kind', [
   // Агент вызвал тул (имя целиком или окончание: «search» подходит к «kedr__search»).
   z.object({ kind: z.literal('toolCalled'), tool: z.string().min(1), label }),
   z.object({ kind: z.literal('toolNotCalled'), tool: z.string().min(1), label }),
+  // Харнесс не искал в базе до ответа (context_retrieved). В режиме auto он ищет всегда —
+  // даже на «17 × 23»: модель тулов не звала, а поиск был (первый прогон evals, 26.10.2026).
+  z.object({ kind: z.literal('noRetrieval'), label }),
   z.object({ kind: z.literal('maxModelRequests'), value: z.number().int().positive(), label }),
   z.object({ kind: z.literal('maxToolCalls'), value: z.number().int().nonnegative(), label }),
   z.object({ kind: z.literal('maxCostUsd'), value: z.number().positive(), label }),
@@ -72,6 +75,8 @@ export function describeCheck(check: EvalCheck): string {
       return `вызвал ${check.tool}`;
     case 'toolNotCalled':
       return `не вызывал ${check.tool}`;
+    case 'noRetrieval':
+      return 'харнесс не искал в базе до ответа';
     default:
       return describeLimit(check);
   }

@@ -22,6 +22,7 @@ export const HELP_TOPICS = [
   'inference',
   'orchestration',
   'model-vs-harness',
+  'evals',
 ] as const;
 
 export type HelpTopic = (typeof HELP_TOPICS)[number];

@@ -287,6 +287,7 @@ function describeTrial(input: TrialInput): TrialResult {
     costUsd: facts.costUsd,
     durationMs: facts.durationMs,
     cacheWarm: readFirstRequestCache(events) === 'warm',
+    answer: facts.answer,
   };
 }
 

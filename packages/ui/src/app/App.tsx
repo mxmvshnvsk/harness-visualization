@@ -38,6 +38,7 @@ import { usePendingPermission } from '../features/usePendingPermission';
 import { AgentsView } from '../features/agents/AgentsView';
 import { AgentLabelsContext, useAgentLabelsOf } from '../features/agents/agentLabels';
 import { McpLab } from '../features/mcp/McpLab';
+import { EvalLab } from '../features/evals/EvalLab';
 import { McpSessionView } from '../features/mcp/session/McpSessionView';
 import { RagLab } from '../features/rag/RagLab';
 import { RetrievalView } from '../features/rag/session/RetrievalView';
@@ -68,7 +69,7 @@ export function App(): ReactElement {
   );
   const lab =
     selection?.kind === 'lab' ? (
-      <LabScreen lab={selection.lab} back={opened} onBack={closeLab} />
+      <LabScreen lab={selection.lab} back={opened} onBack={closeLab} onSelect={pick} />
     ) : null;
   if (opened === null) {
     return lab ?? <StartScreen onOpenLab={openLab}>{sources}</StartScreen>;
@@ -146,13 +147,21 @@ function LabScreen(props: {
   lab: LabName;
   back: OpenedSelection | null;
   onBack: () => void;
+  // Лаборатория evals открывает трейс попытки.
+  onSelect: (next: Selection) => void;
 }): ReactElement {
   const backLabel = BACK_LABELS[props.back?.kind ?? 'start'];
-  return props.lab === 'rag' ? (
-    <RagLab backLabel={backLabel} onBack={props.onBack} />
-  ) : (
-    <McpLab backLabel={backLabel} onBack={props.onBack} />
-  );
+  const openTrace = (file: string): void => {
+    props.onSelect({ kind: 'trace', file });
+  };
+  switch (props.lab) {
+    case 'rag':
+      return <RagLab backLabel={backLabel} onBack={props.onBack} />;
+    case 'mcp':
+      return <McpLab backLabel={backLabel} onBack={props.onBack} />;
+    case 'evals':
+      return <EvalLab backLabel={backLabel} onBack={props.onBack} onOpenTrace={openTrace} />;
+  }
 }
 
 const BACK_LABELS: Record<OpenedSelection['kind'] | 'start', string> = {
@@ -295,6 +304,12 @@ const LAB_ENTRIES: readonly { lab: LabName; title: string; short: string; text: 
     title: 'Лаборатория MCP',
     short: 'тулы, протокол, цена, доверие',
     text: 'Что такое тул для модели, как харнесс говорит с MCP-сервером, сколько стоят тулы и можно ли верить серверу.',
+  },
+  {
+    lab: 'evals',
+    title: 'Лаборатория Evals',
+    short: 'задачи, попытки, pass@k',
+    text: 'Как понять, что агент стал лучше, а не «вроде лучше»: набор задач, несколько попыток, проверки по трейсу и итог по конфигурациям.',
   },
 ];
 

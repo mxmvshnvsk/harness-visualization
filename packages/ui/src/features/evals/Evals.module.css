@@ -1,0 +1,377 @@
+/* Лаборатория evals (этап 8e) — по мокапу, одобренному автором. Каркас экрана — общий
+   с лабораториями RAG и MCP (RagLab.module.css). */
+
+.eyebrow {
+  font: 12px var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.heading {
+  margin: 0;
+  font-size: 20px;
+  text-wrap: balance;
+}
+
+.small {
+  margin: 0;
+  font-size: 14px;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.note {
+  margin: 0;
+  padding: 10px 14px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 12px 12px 0;
+  background: var(--accent-soft);
+  font-size: 14px;
+}
+
+/* Из чего eval */
+.pipe {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.stage[aria-pressed='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.stage small {
+  font: 11.5px var(--font-mono);
+  color: var(--muted);
+}
+
+.explain,
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.explain ul {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--raised);
+  font-size: 13.5px;
+}
+
+/* Набор задач */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tasks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 12px;
+}
+
+.task {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--raised);
+}
+
+.task q {
+  font-weight: var(--weight-medium);
+  quotes: '«' '»';
+}
+
+.checks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.checks li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  font: 11.5px var(--font-mono);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.tag::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--tag);
+}
+
+.tag[data-kind='code'] {
+  --tag: var(--tool);
+}
+
+.tag[data-kind='judge'] {
+  --tag: var(--judge);
+}
+
+/* Прогон */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.select {
+  min-height: 32px;
+  max-width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: 13px var(--font-mono);
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.total {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--raised);
+}
+
+.big {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.big div {
+  display: flex;
+  flex-direction: column;
+}
+
+.big b {
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.big small {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.tableWrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.table th,
+.table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.table th {
+  font: 12px var(--font-mono);
+  color: var(--muted);
+  font-weight: normal;
+}
+
+.cells {
+  display: flex;
+  gap: 4px;
+}
+
+.cell {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font: 600 14px var(--font-mono);
+  cursor: pointer;
+}
+
+.cell[data-result='pass'] {
+  --cell: var(--status-good);
+}
+
+.cell[data-result='fail'] {
+  --cell: var(--error);
+}
+
+.cell[data-result='unknown'] {
+  --cell: var(--status-warning);
+}
+
+.cell[data-result] {
+  border-color: color-mix(in srgb, var(--cell) 35%, transparent);
+  background: color-mix(in srgb, var(--cell) 14%, transparent);
+  color: var(--cell);
+}
+
+.cell[aria-pressed='true'] {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.number {
+  font: 12.5px var(--font-mono);
+  white-space: nowrap;
+}
+
+/* Попытка крупно */
+.answer {
+  max-height: 360px;
+  overflow: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--raised);
+  font-size: 14px;
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.result {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 8px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 13.5px;
+}
+
+.result small {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+  overflow-wrap: anywhere;
+}
+
+.result[data-result='fail'] {
+  background: color-mix(in srgb, var(--error) 10%, transparent);
+}
+
+.icon {
+  font: 600 14px var(--font-mono);
+}
+
+.result[data-result='pass'] .icon {
+  color: var(--status-good);
+}
+
+.result[data-result='fail'] .icon {
+  color: var(--error);
+}
+
+.result[data-result='unknown'] .icon {
+  color: var(--status-warning);
+}
+
+/* Когда гоняют */
+.when {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  counter-reset: step;
+}
+
+.when .box::before {
+  counter-increment: step;
+  content: counter(step);
+  font: 12px var(--font-mono);
+  color: var(--muted);
+}
+
+@media (width <= 820px) {
+  .pipe,
+  .when,
+  .explain,
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,6 +1,7 @@
 // Запросы к серверу харнесса (packages/server). Типы ответов — из самого сервера:
 // так интерфейс не разойдётся с API незаметно — расхождение поймает tsc.
 
+import type { EvalReport } from '@harness-visualization/harness/evals';
 import type { LabBase, LabIndex, LabSearch } from '@harness-visualization/mcp-server/lab';
 import type {
   SessionDetails,
@@ -10,6 +11,7 @@ import type {
   TraceSummary,
   GroundingReportResponse,
   McpCourseResponse,
+  EvalsResponse,
   SessionOptionsResponse,
 } from '@harness-visualization/server';
 
@@ -69,6 +71,14 @@ export async function getRagBase(): Promise<LabBase> {
 }
 
 // События записанной сессии курса MCP (examples/traces).
+export async function getEvals(): Promise<EvalsResponse> {
+  return getJson('/api/evals');
+}
+
+export async function getEvalReport(file: string): Promise<EvalReport> {
+  return getJson(`/api/evals/reports/${encodeURIComponent(file)}`);
+}
+
 export async function getMcpCourse(): Promise<McpCourseResponse> {
   return getJson('/api/mcp/course');
 }

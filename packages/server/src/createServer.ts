@@ -14,6 +14,7 @@ import { registerSessionRoutes } from './sessions/sessionRoutes.js';
 import { TraceCatalog } from './traces/TraceCatalog.js';
 import { registerTraceRoutes } from './traces/traceRoutes.js';
 import { registerMcpCourseRoutes } from './labs/mcpCourseRoutes.js';
+import { registerEvalRoutes } from './evals/evalRoutes.js';
 
 // Сколько ждать идущие сессии при остановке. Ход агента после отказа — ещё один запрос
 // к модели, обычно несколько секунд; дольше ждать незачем — пусть трейс лучше оборвётся.
@@ -46,6 +47,11 @@ export function createServer(options: ServerOptions): FastifyInstance {
     similarityThreshold: options.loadedSettings.settings.grounding.similarityThreshold,
   });
   registerMcpCourseRoutes(app, courseCatalog);
+  registerEvalRoutes(app, {
+    projectRoot: options.projectRoot,
+    reportsDirectory: join(options.projectRoot, traces.directory, 'evals'),
+    catalog,
+  });
   registerUiPages(app);
   registerDebugPage(app);
   // Сервер останавливают (Ctrl+C). Ждущие вопросы закрываются отказом noOneToAsk, диалоги,

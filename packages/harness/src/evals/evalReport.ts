@@ -34,6 +34,8 @@ export interface TrialResult {
   durationMs: number;
   // Кэш был прогрет к первому шагу чужой сессией — эта попытка дешевле не из-за конфигурации.
   cacheWarm: boolean;
+  // Ответ агента; в первых отчётах его нет — сервер дочитывает его из трейса попытки.
+  answer?: string | null;
 }
 
 export interface EvalReport {
@@ -66,14 +68,16 @@ export interface CellSummary {
   passes: number;
   // Попытки без вердикта: провалов нет, но и не всё проверено.
   unknown: number;
-  passAtK: boolean;
-  passHatK: boolean;
+  // null — попыток меньше k (прогон идёт или прерван) и ответа ещё нет: pass^k по одной
+  // попытке из трёх — не pass^3. pass@k уже известен, если хоть одна попытка прошла.
+  passAtK: boolean | null;
+  passHatK: boolean | null;
 }
 
 export interface ConfigSummary {
   config: string;
   tasks: number;
-  // Доля задач, решённых хоть раз / во всех попытках.
+  // Доля задач, решённых хоть раз / во всех попытках — среди задач, по которым ответ уже есть.
   passAtK: number;
   passHatK: number;
   // Доля удачных попыток среди всех.
@@ -88,14 +92,15 @@ export function summarizeCell(report: EvalReport, taskId: string, config: string
     .filter((result) => result.taskId === taskId && result.config === config)
     .sort((left, right) => left.trial - right.trial);
   const passes = trials.filter((result) => result.passed === true).length;
+  const complete = trials.length >= report.trials;
   return {
     taskId,
     config,
     trials,
     passes,
     unknown: trials.filter((result) => result.passed === null).length,
-    passAtK: passes > 0,
-    passHatK: trials.length > 0 && passes === trials.length,
+    passAtK: passes > 0 || complete ? passes > 0 : null,
+    passHatK: complete ? passes === trials.length : null,
   };
 }
 
@@ -109,8 +114,8 @@ export function summarizeConfig(report: EvalReport, config: string): ConfigSumma
   return {
     config,
     tasks: cells.length,
-    passAtK: share(cells.filter((cell) => cell.passAtK).length, cells.length),
-    passHatK: share(cells.filter((cell) => cell.passHatK).length, cells.length),
+    passAtK: shareOf(cells.map((cell) => cell.passAtK)),
+    passHatK: shareOf(cells.map((cell) => cell.passHatK)),
     trialPassRate: share(trials.filter((trial) => trial.passed === true).length, trials.length),
     costUsd: costs.some((cost) => cost === null)
       ? null
@@ -118,6 +123,11 @@ export function summarizeConfig(report: EvalReport, config: string): ConfigSumma
     medianDurationMs: median(trials.map((trial) => trial.durationMs)),
     medianModelRequests: median(trials.map((trial) => trial.modelRequests)),
   };
+}
+
+function shareOf(values: (boolean | null)[]): number {
+  const known = values.filter((value) => value !== null);
+  return known.length === 0 ? 0 : known.filter(Boolean).length / known.length;
 }
 
 function median(values: number[]): number {

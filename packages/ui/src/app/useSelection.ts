@@ -1,12 +1,12 @@
 // Что открыто: живая сессия сервера, записанный трейс или лаборатория (RAG, MCP). Хранится в адресе
-// (?session=…, ?trace=… или ?lab=rag | mcp), поэтому ссылкой можно поделиться, а «назад» работает.
+// (?session=…, ?trace=… или ?lab=rag | mcp | evals), поэтому ссылкой можно поделиться, а «назад» работает.
 // null — ничего не открыто: стартовый экран. Лабораторию открыли из сессии или трейса — адрес
 // помнит и его (?lab=rag&trace=…): «назад» из лаборатории возвращает туда, а не на старт.
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type LabName = 'rag' | 'mcp';
-const LABS: readonly LabName[] = ['rag', 'mcp'];
+export type LabName = 'rag' | 'mcp' | 'evals';
+const LABS: readonly LabName[] = ['rag', 'mcp', 'evals'];
 
 // Открытый поток событий: живая сессия или записанный трейс.
 export type OpenedSelection =

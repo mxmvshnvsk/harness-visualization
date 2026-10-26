@@ -45,7 +45,10 @@ export function useCourseGrounding(): Loaded<GroundingReportResponse> {
   return useLoaded(getCourseGrounding, []);
 }
 
-function useLoaded<Value>(load: () => Promise<Value>, deps: readonly unknown[]): Loaded<Value> {
+export function useLoaded<Value>(
+  load: () => Promise<Value>,
+  deps: readonly unknown[],
+): Loaded<Value> {
   const [state, setState] = useState<Loaded<Value>>({ status: 'loading' });
   useEffect(() => {
     let cancelled = false;
