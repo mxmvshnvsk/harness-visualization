@@ -70,16 +70,22 @@ export function TrialDetail(props: {
               <MarkdownView text={trial.answer} />
             )}
           </div>
-          <div>
-            <Button
-              variant="quiet"
-              onClick={() => {
-                props.onOpenTrace(traceFile);
-              }}
-            >
-              Открыть трейс попытки →
-            </Button>
-          </div>
+          {trial.traceAvailable === false ? (
+            <p className={`${styles.small} ${styles.muted}`}>
+              Трейса попытки здесь нет: в примерах из репозитория лежит только отчёт с ответами.
+            </p>
+          ) : (
+            <div>
+              <Button
+                variant="quiet"
+                onClick={() => {
+                  props.onOpenTrace(traceFile);
+                }}
+              >
+                Открыть трейс попытки →
+              </Button>
+            </div>
+          )}
         </div>
         <CheckList checks={trial.checks} />
       </div>

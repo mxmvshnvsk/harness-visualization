@@ -149,7 +149,8 @@ function describeReport(report: EvalReportSummary): string {
     report.finishedAt === null && report.done < report.planned
       ? ` · идёт: ${String(report.done)} из ${String(report.planned)}`
       : '';
-  return `${when} · ${report.setName} · ${report.configs.join(', ')} · k = ${String(report.trials)}${progress}`;
+  const example = report.example ? ' · пример' : '';
+  return `${when} · ${report.setName} · ${report.configs.join(', ')} · k = ${String(report.trials)}${progress}${example}`;
 }
 
 function RunSummary(props: {

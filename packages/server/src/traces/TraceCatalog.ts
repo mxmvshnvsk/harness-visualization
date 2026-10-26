@@ -1,4 +1,6 @@
-// Каталог записанных трейсов в папке traces/. Для списка каждый трейс читается целиком
+// Каталог записанных трейсов: папка traces/ и примеры из репозитория (examples/traces, этап 9.3) —
+// эталонные трейсы по урокам, чтобы у склонировавшего проект было что смотреть и от чего
+// ветвиться. Одноимённый трейс из traces/ главнее примера. Для списка каждый трейс читается целиком
 // (в папке их сотни, мегабайты), поэтому сводка запоминается по размеру и времени изменения
 // файла: пока файл тот же, повторно его не читаем.
 //
@@ -22,6 +24,8 @@ export interface TraceSummary {
   file: string;
   kind: TraceKind;
   synthetic: boolean;
+  // Пример из репозитория (examples/traces), а не своя сессия из traces/.
+  example: boolean;
   sessionId: string | null;
   // Вопрос пользователя; у проверки опоры — путь к проверенному трейсу.
   title: string | null;
@@ -51,15 +55,27 @@ interface CachedSummary {
   summary: TraceSummary;
 }
 
+// Папка трейсов; example — примеры из репозитория.
+export interface TraceSource {
+  directory: string;
+  example: boolean;
+}
+
 export class TraceCatalog {
   private readonly cache = new Map<string, CachedSummary>();
 
-  constructor(private readonly directory: string) {}
+  private readonly sources: TraceSource[];
+
+  constructor(sources: string | TraceSource[]) {
+    this.sources = typeof sources === 'string' ? [{ directory: sources, example: false }] : sources;
+  }
 
   // Новые сверху: имя файла начинается со времени записи.
   async list(): Promise<TraceSummary[]> {
-    const names = await this.traceFileNames();
-    const summaries = await Promise.all(names.map((name) => this.summarize(name)));
+    const located = await this.locateAll();
+    const summaries = await Promise.all(
+      [...located.entries()].map(([file, source]) => this.summarize(file, source)),
+    );
     return summaries.sort((left, right) =>
       (right.startedAt ?? '').localeCompare(left.startedAt ?? ''),
     );
@@ -67,48 +83,64 @@ export class TraceCatalog {
 
   // null — такого трейса нет или имя недопустимо.
   async read(file: string): Promise<TraceContents | null> {
-    const path = this.pathOf(file);
-    if (path === null) {
+    if (!TRACE_FILE_NAME.test(file)) {
       return null;
     }
-    try {
-      return await readTraceFile(path);
-    } catch {
-      return null;
+    for (const source of this.sources) {
+      try {
+        return await readTraceFile(join(source.directory, file));
+      } catch {
+        // В этой папке нет — ищем в следующей.
+      }
     }
+    return null;
   }
 
-  private pathOf(file: string): string | null {
-    return TRACE_FILE_NAME.test(file) ? join(this.directory, file) : null;
-  }
-
-  private async traceFileNames(): Promise<string[]> {
-    try {
-      const entries = await readdir(this.directory, { withFileTypes: true });
-      return entries
-        .filter((entry) => entry.isFile() && TRACE_FILE_NAME.test(entry.name))
-        .map((entry) => entry.name);
-    } catch {
-      // Папки ещё нет: ни одной сессии не было.
-      return [];
+  // Файл → папка, где он лежит; одноимённый в первой папке главнее.
+  private async locateAll(): Promise<Map<string, TraceSource>> {
+    const located = new Map<string, TraceSource>();
+    for (const source of this.sources) {
+      for (const name of await traceFileNames(source.directory)) {
+        if (!located.has(name)) {
+          located.set(name, source);
+        }
+      }
     }
+    return located;
   }
 
-  private async summarize(file: string): Promise<TraceSummary> {
-    const path = join(this.directory, file);
+  private async summarize(file: string, source: TraceSource): Promise<TraceSummary> {
+    const path = join(source.directory, file);
     const info = await stat(path);
-    const cached = this.cache.get(file);
+    const key = `${source.directory}/${file}`;
+    const cached = this.cache.get(key);
     if (cached?.sizeBytes === info.size && cached.modifiedAtMs === info.mtimeMs) {
       return cached.summary;
     }
     const contents = await readTraceFile(path);
-    const summary = buildSummary(file, contents, info.size);
-    this.cache.set(file, { sizeBytes: info.size, modifiedAtMs: info.mtimeMs, summary });
+    const summary = { ...buildSummary(file, contents, info.size), example: source.example };
+    this.cache.set(key, { sizeBytes: info.size, modifiedAtMs: info.mtimeMs, summary });
     return summary;
   }
 }
 
-function buildSummary(file: string, contents: TraceContents, sizeBytes: number): TraceSummary {
+async function traceFileNames(directory: string): Promise<string[]> {
+  try {
+    const entries = await readdir(directory, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isFile() && TRACE_FILE_NAME.test(entry.name))
+      .map((entry) => entry.name);
+  } catch {
+    // Папки ещё нет: ни одной сессии не было.
+    return [];
+  }
+}
+
+function buildSummary(
+  file: string,
+  contents: TraceContents,
+  sizeBytes: number,
+): Omit<TraceSummary, 'example'> {
   const { events, skippedLines } = contents;
   const first = events.at(0);
   return {

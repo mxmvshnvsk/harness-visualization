@@ -7,6 +7,7 @@ function trace(file: string, startedAt: string, sourceFile: string | null = null
     file,
     kind: 'session',
     synthetic: false,
+    example: false,
     sessionId: file,
     title: 'вопрос',
     model: 'deepseek-flash',

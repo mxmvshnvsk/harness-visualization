@@ -36,6 +36,8 @@ export interface TrialResult {
   cacheWarm: boolean;
   // Ответ агента; в первых отчётах его нет — сервер дочитывает его из трейса попытки.
   answer?: string | null;
+  // Есть ли трейс попытки на сервере: у примеров из репозитория — только отчёт (этап 9.3).
+  traceAvailable?: boolean;
 }
 
 // Задача, как она записана в отчёте: в отчётах до разделения на regression и capability

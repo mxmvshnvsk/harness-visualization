@@ -38,7 +38,11 @@ export function createServer(options: ServerOptions): FastifyInstance {
   const registry = new SessionRegistry();
   registerSessionRoutes(app, { ...options, registry, permissions, questions });
   const { traces } = options.loadedSettings.settings;
-  const catalog = new TraceCatalog(join(options.projectRoot, traces.directory));
+  // Свои трейсы и примеры из репозитория (этап 9.3): их видно в списке, от них можно ветвиться.
+  const catalog = new TraceCatalog([
+    { directory: join(options.projectRoot, traces.directory), example: false },
+    { directory: join(options.projectRoot, 'examples', 'traces'), example: true },
+  ]);
   registerBranchRoutes(app, {
     ...options,
     registry,
@@ -58,7 +62,10 @@ export function createServer(options: ServerOptions): FastifyInstance {
   registerMcpCourseRoutes(app, courseCatalog);
   registerEvalRoutes(app, {
     projectRoot: options.projectRoot,
-    reportsDirectory: join(options.projectRoot, traces.directory, 'evals'),
+    reportSources: [
+      { directory: join(options.projectRoot, traces.directory, 'evals'), example: false },
+      { directory: join(options.projectRoot, 'examples', 'evals'), example: true },
+    ],
     catalog,
   });
   registerUiPages(app);

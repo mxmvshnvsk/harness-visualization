@@ -98,6 +98,7 @@ export function TraceList(props: TraceListProps): ReactElement {
               {trace.synthetic && <Badge tone="error">синтетический</Badge>}
               {trace.kind !== 'session' && <Badge tone="judge">{trace.kind}</Badge>}
               {trace.branch !== null && <Badge>⑂ шаг {trace.branch.step}</Badge>}
+              {trace.example && <Badge>пример</Badge>}
               {trace.title ?? trace.file}
             </span>
             <span className={styles.meta}>

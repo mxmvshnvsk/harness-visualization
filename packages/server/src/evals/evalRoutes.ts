@@ -1,5 +1,6 @@
 // Маршруты лаборатории evals (этап 8e):
-//   GET /api/evals                 — наборы задач из evals/*.json и отчёты прогонов из traces/evals/;
+//   GET /api/evals                 — наборы задач из evals/*.json и отчёты прогонов из traces/evals/
+//                                    и примеры из репозитория (examples/evals, этап 9.3);
 //   GET /api/evals/reports/:file   — отчёт прогона с ответом агента в каждой попытке.
 //
 // Отчёт пишет pnpm run eval после каждой попытки, поэтому незаконченный прогон тоже виден.
@@ -20,6 +21,8 @@ const JSON_FILE_NAME = /^[\w.-]+\.json$/u;
 
 export interface EvalReportSummary {
   file: string;
+  // Пример из репозитория: трейсов попыток при нём нет, только отчёт с ответами.
+  example: boolean;
   setName: string;
   startedAt: string;
   finishedAt: string | null;
@@ -37,16 +40,24 @@ export interface EvalsResponse {
   reports: EvalReportSummary[];
 }
 
+interface ReportSource {
+  directory: string;
+  example: boolean;
+}
+
 interface EvalRoutesOptions {
   projectRoot: string;
-  reportsDirectory: string;
+  // Свои отчёты главнее одноимённых примеров.
+  reportSources: ReportSource[];
   catalog: TraceCatalog;
 }
+
+type LocatedReport = EvalReport & { file: string; example: boolean };
 
 export function registerEvalRoutes(app: FastifyInstance, options: EvalRoutesOptions): void {
   app.get('/api/evals', async (): Promise<EvalsResponse> => {
     const sets = await readSets(join(options.projectRoot, 'evals'));
-    const reports = await readReports(options.reportsDirectory);
+    const reports = await readReports(options.reportSources);
     return {
       sets,
       reports: reports
@@ -57,9 +68,7 @@ export function registerEvalRoutes(app: FastifyInstance, options: EvalRoutesOpti
 
   app.get<{ Params: { file: string } }>('/api/evals/reports/:file', async (request, reply) => {
     const { file } = request.params;
-    const report = JSON_FILE_NAME.test(file)
-      ? await readReport(join(options.reportsDirectory, file), file)
-      : null;
+    const report = JSON_FILE_NAME.test(file) ? await findReport(options.reportSources, file) : null;
     if (report === null) {
       return reply.code(404).send({ error: 'Такого отчёта нет в traces/evals/' });
     }
@@ -92,29 +101,46 @@ async function readSets(directory: string): Promise<EvalsResponse['sets']> {
   return sets;
 }
 
-async function readReports(directory: string): Promise<(EvalReport & { file: string })[]> {
-  const reports = await Promise.all(
-    (await jsonFiles(directory)).map((file) => readReport(join(directory, file), file)),
-  );
-  return reports.filter((report) => report !== null);
+async function readReports(sources: ReportSource[]): Promise<LocatedReport[]> {
+  const reports = new Map<string, LocatedReport>();
+  for (const source of sources) {
+    for (const file of await jsonFiles(source.directory)) {
+      const report = reports.has(file) ? null : await readReport(source, file);
+      if (report !== null) {
+        reports.set(file, report);
+      }
+    }
+  }
+  return [...reports.values()];
+}
+
+async function findReport(sources: ReportSource[], file: string): Promise<LocatedReport | null> {
+  for (const source of sources) {
+    const report = await readReport(source, file);
+    if (report !== null) {
+      return report;
+    }
+  }
+  return null;
 }
 
 // Отчёт мог дописываться в эту секунду или оказаться чужим JSON — тогда его просто нет.
-async function readReport(
-  path: string,
-  file: string,
-): Promise<(EvalReport & { file: string }) | null> {
+async function readReport(source: ReportSource, file: string): Promise<LocatedReport | null> {
   try {
+    const path = join(source.directory, file);
     const value = JSON.parse(await readFile(path, 'utf8')) as Partial<EvalReport>;
-    return value.kind === 'evalReport' ? { ...(value as EvalReport), file } : null;
+    return value.kind === 'evalReport'
+      ? { ...(value as EvalReport), file, example: source.example }
+      : null;
   } catch {
     return null;
   }
 }
 
-function summarizeReport(report: EvalReport & { file: string }): EvalReportSummary {
+function summarizeReport(report: LocatedReport): EvalReportSummary {
   return {
     file: report.file,
+    example: report.example,
     setName: report.set.name,
     startedAt: report.startedAt,
     finishedAt: report.finishedAt,
@@ -128,15 +154,17 @@ function summarizeReport(report: EvalReport & { file: string }): EvalReportSumma
 }
 
 // В первых отчётах ответа нет — берём его из трейса попытки: трейс — источник правды.
+// Есть ли трейс попытки: у примеров из репозитория трейсов попыток нет, только отчёт.
 async function withAnswers(report: EvalReport, catalog: TraceCatalog): Promise<EvalReport> {
   const results = await Promise.all(
     report.results.map(async (result) => {
-      if (result.answer !== undefined) {
-        return result;
-      }
       const contents = await catalog.read(basename(result.tracePath));
       const events: HarnessEvent[] = contents?.events ?? [];
-      return { ...result, answer: readTrialFacts(events).answer };
+      return {
+        ...result,
+        answer: result.answer !== undefined ? result.answer : readTrialFacts(events).answer,
+        traceAvailable: contents !== null,
+      };
     }),
   );
   return { ...report, results };
