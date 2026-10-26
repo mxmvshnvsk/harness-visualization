@@ -20,6 +20,7 @@ export function ToolCallPanel({ tool }: { tool: ToolCallView }): ReactElement {
         <Badge tone={STATUS_TONES[tool.status]}>{tool.status}</Badge>
         <span className={styles.headerHelp}>
           {isMcpTool(tool.toolName) && <Term topic="mcp">это tool MCP-сервера</Term>}
+          <Term topic="model-vs-harness">кто его выполняет</Term>
           <HelpButton topic="tool-calls" />
         </span>
       </header>

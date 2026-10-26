@@ -2,6 +2,7 @@
 // которые задал код, план и что стало с каждой задачей — поручение, отчёты по кругам, приёмка.
 
 import { useState, type ReactElement } from 'react';
+import { HelpButton } from '../../help/HelpLinks';
 import { MarkdownView } from '../../help/MarkdownView';
 import type {
   OrchestrationStepView,
@@ -45,8 +46,11 @@ export function OrchestrationPanel({ view }: { view: OrchestrationView }): React
     <section className={agents.card} aria-label="Как шла работа">
       <div className={agents.cardHead}>
         <h2 className={agents.title}>Как шла работа</h2>
-        <span className={styles.mode}>
-          {MODES[view.mode].name} · {MODES[view.mode].who}
+        <span className={styles.side}>
+          <span className={styles.mode}>
+            {MODES[view.mode].name} · {MODES[view.mode].who}
+          </span>
+          <HelpButton topic="orchestration" />
         </span>
       </div>
       {view.steps.length > 0 && <Steps steps={view.steps} />}

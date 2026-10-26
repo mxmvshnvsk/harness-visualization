@@ -20,6 +20,8 @@ export const HELP_TOPICS = [
   'skills-memory',
   'subagents',
   'inference',
+  'orchestration',
+  'model-vs-harness',
 ] as const;
 
 export type HelpTopic = (typeof HELP_TOPICS)[number];

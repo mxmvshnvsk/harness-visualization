@@ -188,3 +188,10 @@
 .card[data-kind='accept'] {
   border-left-color: var(--status-good);
 }
+
+.side {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
