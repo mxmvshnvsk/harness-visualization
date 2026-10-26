@@ -3,10 +3,13 @@
 // из delete_file. Поэтому вид работает и в повторе (diff на шаге, где стоит бегунок),
 // и на примерах из репозитория. Файл, который агент записал, не прочитав, — для нас новый:
 // исходного текста в трейсе нет.
+// Импорт чужого харнесса (9.4): тулы там свои, и адаптер кладёт в details.fileEffect, что тул
+// сделал с файлом, — чтение, запись или правку фрагментом. Здесь их понимаем одинаково.
 
 import type {
   AcceptanceCheckedPayload,
   ArenaRun,
+  FileEffect,
   HarnessEvent,
 } from '@harness-visualization/harness';
 
@@ -20,6 +23,10 @@ export interface CodeFile {
   writes: number;
   // Шаг агента, на котором файл менялся последний раз; у прочитанного — когда прочитан.
   step: number;
+  // original — только прочитанный кусок файла (чтение с offset или обрезанное).
+  partial: boolean;
+  // Правки фрагментом, когда текста файла в трейсе нет: показываем их сами по себе.
+  fragments: { oldText: string; newText: string }[];
 }
 
 export interface TestRun {
@@ -104,6 +111,11 @@ function apply(builder: Builder, event: HarnessEvent): void {
       programRunOf(builder.step, builder.calls.get(event.toolCallId), event),
     );
   } else if (event.type === 'tool_result' && event.status === 'success') {
+    const effect = fileEffectOf(event.details);
+    if (effect !== null) {
+      applyEffect(builder, effect);
+      return;
+    }
     const call = builder.calls.get(event.toolCallId);
     if (call !== undefined) {
       applyResult(builder, call, event);
@@ -162,7 +174,87 @@ function write(builder: Builder, path: string, content: string): void {
 }
 
 function newFile(path: string, step: number): CodeFile {
-  return { path, original: null, current: null, status: 'read', writes: 0, step };
+  return {
+    path,
+    original: null,
+    current: null,
+    status: 'read',
+    writes: 0,
+    step,
+    partial: false,
+    fragments: [],
+  };
+}
+
+function fileEffectOf(details: Record<string, unknown> | null): FileEffect | null {
+  const effect = details?.fileEffect;
+  return typeof effect === 'object' && effect !== null ? (effect as FileEffect) : null;
+}
+
+const EFFECT_HANDLERS: {
+  [Kind in FileEffect['kind']]: (
+    builder: Builder,
+    effect: Extract<FileEffect, { kind: Kind }>,
+  ) => void;
+} = {
+  read: (builder, effect) => {
+    const file = builder.files.get(effect.path);
+    // Целиком прочитанный файл заменяет кусок, прочитанный раньше, пока агент его не менял.
+    if (file === undefined || (file.partial && !effect.partial && file.writes === 0)) {
+      builder.files.set(effect.path, {
+        ...newFile(effect.path, builder.step),
+        original: effect.content,
+        current: effect.content,
+        partial: effect.partial,
+      });
+    }
+  },
+  write: (builder, effect) => {
+    const file = builder.files.get(effect.path);
+    // Claude Code пишет файл до правки — он точнее того, что агент успел прочитать.
+    if (effect.before !== undefined && (file === undefined || file.writes === 0)) {
+      builder.files.set(effect.path, {
+        ...newFile(effect.path, file?.step ?? builder.step),
+        original: effect.before,
+        current: effect.before,
+        status: effect.before === null ? 'created' : 'read',
+      });
+    }
+    write(builder, effect.path, effect.after);
+  },
+  edit: (builder, effect) => {
+    const file = builder.files.get(effect.path) ?? newFile(effect.path, builder.step);
+    const after = file.current === null ? null : replaceText(file.current, effect);
+    if (after !== null) {
+      builder.files.set(effect.path, file);
+      write(builder, effect.path, after);
+      return;
+    }
+    builder.files.set(effect.path, {
+      ...file,
+      status: 'modified',
+      writes: file.writes + 1,
+      step: builder.step,
+      fragments: [...file.fragments, { oldText: effect.oldString, newText: effect.newString }],
+    });
+  },
+};
+
+function applyEffect(builder: Builder, effect: FileEffect): void {
+  (EFFECT_HANDLERS[effect.kind] as (builder: Builder, effect: FileEffect) => void)(builder, effect);
+}
+
+// Правка фрагментом; null — фрагмента в известном тексте нет (например, прочитан кусок).
+function replaceText(
+  text: string,
+  edit: { oldString: string; newString: string; replaceAll: boolean },
+): string | null {
+  if (!text.includes(edit.oldString)) {
+    return null;
+  }
+  return edit.replaceAll
+    ? text.split(edit.oldString).join(edit.newString)
+    : text.replace(edit.oldString, () => edit.newString);
 }
 
 function testRunOf(step: number, result: Extract<HarnessEvent, { type: 'tool_result' }>): TestRun {

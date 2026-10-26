@@ -14,6 +14,7 @@
 
 import type { HarnessEvent, HarnessEventPayload, ImportedFrom } from '../events/harnessEvents.js';
 import type { ModelReply, ReasoningEffort, TokenUsage, ToolCall } from '../model/chatTypes.js';
+import { openCodeFileEffect } from './fileEffects.js';
 import { maskHomePaths, maskSecretText } from './maskSecretText.js';
 import { reconstructRequests } from './reconstructRequests.js';
 
@@ -208,7 +209,8 @@ class Writer {
       argumentsText: call.argumentsText,
       arguments: block.state?.input ?? null,
     });
-    this.emit(this.at(time.completed), toolResult(call, block.state ?? {}, time));
+    const directory = this.session.info?.location?.directory ?? null;
+    this.emit(this.at(time.completed), toolResult(call, block.state ?? {}, time, directory));
   }
 
   // Время сообщения, но не раньше предыдущего события: плееру нужен порядок. Тулы OpenCode
@@ -251,15 +253,32 @@ function toolResult(
   call: ToolCall,
   state: NonNullable<Block['state']>,
   time: NonNullable<Block['time']>,
+  directory: string | null,
 ): HarnessEventPayload {
   const ranAt = time.ran ?? time.created ?? 0;
+  const content = (state.content ?? [])
+    .map((part) => part.text ?? `[${part.type ?? '?'}]`)
+    .join('\n');
+  const success = state.status === 'completed';
+  const fileEffect = success
+    ? openCodeFileEffect(
+        call.name,
+        state.input,
+        { text: content, truncated: state.metadata?.truncated === true },
+        directory,
+      )
+    : null;
+  const details = {
+    ...state.metadata,
+    ...(fileEffect === null ? {} : { fileEffect }),
+  };
   return {
     type: 'tool_result',
     toolCallId: call.id,
     toolName: call.name,
-    status: state.status === 'completed' ? 'success' : 'error',
-    content: (state.content ?? []).map((part) => part.text ?? `[${part.type ?? '?'}]`).join('\n'),
-    details: state.metadata === undefined ? null : { ...state.metadata },
+    status: success ? 'success' : 'error',
+    content,
+    details: Object.keys(details).length === 0 ? null : details,
     cost: null,
     durationMs: Math.max(0, (time.completed ?? ranAt) - ranAt),
   };

@@ -8,7 +8,7 @@ import { HelpButton } from '../../help/HelpLinks';
 import { projectCode, type CodeFile, type CodeView as View } from '../../projections/projectCode';
 import { countChanges, diffHunks, lineDiff, type DiffHunk } from '../../projections/lineDiff';
 import { AcceptanceCard } from './AcceptanceCard';
-import { describeArena, describeNoCode, STATUS_LABELS } from './codeLabels';
+import { describeArena, describeFileNote, describeNoCode, STATUS_LABELS } from './codeLabels';
 import styles from './Code.module.css';
 
 const MARKS = { add: '+', del: '−', same: ' ' } as const;
@@ -120,7 +120,7 @@ function FilesCard({ files }: { files: readonly CodeFile[] }): ReactElement {
 // По умолчанию открыт файл с самой большой правкой — обычно это и есть решение задачи.
 function biggest(files: readonly CodeFile[]): CodeFile | undefined {
   const size = (file: CodeFile): number => {
-    const changes = countChanges(lineDiff(file.original ?? '', file.current ?? ''));
+    const changes = fileChanges(file);
     return changes.added + changes.removed;
   };
   return [...files].sort((left, right) => size(right) - size(left))[0];
@@ -132,7 +132,7 @@ function FileItem(props: {
   onSelect: (path: string) => void;
 }): ReactElement {
   const { file } = props;
-  const changes = countChanges(lineDiff(file.original ?? '', file.current ?? ''));
+  const changes = fileChanges(file);
   return (
     <li>
       <button
@@ -156,19 +156,37 @@ function FileItem(props: {
   );
 }
 
+// Сколько строк добавлено и убрано: по всему файлу и по правкам фрагментом.
+function fileChanges(file: CodeFile): { added: number; removed: number } {
+  return [
+    lineDiff(file.original ?? '', file.current ?? ''),
+    ...file.fragments.map((fragment) => lineDiff(fragment.oldText, fragment.newText)),
+  ]
+    .map(countChanges)
+    .reduce((sum, item) => ({
+      added: sum.added + item.added,
+      removed: sum.removed + item.removed,
+    }));
+}
+
 function FileDiff({ file }: { file: CodeFile }): ReactElement {
   const lines = lineDiff(file.original ?? '', file.current ?? '');
   const hunks = file.status === 'read' ? [{ kind: 'lines' as const, lines }] : diffHunks(lines);
+  const whole = file.original !== null || file.current !== null;
   return (
     <div>
       <p className={styles.muted}>
         {STATUS_LABELS[file.status]} · шаг {file.step}
         {file.writes > 1 ? ` · записан ${String(file.writes)} раза` : ''}
-        {file.status === 'created' && file.original === null
-          ? ' · агент записал файл, не прочитав: исходного текста в трейсе нет'
-          : ''}
+        {describeFileNote(file)}
       </p>
-      <DiffBlock hunks={hunks} />
+      {whole && <DiffBlock hunks={hunks} />}
+      {file.fragments.map((fragment, index) => (
+        <DiffBlock
+          key={index}
+          hunks={[{ kind: 'lines', lines: lineDiff(fragment.oldText, fragment.newText) }]}
+        />
+      ))}
     </div>
   );
 }

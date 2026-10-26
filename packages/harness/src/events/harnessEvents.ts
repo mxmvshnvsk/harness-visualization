@@ -348,6 +348,17 @@ export interface ToolCallPayload {
 // denied — пользователь не разрешил действие; blocked — действие запрещено политикой харнесса.
 export type ToolResultStatus = 'success' | 'error' | 'denied' | 'blocked';
 
+// Что тул чужого харнесса сделал с файлом (адаптеры 9.4): адаптер знает формат своих тулов
+// и кладёт в details.fileEffect одно из трёх — так вкладка «Код» понимает Read/Edit/Write
+// Claude Code и read/edit/write OpenCode, не зная их форматов. Путь — от папки проекта.
+export type FileEffect =
+  // partial — прочитана часть файла (offset или обрезка): исходный текст тогда неизвестен.
+  | { kind: 'read'; path: string; content: string; partial: boolean }
+  // before: null — файла не было; undefined — неизвестно, каким он был.
+  | { kind: 'write'; path: string; before?: string | null; after: string }
+  // Правка «заменить фрагмент»: применяем к последнему известному тексту файла.
+  | { kind: 'edit'; path: string; oldString: string; newString: string; replaceAll: boolean };
+
 export interface ToolResultPayload {
   type: 'tool_result';
   toolCallId: string;

@@ -15,6 +15,7 @@
 
 import type { HarnessEvent, HarnessEventPayload, ImportedFrom } from '../events/harnessEvents.js';
 import type { ModelReply, TokenUsage, ToolCall } from '../model/chatTypes.js';
+import { claudeCodeFileEffect } from './fileEffects.js';
 import { maskHomePaths, maskSecretText } from './maskSecretText.js';
 import { reconstructRequests } from './reconstructRequests.js';
 
@@ -38,6 +39,10 @@ interface Entry {
   timestamp?: string;
   version?: string;
   isSidechain?: boolean;
+  agentId?: string;
+  cwd?: string;
+  // Что увидел интерфейс Claude Code: у Read — текст файла, у Edit и Write — файл до правки.
+  toolUseResult?: unknown;
   isMeta?: boolean;
   isCompactSummary?: boolean;
   compactMetadata?: { preTokens?: number; postTokens?: number };
@@ -108,13 +113,15 @@ class EventBuilder {
   private readonly main: Entry[];
   private readonly groups = new Map<string, Entry[]>();
   private readonly emitted = new Set<string>();
-  private readonly toolNames = new Map<string, string>();
+  private readonly toolCalls = new Map<string, { name: string; input: unknown }>();
   private time = 0;
   private iteration = 0;
   private requests = 0;
   private compactions = 0;
   private boundary: Entry | null = null;
   private readonly usage: TokenUsage = emptyUsage();
+  // Папка проекта (уже замаскированная): пути файлов во вкладке «Код» — от неё.
+  private readonly cwd: string | null;
 
   constructor(private readonly entries: readonly Entry[]) {
     this.sessionId = (entries.find((entry) => entry.sessionId)?.sessionId ?? 'imported').slice(
@@ -122,6 +129,7 @@ class EventBuilder {
       8,
     );
     this.main = entries.filter((entry) => entry.isSidechain !== true);
+    this.cwd = this.main.find((entry) => typeof entry.cwd === 'string')?.cwd ?? null;
     for (const entry of this.main) {
       const id = entry.type === 'assistant' ? entry.message?.id : undefined;
       if (id !== undefined) {
@@ -197,9 +205,7 @@ class EventBuilder {
     const content = entry.message?.content ?? '';
     const at = this.at(entry);
     if (Array.isArray(content) && content.some((block) => block.type === 'tool_result')) {
-      for (const block of content.filter((item) => item.type === 'tool_result')) {
-        this.toolResult(block, at);
-      }
+      this.toolResults(entry, content, at);
       return;
     }
     const text = typeof content === 'string' ? content : textOf(content);
@@ -211,15 +217,28 @@ class EventBuilder {
     }
   }
 
-  private toolResult(block: Block, at: number): void {
+  private toolResults(entry: Entry, content: readonly Block[], at: number): void {
+    const results = content.filter((item) => item.type === 'tool_result');
+    for (const block of results) {
+      // toolUseResult один на запись — относится к результату, только если он один.
+      this.toolResult(block, at, results.length === 1 ? entry : null);
+    }
+  }
+
+  private toolResult(block: Block, at: number, entry: Entry | null): void {
     const toolCallId = block.tool_use_id ?? '';
+    const call = this.toolCalls.get(toolCallId);
+    const fileEffect =
+      call === undefined || entry === null
+        ? null
+        : claudeCodeFileEffect(call.name, call.input, entry.toolUseResult, this.cwd);
     this.emit(at, {
       type: 'tool_result',
       toolCallId,
-      toolName: this.toolNames.get(toolCallId) ?? 'тул',
+      toolName: call?.name ?? 'тул',
       status: block.is_error === true ? 'error' : 'success',
       content: typeof block.content === 'string' ? block.content : textOf(block.content),
-      details: null,
+      details: fileEffect === null ? null : { fileEffect },
       cost: null,
       durationMs: 0,
     });
@@ -251,13 +270,14 @@ class EventBuilder {
       cost: null,
     });
     for (const call of reply.toolCalls) {
-      this.toolNames.set(call.id, call.name);
+      const input = parseArguments(call.argumentsText);
+      this.toolCalls.set(call.id, { name: call.name, input });
       this.emit(answeredAt, {
         type: 'tool_call',
         toolCallId: call.id,
         toolName: call.name,
         argumentsText: call.argumentsText,
-        arguments: parseArguments(call.argumentsText),
+        arguments: input,
       });
     }
     if (reply.toolCalls.length === 0 && reply.text !== null) {
