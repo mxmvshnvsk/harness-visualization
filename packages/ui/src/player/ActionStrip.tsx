@@ -45,9 +45,11 @@ export function ActionStrip({ clock, schedule, view }: ActionStripProps): ReactE
     >
       <div className={styles.viewport}>
         <div ref={trackRef} className={styles.track}>
-          {segments.map((segment) => (
-            <SegmentBar key={segment.key} segment={segment} total={total} />
-          ))}
+          <div className={styles.bars}>
+            {segments.map((segment) => (
+              <SegmentBar key={segment.key} segment={segment} total={total} />
+            ))}
+          </div>
           {questionMarks(schedule).map((at, index, marks) =>
             marks.length > 1 ? (
               <span key={at} className={styles.mark} style={{ left: percent(at, total) }}>
@@ -55,7 +57,9 @@ export function ActionStrip({ clock, schedule, view }: ActionStripProps): ReactE
               </span>
             ) : null,
           )}
-          <div ref={headRef} className={styles.head} />
+          <div ref={headRef} className={styles.headRail}>
+            <div className={styles.head} />
+          </div>
         </div>
       </div>
       <div className={styles.ghost} data-ghost="line" />
@@ -139,19 +143,34 @@ interface HeadRefs {
 }
 
 // Бегунок и пройденные отрезки — по кадрам часов; при воспроизведении окно едет за бегунком.
+// В DOM пишем только то, что изменилось: запись атрибута, даже того же значения, заставляет
+// браузер пересчитать стили, а отрезков в длинной сессии — сотни, кадров — 60 в секунду.
 function useHead(clock: TimelineClock, view: StripView, total: number, refs: HeadRefs): void {
   const { stripRef, trackRef, headRef } = refs;
   useEffect(() => {
     const segments = [...(trackRef.current?.querySelectorAll<HTMLElement>('[data-from]') ?? [])];
+    const starts = segments.map((segment) => Number(segment.dataset.from));
+    const past = segments.map(() => null as boolean | null);
+    let valueNow = '';
     const draw = (): void => {
       const { time, playing, following } = clock.getState();
+      // Бегунок едет сдвигом слоя (transform), а не left: так кадр собирает компоновщик,
+      // без раскладки и перерисовки «стеклянного» дока с размытием под ним.
       if (headRef.current !== null) {
-        headRef.current.style.left = percent(time, total);
+        headRef.current.style.transform = `translateX(${percent(time, total)})`;
       }
-      stripRef.current?.setAttribute('aria-valuenow', String(Math.round((time / total) * 100)));
-      for (const segment of segments) {
-        segment.dataset.past = String(time >= Number(segment.dataset.from));
+      const nextValue = String(Math.round((time / total) * 100));
+      if (nextValue !== valueNow) {
+        valueNow = nextValue;
+        stripRef.current?.setAttribute('aria-valuenow', nextValue);
       }
+      segments.forEach((segment, index) => {
+        const isPast = time >= (starts[index] ?? 0);
+        if (past[index] !== isPast) {
+          past[index] = isPast;
+          segment.dataset.past = String(isPast);
+        }
+      });
       const state = view.get();
       if (zoomActive(state) && state.follow && (playing || following)) {
         view.setWindow(followHead(state.win, time, state.total));

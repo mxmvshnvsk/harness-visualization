@@ -6,6 +6,7 @@ import type { CSSProperties, ReactElement } from 'react';
 import { Term } from '../../help/HelpLinks';
 import { PARTS, partTokens } from '../context/contextScale';
 import styles from './Budget.module.css';
+import { formatRu } from '../../text/formatNumber';
 
 interface BudgetBlockProps {
   budget: PromptBudget;
@@ -61,7 +62,7 @@ export function BudgetBlock({ budget, exactTokens }: BudgetBlockProps): ReactEle
       </ul>
       <ReconstructedNote budget={budget} />
       <p className={styles.note}>
-        Разбивка — оценка: символы JSON запроса ÷ {budget.charsPerToken.toLocaleString('ru-RU')}.{' '}
+        Разбивка — оценка: символы JSON запроса ÷ {formatRu(budget.charsPerToken)}.{' '}
         {exactTokens === null
           ? 'Точное число придёт в usage ответа.'
           : `Точно, по usage ответа, — ${format(exactTokens)} (оценка ошиблась на ${String(errorPercent(estimate.total, exactTokens))} %).`}{' '}
@@ -95,5 +96,5 @@ function describe({ estimate, limitTokens }: PromptBudget): string {
 }
 
 function format(value: number): string {
-  return value.toLocaleString('ru-RU');
+  return formatRu(value);
 }

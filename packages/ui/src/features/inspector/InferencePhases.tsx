@@ -6,6 +6,7 @@ import type { ReactElement } from 'react';
 import { Term } from '../../help/HelpLinks';
 import type { ModelCall } from '../../projections/sessionView';
 import styles from './Inspector.module.css';
+import { formatRu } from '../../text/formatNumber';
 
 const STOPS: Record<string, string> = {
   stop: 'модель сама закончила ответ',
@@ -58,7 +59,7 @@ export function InferencePhases({ call }: { call: ModelCall }): ReactElement | n
           <code className={styles.mono}>finish_reason: {finishReason ?? '—'}</code>
           <span>
             {STOPS[finishReason ?? ''] ?? 'причина от провайдера'} · весь запрос{' '}
-            {(response.durationMs / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} с
+            {formatRu(response.durationMs / 1000, { maximumFractionDigits: 1 })} с
           </span>
         </div>
       </div>
@@ -98,5 +99,5 @@ function Split({ parts }: { parts: Part[] }): ReactElement {
 }
 
 function format(value: number): string {
-  return value.toLocaleString('ru-RU');
+  return formatRu(value);
 }

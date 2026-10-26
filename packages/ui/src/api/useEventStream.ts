@@ -3,8 +3,12 @@
 // а сервер досылает пропущенное. Конец потока — именованное событие end: после него
 // закрываем EventSource сами, иначе он переподключится к законченной сессии.
 //
-// Трейс приходит сотнями событий подряд. Чтобы не перерисовывать экран на каждое,
-// события копятся и попадают в состояние раз в кадр (requestAnimationFrame).
+// Трейс приходит сотнями событий подряд. Чтобы не перерисовывать экран на каждое, события
+// копятся: у живой сессии — до следующего кадра (requestAnimationFrame), у записанного трейса —
+// до конца потока, одним куском. Раньше трейс тоже шёл по кадрам: файл в 1 МБ приходил за
+// десяток кадров, и на каждый весь экран считался заново — открытие трейса тормозило
+// (профиль 26.10.2026). Если поток трейса почему-то затянулся, накопленное показывается раз
+// в секунду, чтобы экран не стоял пустым.
 //
 // Кроме событий, живая сессия присылает кусочки ответа модели (этап 8d.2) — именованное
 // событие delta без id. Они складываются по requestId в текст рассуждения и ответа, чтобы
@@ -35,7 +39,8 @@ function initialStream<End>(url: string | null): EventStream<End> {
   return { events: [], deltas: {}, end: null, state: url === null ? 'idle' : 'open' };
 }
 
-export function useEventStream<End>(url: string | null): EventStream<End> {
+// untilEnd — записанный трейс: события попадают в состояние все сразу, по событию end.
+export function useEventStream<End>(url: string | null, untilEnd = false): EventStream<End> {
   const [stream, setStream] = useState<EventStream<End>>(() => initialStream(url));
   // Адрес сменился — начинаем с пустого потока прямо при отрисовке, а не в эффекте:
   // так React не рисует лишний кадр со старыми событиями (образец из документации React:
@@ -51,7 +56,7 @@ export function useEventStream<End>(url: string | null): EventStream<End> {
       return undefined;
     }
     const source = new EventSource(url);
-    const buffer = createFrameBuffer((events, deltas) => {
+    const buffer = createFrameBuffer(untilEnd, (events, deltas) => {
       setStream((current) => ({
         ...current,
         events: events.length === 0 ? current.events : [...current.events, ...events],
@@ -85,7 +90,7 @@ export function useEventStream<End>(url: string | null): EventStream<End> {
       source.close();
       buffer.cancel();
     };
-  }, [url]);
+  }, [url, untilEnd]);
 
   return stream;
 }
@@ -106,17 +111,29 @@ interface FrameBuffer {
   cancel: () => void;
 }
 
+// Запас на случай, когда поток трейса идёт дольше обычного: показать накопленное.
+const SLOW_TRACE_FLUSH_MS = 1000;
+
 function createFrameBuffer(
+  untilEnd: boolean,
   deliver: (events: HarnessEvent[], deltas: ModelDelta[]) => void,
 ): FrameBuffer {
   let pending: HarnessEvent[] = [];
   let pendingDeltas: ModelDelta[] = [];
   let frame: number | null = null;
-  const flush = (): void => {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  const stopTimers = (): void => {
     if (frame !== null) {
       cancelAnimationFrame(frame);
       frame = null;
     }
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+  const flush = (): void => {
+    stopTimers();
     if (pending.length > 0 || pendingDeltas.length > 0) {
       deliver(pending, pendingDeltas);
       pending = [];
@@ -124,7 +141,11 @@ function createFrameBuffer(
     }
   };
   const schedule = (): void => {
-    frame ??= requestAnimationFrame(flush);
+    if (untilEnd) {
+      timer ??= setTimeout(flush, SLOW_TRACE_FLUSH_MS);
+    } else {
+      frame ??= requestAnimationFrame(flush);
+    }
   };
   return {
     push: (event) => {
@@ -137,9 +158,7 @@ function createFrameBuffer(
     },
     flush,
     cancel: () => {
-      if (frame !== null) {
-        cancelAnimationFrame(frame);
-      }
+      stopTimers();
       pending = [];
       pendingDeltas = [];
     },

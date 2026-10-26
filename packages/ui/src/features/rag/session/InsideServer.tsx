@@ -12,6 +12,7 @@ import { cosine } from '../vectors';
 import { Fingerprint } from './Fingerprint';
 import { formatSimilarity } from './retrievalLabels';
 import styles from './Retrieval.module.css';
+import { formatRu } from '../../../text/formatNumber';
 
 export function InsideServer(props: { action: SearchAction; defaultOpen: boolean }): ReactElement {
   const { action } = props;
@@ -91,7 +92,7 @@ function Pipeline({ action, base, search }: PipelineProps): ReactElement {
             [
             {search.queryVector
               .slice(0, 6)
-              .map((value) => value.toLocaleString('ru-RU', { maximumFractionDigits: 3 }))
+              .map((value) => formatRu(value, { maximumFractionDigits: 3 }))
               .join('; ')}
             ; …]
           </span>

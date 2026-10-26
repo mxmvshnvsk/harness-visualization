@@ -4,6 +4,7 @@ import type { ReactElement } from 'react';
 import type { RetrievalAction } from '../../../projections/projectRetrieval';
 import { MODE_LABELS } from './retrievalLabels';
 import styles from './Retrieval.module.css';
+import { formatRu } from '../../../text/formatNumber';
 
 interface SummaryTilesProps {
   mode: string | null;
@@ -51,7 +52,7 @@ export function SummaryTiles({ mode, actions, documents, cited }: SummaryTilesPr
       </div>
       <div className={styles.tile}>
         <small>в контексте</small>
-        <b>{(chars / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} тыс. симв.</b>
+        <b>{formatRu(chars / 1000, { maximumFractionDigits: 1 })} тыс. симв.</b>
         <span>найденное и прочитанное — часть «результаты тулов» на экране «Контекст»</span>
       </div>
     </div>

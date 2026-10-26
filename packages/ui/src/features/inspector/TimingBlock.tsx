@@ -9,6 +9,7 @@ import type { ModelCall } from '../../projections/sessionView';
 import { formatMilliseconds, formatSeconds } from '../../text/formatDuration';
 import { PhaseBar, PhaseLegend, answerWord } from './PhaseBar';
 import styles from './TimingBlock.module.css';
+import { formatRu } from '../../text/formatNumber';
 
 interface TimingBlockProps {
   call: ModelCall;
@@ -55,9 +56,7 @@ function Ticks({ timing }: { timing: InferenceTiming }): ReactElement {
       <span style={{ left: 0 }}>0</span>
       <span style={{ left: at(timing.firstMs) }}>{formatMilliseconds(timing.firstMs)}</span>
       {timing.reasoningMs > 0 && (
-        <span style={{ left: at(timing.answerAtMs) }}>
-          {timing.answerAtMs.toLocaleString('ru-RU')}
-        </span>
+        <span style={{ left: at(timing.answerAtMs) }}>{formatRu(timing.answerAtMs)}</span>
       )}
       <span style={{ left: '100%' }}>{formatMilliseconds(timing.totalMs)}</span>
     </span>
@@ -74,7 +73,7 @@ function Stats({
   return (
     <div className={styles.stats}>
       <Stat label="до первого токена" value={formatSeconds(timing.waitMs)}>
-        {missTokens.toLocaleString('ru-RU')} токенов prompt не из кэша
+        {formatRu(missTokens)} токенов prompt не из кэша
       </Stat>
       <Stat label="рассуждение" value={formatSeconds(timing.reasoningMs)}>
         {tokensAndRate(timing.reasoningTokens, timing.reasoningRate)}
@@ -100,7 +99,7 @@ function Stat(props: { label: string; value: string; children: React.ReactNode }
 }
 
 function tokensAndRate(tokens: number, rate: number | null): string {
-  const count = `${tokens.toLocaleString('ru-RU')} ток.`;
+  const count = `${formatRu(tokens)} ток.`;
   return rate === null ? count : `${count} · ≈${String(rate)} ток/с`;
 }
 
@@ -146,8 +145,8 @@ function Comparison({
                 <PhaseBar timing={timing} scaleMs={scaleMs} mini />
               </td>
               <td>{formatSeconds(timing.waitMs)}</td>
-              <td>{response.reply.usage.inputCacheMissTokens.toLocaleString('ru-RU')}</td>
-              <td>{response.reply.usage.outputTokens.toLocaleString('ru-RU')}</td>
+              <td>{formatRu(response.reply.usage.inputCacheMissTokens)}</td>
+              <td>{formatRu(response.reply.usage.outputTokens)}</td>
               <td>{formatSeconds(timing.totalMs)}</td>
             </tr>
           ))}

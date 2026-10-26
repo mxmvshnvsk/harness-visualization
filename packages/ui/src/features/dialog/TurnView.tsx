@@ -10,6 +10,7 @@ import type { TimelineClock } from '../../timeline/TimelineClock';
 import { useClockValue } from '../../timeline/useTimeline';
 import styles from './Dialog.module.css';
 import { LiveStep, typingStatus, useTyping } from './LiveStep';
+import { formatRu } from '../../text/formatNumber';
 
 interface TurnViewProps {
   turn: DialogTurn;
@@ -41,7 +42,7 @@ export function TurnView({
             <span>шагов {turn.steps}</span>
             <span>тулов {turn.tools}</span>
             {turn.delegations > 0 && <span>поручений {turn.delegations}</span>}
-            <span>input {turn.inputTokens.toLocaleString('ru-RU')}</span>
+            <span>input {formatRu(turn.inputTokens)}</span>
             <span>{formatSeconds((turn.answeredAt ?? turn.askedAt) - turn.askedAt)}</span>
           </div>
           <button type="button" className={styles.jump} onClick={onJump}>
@@ -137,5 +138,5 @@ function useNow(ticking: boolean): number {
 }
 
 function formatSeconds(ms: number): string {
-  return `${(ms / 1000).toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} с`;
+  return `${formatRu(ms / 1000, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} с`;
 }

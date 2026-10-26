@@ -1,15 +1,16 @@
 // Подписи вида «MCP»: время, размер, о чём сообщение протокола.
 
 import type { McpPair } from '../../../projections/projectMcp';
+import { formatRu } from '../../../text/formatNumber';
 
 export function formatMs(value: number): string {
   return value < 1000
     ? `${String(Math.round(value))} мс`
-    : `${(value / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} с`;
+    : `${formatRu(value / 1000, { maximumFractionDigits: 1 })} с`;
 }
 
 export function formatKb(chars: number): string {
-  return `${(chars / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} КБ`;
+  return `${formatRu(chars / 1000, { maximumFractionDigits: 1 })} КБ`;
 }
 
 const ABOUT: Record<string, string> = {

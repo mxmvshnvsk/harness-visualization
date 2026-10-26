@@ -162,7 +162,7 @@ function permissionPrompt(
 // поток не закрывается.
 function useOpenedStream(selection: Selection | null) {
   const opened = selection?.kind === 'lab' ? selection.back : selection;
-  const stream = useEventStream<StreamEnd>(streamUrl(opened));
+  const stream = useEventStream<StreamEnd>(streamUrl(opened), opened?.kind === 'trace');
   const sessionId = opened?.kind === 'session' ? opened.sessionId : null;
   const pending = usePendingPermission(sessionId, stream.events);
   return { opened, stream, sessionId, pending };

@@ -4,6 +4,7 @@
 
 import { WARM_SHARE_THRESHOLD } from '@harness-visualization/harness/tokenomics';
 import type { CacheView } from '../../projections/sessionView';
+import { formatRu } from '../../text/formatNumber';
 
 export interface CacheExplanation {
   // Коротко, для бейджа.
@@ -44,7 +45,7 @@ export function explainCache(cache: CacheView, inputTokens: number): CacheExplan
 }
 
 function formatTokens(value: number): string {
-  return value.toLocaleString('ru-RU');
+  return formatRu(value);
 }
 
 function formatShare(share: number): string {

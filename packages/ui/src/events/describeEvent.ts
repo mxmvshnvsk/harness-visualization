@@ -4,6 +4,7 @@
 import type { HarnessEvent, HarnessEventType, TokenUsage } from '@harness-visualization/harness';
 import { plural } from '../text/plural';
 import type { EventOfType } from './eventTypes';
+import { formatRu } from '../text/formatNumber';
 
 const SKILL_TRIGGERS = {
   always: 'харнесс при старте',
@@ -128,7 +129,7 @@ export function describeUsage(usage: TokenUsage): string {
 }
 
 export function formatNumber(value: number): string {
-  return value.toLocaleString('ru-RU');
+  return formatRu(value);
 }
 
 export function formatMoney(value: number, currency: string): string {

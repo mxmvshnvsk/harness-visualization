@@ -1,7 +1,7 @@
 // Переключатель из нескольких вариантов («Поток / Инспектор / Сырые события»).
 // Выбранный вариант подсвечен ползунком, который переезжает к нему.
 
-import { useLayoutEffect, useRef, type ReactElement } from 'react';
+import { useEffect, useRef, type ReactElement } from 'react';
 import styles from './Segmented.module.css';
 
 interface SegmentedProps<Value extends string> {
@@ -17,7 +17,7 @@ export function Segmented<Value extends string>(props: SegmentedProps<Value>): R
   const { label, options, value, onChange, size = 'normal' } = props;
   const groupRef = useRef<HTMLDivElement>(null);
   const thumbRef = useRef<HTMLSpanElement>(null);
-  useLayoutEffect(() => {
+  useEffect(() => {
     const group = groupRef.current;
     if (group === null) {
       return undefined;
@@ -32,8 +32,11 @@ export function Segmented<Value extends string>(props: SegmentedProps<Value>): R
         thumbRef.current.style.height = `${String(pressed.offsetHeight)}px`;
       }
     };
-    place();
-    // Шрифт догружается и меняет ширину кнопок — пересчитываем.
+    // Ползунок ставит ResizeObserver: при подписке он вызывает place сам — после раскладки
+    // кадра, до отрисовки, поэтому ползунок встаёт на место без мигания. Мерить кнопку прямо
+    // в эффекте нельзя: замер посреди коммита заставлял браузер раскладывать всю только что
+    // открытую вкладку лишний раз (профиль 26.10.2026). Шрифт догрузился, кнопки
+    // перенеслись — тот же наблюдатель пересчитает.
     const observer = new ResizeObserver(place);
     observer.observe(group);
     return () => {

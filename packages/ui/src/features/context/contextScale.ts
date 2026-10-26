@@ -2,6 +2,7 @@
 
 import type { PromptBudget } from '@harness-visualization/harness';
 import type { ContextRequest } from '../../projections/projectContext';
+import { formatRu } from '../../text/formatNumber';
 
 // Порядок — снизу вверх в столбике: от постоянного (system, скиллы, память) к растущему.
 export const PARTS = [
@@ -62,15 +63,15 @@ function ticksOf(max: number, step: number): number[] {
 }
 
 export function formatTokens(value: number): string {
-  return value.toLocaleString('ru-RU');
+  return formatRu(value);
 }
 
 // Коротко для делений оси: 12 000 → «12 тыс.».
 export function formatTick(value: number): string {
   if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toLocaleString('ru-RU')} млн`;
+    return `${formatRu(value / 1_000_000)} млн`;
   }
-  return value >= 1000 ? `${(value / 1000).toLocaleString('ru-RU')} тыс.` : String(value);
+  return value >= 1000 ? `${formatRu(value / 1000)} тыс.` : String(value);
 }
 
 export function errorPercent(request: ContextRequest): number | null {

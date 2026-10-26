@@ -9,6 +9,7 @@ import { isMcpTool } from '../../timeline/actions';
 import { HelpButton, Term } from '../../help/HelpLinks';
 import { McpCallBlock } from './McpCallBlock';
 import { WriteFileDiff } from '../code/WriteFileDiff';
+import { formatRu } from '../../text/formatNumber';
 
 export function ToolCallPanel({ tool }: { tool: ToolCallView }): ReactElement {
   return (
@@ -73,7 +74,7 @@ function PermissionChain({ tool }: { tool: ToolCallView }): ReactElement {
           {answer !== null && (
             <li>
               {answer.approved ? 'Разрешено' : 'Запрещено'} · answeredBy {answer.answeredBy} · ждали{' '}
-              {answer.waitedForUserMs.toLocaleString('ru-RU')} мс
+              {formatRu(answer.waitedForUserMs)} мс
             </li>
           )}
         </ol>
@@ -92,7 +93,7 @@ function ToolResult({ tool }: { tool: ToolCallView }): ReactElement {
   return (
     <section className={styles.block}>
       <h3 className={styles.blockTitle}>
-        результат · {result.status} · {result.durationMs.toLocaleString('ru-RU')} мс{cost}
+        результат · {result.status} · {formatRu(result.durationMs)} мс{cost}
       </h3>
       <ResultContent content={result.content} truncation={tool.truncation} />
       {result.details !== null && (
@@ -122,7 +123,7 @@ function ResultContent({
       </>
     );
   }
-  const format = (value: number): string => value.toLocaleString('ru-RU');
+  const format = (value: number): string => formatRu(value);
   return (
     <>
       <div className={styles.caption}>

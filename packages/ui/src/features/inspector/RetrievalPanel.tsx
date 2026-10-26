@@ -6,6 +6,7 @@ import type { RetrievalView } from '../../projections/sessionView';
 import styles from './Inspector.module.css';
 import { HelpButton } from '../../help/HelpLinks';
 import { ChainLinks, hasVector } from '../ChainLinks';
+import { formatRu } from '../../text/formatNumber';
 
 export function RetrievalPanel({ retrieval }: { retrieval: RetrievalView }): ReactElement {
   const { rewrite, retrieved } = retrieval;
@@ -33,7 +34,7 @@ export function RetrievalPanel({ retrieval }: { retrieval: RetrievalView }): Rea
         <section className={styles.block}>
           <h3 className={styles.blockTitle}>
             {retrieved.toolName} · query от {retrieved.queryAuthor} · {retrieved.status} ·{' '}
-            {retrieved.durationMs.toLocaleString('ru-RU')} мс
+            {formatRu(retrieved.durationMs)} мс
           </h3>
           <pre className={styles.code}>{JSON.stringify(retrieved.arguments, null, 2)}</pre>
           <ChainLinks

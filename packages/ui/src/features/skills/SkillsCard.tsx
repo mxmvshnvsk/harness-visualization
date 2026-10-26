@@ -9,6 +9,7 @@ import {
   type SkillsMemoryView,
 } from '../../projections/projectSkillsMemory';
 import styles from './SkillsMemory.module.css';
+import { formatRu } from '../../text/formatNumber';
 
 interface CardProps {
   view: SkillsMemoryView;
@@ -83,7 +84,7 @@ function SkillRow({ skill, load, ended, onSeek }: SkillRowProps): ReactElement {
       </div>
       <p className={styles.description}>{skill.description}</p>
       <span className={styles.meta}>
-        инструкция ≈ {skill.instructionCharacters.toLocaleString('ru-RU')} симв.
+        инструкция ≈ {formatRu(skill.instructionCharacters)} симв.
         {skill.files.length > 0 && ` · файлы: ${skill.files.join(', ')}`}
       </span>
     </li>

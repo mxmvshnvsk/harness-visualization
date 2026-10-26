@@ -6,6 +6,7 @@ import styles from '../RagLab.module.css';
 import { cosine, pca } from '../vectors';
 import { PHRASES, PROBE, TOPICS, type Topic } from './courseContent';
 import { CourseTerm, Lab, StepShell } from './StepShell';
+import { formatRu } from '../../../text/formatNumber';
 
 const TEXTS = [...PHRASES.map((phrase) => phrase.text), PROBE];
 
@@ -58,7 +59,7 @@ function VectorProse({ first }: { first: number[] | undefined }): ReactElement {
         [
         {(first ?? [])
           .slice(0, 8)
-          .map((value) => value.toLocaleString('ru-RU', { maximumFractionDigits: 3 }))
+          .map((value) => formatRu(value, { maximumFractionDigits: 3 }))
           .join('; ')}
         ; … ещё 376 чисел]
       </p>
@@ -148,7 +149,7 @@ function SimilarityList({
             <span style={{ width: width(item.similarity), background: TOPIC_COLORS[item.topic] }} />
           </span>
           <span className={styles.number}>
-            {item.similarity.toLocaleString('ru-RU', {
+            {formatRu(item.similarity, {
               minimumFractionDigits: 3,
               maximumFractionDigits: 3,
             })}

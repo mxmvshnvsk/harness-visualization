@@ -1,6 +1,8 @@
 // Число со словом в нужной форме: 1 запрос, 2 запроса, 5 запросов.
 // Форму выбирает Intl.PluralRules — правила русского языка встроены в браузер.
 
+import { formatRu } from './formatNumber';
+
 const RULES = new Intl.PluralRules('ru');
 
 // one — 1, 21, 31…; few — 2–4, 22–24…; many — 0, 5–20, 25–30…
@@ -11,7 +13,7 @@ export interface WordForms {
 }
 
 export function plural(count: number, forms: WordForms): string {
-  return `${count.toLocaleString('ru-RU')} ${pickForm(count, forms)}`;
+  return `${formatRu(count)} ${pickForm(count, forms)}`;
 }
 
 function pickForm(count: number, forms: WordForms): string {

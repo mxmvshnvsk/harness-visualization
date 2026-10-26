@@ -1,6 +1,7 @@
 // Подписи вида «RAG»: способы поиска, режимы, цвета видов документов.
 
 import type { RetrievalAction, SearchKind } from '../../../projections/projectRetrieval';
+import { formatRu } from '../../../text/formatNumber';
 
 export const SEARCH_LABELS: Record<SearchKind, { name: string; letter: string }> = {
   words: { name: 'по словам', letter: 'С' },
@@ -44,5 +45,5 @@ export function placeOf(action: RetrievalAction, turns: number): string {
 }
 
 export function formatSimilarity(value: number): string {
-  return value.toLocaleString('ru-RU', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  return formatRu(value, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 }

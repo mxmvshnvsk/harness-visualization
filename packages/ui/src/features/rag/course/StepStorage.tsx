@@ -6,6 +6,7 @@ import { useState, type FormEvent, type ReactElement } from 'react';
 import styles from '../RagLab.module.css';
 import { useRagIndex, useSearch } from '../useRagData';
 import { Lab, StepShell } from './StepShell';
+import { formatRu } from '../../../text/formatNumber';
 
 interface StepProps {
   base: LabBase;
@@ -51,11 +52,9 @@ export function StepStorage({ base, onStep }: StepProps): ReactElement {
 }
 
 const megabytes = (bytes: number): string =>
-  (bytes / 1024 / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
-const kilobytes = (bytes: number): string =>
-  (bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 0 });
-const short = (value: number): string =>
-  value.toLocaleString('ru-RU', { maximumFractionDigits: 3 });
+  formatRu(bytes / 1024 / 1024, { maximumFractionDigits: 0 });
+const kilobytes = (bytes: number): string => formatRu(bytes / 1024, { maximumFractionDigits: 0 });
+const short = (value: number): string => formatRu(value, { maximumFractionDigits: 3 });
 
 function IndexLab({ index }: { index: LabIndex }): ReactElement {
   const { sample } = index;

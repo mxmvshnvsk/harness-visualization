@@ -1,13 +1,15 @@
 // Подписи вкладки «Агенты»: имя агента, числа и время.
 
+import { formatRu } from '../../text/formatNumber';
+
 export function agentName(id: string): string {
   return id === 'main' ? 'главный агент' : id;
 }
 
 export function formatTokens(value: number): string {
-  return value.toLocaleString('ru-RU');
+  return formatRu(value);
 }
 
 export function formatSeconds(ms: number): string {
-  return `${(ms / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} с`;
+  return `${formatRu(ms / 1000, { maximumFractionDigits: 1 })} с`;
 }

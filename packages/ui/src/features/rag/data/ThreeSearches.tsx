@@ -4,6 +4,7 @@
 import type { LabBase, LabQuestion, LabSearch } from '@harness-visualization/mcp-server/lab';
 import type { ReactElement } from 'react';
 import styles from './Data.module.css';
+import { formatRu } from '../../../text/formatNumber';
 
 const METHODS = [
   {
@@ -66,7 +67,7 @@ export function ThreeSearches({ base, search, question }: ThreeSearchesProps): R
                       {item.documentId}
                     </span>
                     <span className={styles.number}>
-                      {item.score.toLocaleString('ru-RU', {
+                      {formatRu(item.score, {
                         minimumFractionDigits: method.digits,
                         maximumFractionDigits: method.digits,
                       })}

@@ -13,6 +13,7 @@ import { AgentChip } from '../agents/AgentChip';
 import { BranchButton } from '../branch/BranchButton';
 import { useSubagentSteps } from './subagentSteps';
 import styles from './Stages.module.css';
+import { formatRu } from '../../text/formatNumber';
 
 interface StageCardProps {
   stage: Stage;
@@ -255,5 +256,5 @@ function StageIcon({ kind }: { kind: StageKind }): ReactElement {
 }
 
 function formatSeconds(ms: number): string {
-  return `${(ms / 1000).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} с`;
+  return `${formatRu(ms / 1000, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} с`;
 }

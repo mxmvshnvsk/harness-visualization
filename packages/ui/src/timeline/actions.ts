@@ -12,6 +12,7 @@ import type { EventGroup } from '../events/eventGroups';
 import type { EventOfType } from '../events/eventTypes';
 import type { FlowNodeId, Route } from '../features/flow/flowGraph';
 import { plural } from '../text/plural';
+import { formatRu } from '../text/formatNumber';
 
 export interface FlowAction {
   id: string;
@@ -827,14 +828,14 @@ function describeModelResponse(event: EventOfType<'model_response'>): ExchangeEn
   const { usage, toolCalls, finishReason } = event.reply;
   const share =
     usage.inputTokens === 0 ? 0 : Math.round((usage.inputCacheHitTokens / usage.inputTokens) * 100);
-  const seconds = (event.durationMs / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
+  const seconds = formatRu(event.durationMs / 1000, { maximumFractionDigits: 1 });
   return {
     back: toolCalls.length > 0 ? `tool_calls: ${String(toolCalls.length)}` : 'текст',
     whatBack:
       toolCalls.length > 0
         ? `Модель просит ${plural(toolCalls.length, TOOLS)}`
         : `Модель ответила (${finishReason})`,
-    detailBack: `${usage.inputTokens.toLocaleString('ru-RU')} input tokens, из кэша ${String(share)} % · output ${usage.outputTokens.toLocaleString('ru-RU')} · ${seconds} с`,
+    detailBack: `${formatRu(usage.inputTokens)} input tokens, из кэша ${String(share)} % · output ${formatRu(usage.outputTokens)} · ${seconds} с`,
   };
 }
 

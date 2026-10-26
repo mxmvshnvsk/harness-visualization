@@ -125,6 +125,20 @@
   outline-offset: 2px;
 }
 
+/* Все отрезки — в одном слое: при наведении он растягивается целиком, одной анимацией.
+   Раньше анимировался каждый отрезок, а в длинной сессии их сотни: наведение, уход мыши и
+   перемотка запускали сотни переходов разом (профиль 26.10.2026). */
+.bars {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.2s;
+}
+
+.strip:hover .bars {
+  transform: scaleY(1.15);
+}
+
+/* Пройденное меняется без анимации: перемотка переключает сразу сотни отрезков. */
 .segment {
   position: absolute;
   top: 7px;
@@ -132,9 +146,6 @@
   border-radius: 5px;
   opacity: 0.45;
   background: var(--meta);
-  transition:
-    opacity 0.2s,
-    transform 0.2s;
 }
 
 .waiting {
@@ -150,10 +161,6 @@
 
 .waiting[data-past='true'] {
   opacity: 0.5;
-}
-
-.strip:hover .segment {
-  transform: scaleY(1.15);
 }
 
 .segment[data-group='dialog'] {
@@ -184,10 +191,19 @@
   background: var(--error);
 }
 
+/* Слой бегунка шириной с дорожку: translateX(N%) сдвигает его на N% дорожки. */
+.headRail {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+
 .head {
   position: absolute;
   top: 0;
   bottom: 0;
+  left: 0;
   width: 2px;
   border-radius: 2px;
   background: var(--text);

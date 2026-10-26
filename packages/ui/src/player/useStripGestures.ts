@@ -21,6 +21,7 @@ import {
   type StripView,
   type StripWindow,
 } from './stripWindow';
+import { formatRu } from '../text/formatNumber';
 
 // Время под точкой ленты с учётом окна.
 export function timeAtX(strip: HTMLElement, win: StripWindow, clientX: number): number {
@@ -130,19 +131,45 @@ function handleKey(event: KeyboardEvent<HTMLElement>, clock: TimelineClock, view
 export interface StripHandlers {
   onKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
   onDoubleClick: () => void;
+  onPointerEnter: (event: PointerEvent<HTMLElement>) => void;
   onPointerDown: (event: PointerEvent<HTMLElement>) => void;
   onPointerMove: (event: PointerEvent<HTMLElement>) => void;
   onPointerUp: (event: PointerEvent<HTMLElement>) => void;
 }
 
+// Последнее движение указателя: применяется раз в кадр, а не на каждое событие.
+interface PendingMove {
+  strip: HTMLElement;
+  clientX: number;
+  captured: boolean;
+}
+
+// Лента меряется при наведении и нажатии, а не на каждом движении: getBoundingClientRect после
+// записи стилей в прошлом кадре заставлял браузер раскладывать сотни отрезков заново.
+// Перемотка, сдвиг и подсказка под курсором — раз в кадр (профиль 26.10.2026: на каждое
+// движение мыши перерисовывался весь экран).
 export function useStripPointer(
   clock: TimelineClock,
   schedule: Schedule,
   view: StripView,
 ): StripHandlers {
   const drag = useRef<Drag | null>(null);
-  const timeOf = (event: PointerEvent<HTMLElement>): number =>
-    timeAtX(event.currentTarget, view.get().win, event.clientX);
+  const rect = useRef<DOMRect | null>(null);
+  const measure = (strip: HTMLElement): DOMRect => {
+    rect.current = strip.getBoundingClientRect();
+    return rect.current;
+  };
+  const timeAt = (strip: HTMLElement, clientX: number): number =>
+    timeAtRect(rect.current ?? measure(strip), view.get().win, clientX);
+  const moves = useOncePerFrame<PendingMove>((move) => {
+    const width = rect.current?.width ?? 1;
+    applyMove(
+      move,
+      timeAt(move.strip, move.clientX),
+      { clock, schedule, view, width },
+      drag.current,
+    );
+  });
   return {
     onKeyDown: (event: KeyboardEvent<HTMLElement>): void => {
       handleKey(event, clock, view);
@@ -150,49 +177,116 @@ export function useStripPointer(
     onDoubleClick: (): void => {
       view.setWindow({ from: 0, to: view.get().total });
     },
+    onPointerEnter: (event: PointerEvent<HTMLElement>): void => {
+      measure(event.currentTarget);
+    },
     onPointerDown: (event: PointerEvent<HTMLElement>): void => {
       event.currentTarget.setPointerCapture(event.pointerId);
+      measure(event.currentTarget);
       const { win } = view.get();
       if (zoomActive(view.get())) {
         drag.current = { x: event.clientX, win, moved: false };
       } else {
-        clock.seek(timeOf(event));
+        clock.seek(timeAt(event.currentTarget, event.clientX));
       }
     },
     onPointerMove: (event: PointerEvent<HTMLElement>): void => {
-      const time = timeOf(event);
-      showGhost(event.currentTarget, schedule, view.get().win, time);
-      if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
-        return;
-      }
-      if (drag.current === null) {
-        clock.seek(time);
-        return;
-      }
-      dragStrip(drag.current, event, view);
+      moves.schedule({
+        strip: event.currentTarget,
+        clientX: event.clientX,
+        captured: event.currentTarget.hasPointerCapture(event.pointerId),
+      });
     },
     onPointerUp: (event: PointerEvent<HTMLElement>): void => {
+      moves.flush();
       const current = drag.current;
       drag.current = null;
       delete event.currentTarget.dataset.dragging;
       if (current !== null && !current.moved) {
-        clock.seek(timeOf(event));
+        clock.seek(timeAt(event.currentTarget, event.clientX));
       }
     },
   };
 }
 
+interface MoveContext {
+  clock: TimelineClock;
+  schedule: Schedule;
+  view: StripView;
+  width: number;
+}
+
+// Движение за кадр: подсказка под курсором; с нажатой кнопкой — перемотка или сдвиг ленты.
+function applyMove(move: PendingMove, time: number, context: MoveContext, drag: Drag | null): void {
+  showGhost(move.strip, context.schedule, context.view.get().win, time);
+  if (!move.captured) {
+    return;
+  }
+  if (drag === null) {
+    context.clock.seek(time);
+  } else {
+    dragStrip(drag, move, context.width, context.view);
+  }
+}
+
+// Последнее из значений за кадр — в run один раз, в начале следующего кадра; flush — сразу.
+function useOncePerFrame<Value>(run: (value: Value) => void): {
+  schedule: (value: Value) => void;
+  flush: () => void;
+} {
+  const pending = useRef<{ value: Value } | null>(null);
+  const frame = useRef<number | null>(null);
+  const runRef = useRef(run);
+  useEffect(() => {
+    runRef.current = run;
+  });
+  useEffect(
+    () => () => {
+      if (frame.current !== null) {
+        cancelAnimationFrame(frame.current);
+      }
+    },
+    [],
+  );
+  const flush = (): void => {
+    if (frame.current !== null) {
+      cancelAnimationFrame(frame.current);
+      frame.current = null;
+    }
+    const next = pending.current;
+    pending.current = null;
+    if (next !== null) {
+      runRef.current(next.value);
+    }
+  };
+  return {
+    schedule: (value) => {
+      pending.current = { value };
+      frame.current ??= requestAnimationFrame(flush);
+    },
+    flush,
+  };
+}
+
+// Время под точкой по уже измеренной ленте.
+function timeAtRect(rect: DOMRect, win: StripWindow, clientX: number): number {
+  const share = Math.min(1, Math.max(0, (clientX - rect.left) / Math.max(1, rect.width)));
+  return win.from + share * (win.to - win.from);
+}
+
 // Сдвиг больше порога — перетаскивание ладонью: лента едет за курсором.
-function dragStrip(drag: Drag, event: PointerEvent<HTMLElement>, view: StripView): void {
-  const dx = event.clientX - drag.x;
+function dragStrip(drag: Drag, move: PendingMove, width: number, view: StripView): void {
+  const dx = move.clientX - drag.x;
   if (!drag.moved && Math.abs(dx) < DRAG_THRESHOLD_PX) {
     return;
   }
-  drag.moved = true;
-  event.currentTarget.dataset.dragging = 'true';
-  view.setFollow(false);
+  if (!drag.moved) {
+    drag.moved = true;
+    move.strip.dataset.dragging = 'true';
+    view.setFollow(false);
+  }
   const span = drag.win.to - drag.win.from;
-  view.setWindow(panBy(drag.win, (-dx / event.currentTarget.clientWidth) * span, view.get().total));
+  view.setWindow(panBy(drag.win, (-dx / width) * span, view.get().total));
 }
 
 function showGhost(strip: HTMLElement, schedule: Schedule, win: StripWindow, time: number): void {
@@ -204,7 +298,7 @@ function showGhost(strip: HTMLElement, schedule: Schedule, win: StripWindow, tim
   const share = (time - win.from) / Math.max(1, win.to - win.from);
   line.style.left = `${String(share * 100)}%`;
   label.style.left = `${String(Math.min(90, Math.max(10, share * 100)))}%`;
-  const seconds = (realAt(schedule, time) / 1000).toLocaleString('ru-RU', {
+  const seconds = formatRu(realAt(schedule, time) / 1000, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });

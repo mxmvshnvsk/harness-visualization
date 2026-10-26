@@ -13,6 +13,7 @@ import styles from './Inspector.module.css';
 import { MessageList } from './MessageList';
 import { ReplyTokens } from '../tokens/ReplyTokens';
 import { HelpButton, Term } from '../../help/HelpLinks';
+import { formatRu } from '../../text/formatNumber';
 
 interface ModelCallPanelProps {
   call: ModelCall;
@@ -190,9 +191,9 @@ function describePurpose(call: ModelCall): string {
 }
 
 function formatNumber(value: number): string {
-  return value.toLocaleString('ru-RU');
+  return formatRu(value);
 }
 
 function formatSeconds(ms: number): string {
-  return `${(ms / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} с`;
+  return `${formatRu(ms / 1000, { maximumFractionDigits: 1 })} с`;
 }

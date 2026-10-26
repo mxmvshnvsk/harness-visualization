@@ -16,6 +16,7 @@ import {
   type RetrievalChoice,
 } from './session/sessionChoices';
 import styles from './SessionForm.module.css';
+import { formatRu } from '../text/formatNumber';
 
 const RETRIEVAL: Record<RetrievalChoice, { label: string; hint: string }> = {
   tool: { label: 'ищет модель', hint: 'сама решает, искать ли и сколько раз' },
@@ -266,7 +267,7 @@ function describeCost({ choices, options }: ChoicesState): string {
   }
   const tokens = options?.subagents.delegateToolTokens ?? null;
   if (choices.subagents && tokens !== null) {
-    return `delegate_task добавит ≈${tokens.toLocaleString('ru-RU')} токенов в каждый запрос к модели`;
+    return `delegate_task добавит ≈${formatRu(tokens)} токенов в каждый запрос к модели`;
   }
   return 'по умолчанию — как в harness.config.json; выбор запоминается';
 }

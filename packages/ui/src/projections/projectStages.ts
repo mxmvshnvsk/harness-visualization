@@ -5,6 +5,7 @@
 import type { HarnessEvent, HarnessEventType } from '@harness-visualization/harness';
 import type { EventOfType } from '../events/eventTypes';
 import { plural } from '../text/plural';
+import { formatRu } from '../text/formatNumber';
 
 export interface StageRow {
   // Номер события в списке — по нему повтор отмечает пройденное.
@@ -448,16 +449,16 @@ function describeBudget(budget: EventOfType<'model_request'>['budget']): string 
     return '';
   }
   const share = Math.round((budget.estimate.total / budget.limitTokens) * 100);
-  return ` · prompt ≈ ${budget.estimate.total.toLocaleString('ru-RU')} из ${budget.limitTokens.toLocaleString('ru-RU')} (${String(share)} %)`;
+  return ` · prompt ≈ ${formatRu(budget.estimate.total)} из ${formatRu(budget.limitTokens)} (${String(share)} %)`;
 }
 
 function describeResponse(event: EventOfType<'model_response'>): string {
   const { usage, toolCalls } = event.reply;
   const share =
     usage.inputTokens === 0 ? 0 : Math.round((usage.inputCacheHitTokens / usage.inputTokens) * 100);
-  const seconds = (event.durationMs / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
+  const seconds = formatRu(event.durationMs / 1000, { maximumFractionDigits: 1 });
   const what = toolCalls.length > 0 ? `просит ${plural(toolCalls.length, TOOLS)}` : 'текст';
-  return `ответ — ${what}: ${usage.inputTokens.toLocaleString('ru-RU')} input tokens, из кэша ${String(share)} %, output ${usage.outputTokens.toLocaleString('ru-RU')} · ${seconds} с`;
+  return `ответ — ${what}: ${formatRu(usage.inputTokens)} input tokens, из кэша ${String(share)} %, output ${formatRu(usage.outputTokens)} · ${seconds} с`;
 }
 
 function describeAnswer(event: EventOfType<'permission_resolved'>): string {
@@ -470,7 +471,7 @@ function describeAnswer(event: EventOfType<'permission_resolved'>): string {
 }
 
 function format(value: number): string {
-  return value.toLocaleString('ru-RU');
+  return formatRu(value);
 }
 
 function shorten(text: string, limit = 220): string {
@@ -479,7 +480,7 @@ function shorten(text: string, limit = 220): string {
 }
 
 function seconds(ms: number): string {
-  return `${(ms / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} с`;
+  return `${formatRu(ms / 1000, { maximumFractionDigits: 1 })} с`;
 }
 
 const TOOLS = { one: 'тул', few: 'тула', many: 'тулов' };

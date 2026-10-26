@@ -6,6 +6,7 @@ import { useEmbeddings } from '../useRagData';
 import { cosine } from '../vectors';
 import { PAIRS } from './courseContent';
 import { Lab, StepShell } from './StepShell';
+import { formatRu } from '../../../text/formatNumber';
 
 const TEXTS = PAIRS.flatMap((pair) => [pair.first, pair.second]);
 // Порог «про то же» у проверки опоры (harness.config.json, grounding.similarityThreshold).
@@ -120,5 +121,5 @@ export function SimilarityScale({ value }: { value: number }): ReactElement {
 }
 
 export function formatSimilarity(value: number): string {
-  return value.toLocaleString('ru-RU', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+  return formatRu(value, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 }

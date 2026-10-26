@@ -13,6 +13,7 @@ import styles from './PlayerBar.module.css';
 import { StripMinimap } from './StripMinimap';
 import { createStripView, type StripView, type StripWindow } from './stripWindow';
 import { formatWindow, ZoomControls } from './ZoomControls';
+import { formatRu } from '../text/formatNumber';
 
 // Скорости — группой кнопок: все видны сразу и переключаются одним нажатием.
 const SPEED_OPTIONS = [0.5, 1, 2, 4].map((value) => ({
@@ -162,15 +163,29 @@ function FollowAndSpeed({ clock, live }: { clock: TimelineClock; live: boolean }
   );
 }
 
-// «сессия 2,25 с из 6,66 с» — по кадрам часов, без перерисовки React.
+const POSITION_REFRESH_MS = 100;
+
+// «сессия 2,25 с из 6,66 с» — по кадрам часов, без перерисовки React; текст меняется,
+// только когда изменились сотые секунды.
 function Position({ clock, schedule }: { clock: TimelineClock; schedule: Schedule }): ReactElement {
   const ref = useRef<HTMLSpanElement>(null);
   useEffect(() => {
-    const total = realAt(schedule, schedule.total);
+    const total = formatSeconds(realAt(schedule, schedule.total));
+    let shown = '';
+    let shownAt = 0;
     const draw = (): void => {
-      if (ref.current !== null) {
-        const real = realAt(schedule, clock.getState().time);
-        ref.current.textContent = `сессия ${formatSeconds(real)} из ${formatSeconds(total)}`;
+      const { time, playing } = clock.getState();
+      // Во время повтора — не чаще 10 раз в секунду: сотые всё равно не прочесть, а каждая
+      // смена текста перерисовывает док с размытием под ним. На паузе — сразу.
+      const now = performance.now();
+      if (playing && now - shownAt < POSITION_REFRESH_MS) {
+        return;
+      }
+      const text = `сессия ${formatSeconds(realAt(schedule, time))} из ${total}`;
+      if (ref.current !== null && text !== shown) {
+        shown = text;
+        shownAt = now;
+        ref.current.textContent = text;
       }
     };
     draw();
@@ -180,7 +195,7 @@ function Position({ clock, schedule }: { clock: TimelineClock; schedule: Schedul
 }
 
 function formatSeconds(ms: number): string {
-  return `${(ms / 1000).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} с`;
+  return `${formatRu(ms / 1000, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} с`;
 }
 
 // Окно ленты — в секундах записи: в повторе долгие ожидания сжаты, поэтому при сдвиге окно

@@ -13,6 +13,7 @@ import {
   type Point,
   nodeRole,
 } from './flowGraph';
+import { formatRu } from '../../text/formatNumber';
 
 export const DOT_POOL = 4;
 export const LABEL_POOL = 6;
@@ -229,5 +230,5 @@ function placeDot(group: SVGGElement, dot: DotSpec): void {
 }
 
 function formatSeconds(ms: number): string {
-  return `${(ms / 1000).toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} с`;
+  return `${formatRu(ms / 1000, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} с`;
 }

@@ -14,6 +14,7 @@ import { StepRaw } from './StepRaw';
 import { StepResponse } from './StepResponse';
 import { StepsTable } from './StepsTable';
 import styles from './Research.module.css';
+import { formatRu } from '../../text/formatNumber';
 
 const TABS = [
   { value: 'context', label: 'Контекст' },
@@ -133,7 +134,7 @@ function useStepKeys(
 }
 
 export function formatNumber(value: number): string {
-  return value.toLocaleString('ru-RU');
+  return formatRu(value);
 }
 
 export function percent(part: number, whole: number): string {

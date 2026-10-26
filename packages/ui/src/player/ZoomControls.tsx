@@ -7,6 +7,7 @@ import { IconButton } from './IconButton';
 import styles from './PlayerBar.module.css';
 import { centerOn, zoomActive, zoomAround, type StripView, type StripWindow } from './stripWindow';
 import { useViewValue } from './useViewValue';
+import { formatRu } from '../text/formatNumber';
 
 interface ZoomControlsProps {
   view: StripView;
@@ -59,7 +60,7 @@ export function ZoomControls({ view, describe, head }: ZoomControlsProps): React
 }
 
 export function formatWindow(ms: number): string {
-  return `окно ${(ms / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} с`;
+  return `окно ${formatRu(ms / 1000, { maximumFractionDigits: 1 })} с`;
 }
 
 function WindowLabel(props: {

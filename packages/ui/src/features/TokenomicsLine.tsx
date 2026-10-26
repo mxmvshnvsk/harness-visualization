@@ -6,6 +6,7 @@ import { Term } from '../help/HelpLinks';
 import type { SessionTotals } from '../projections/sessionView';
 import { plural } from '../text/plural';
 import styles from './TokenomicsLine.module.css';
+import { formatRu } from '../text/formatNumber';
 
 const REQUESTS = { one: 'запрос', few: 'запроса', many: 'запросов' };
 
@@ -65,9 +66,9 @@ function describeCosts(totals: SessionTotals): string {
 }
 
 function formatNumber(value: number): string {
-  return value.toLocaleString('ru-RU');
+  return formatRu(value);
 }
 
 function formatSeconds(ms: number): string {
-  return `${(ms / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} с`;
+  return `${formatRu(ms / 1000, { maximumFractionDigits: 1 })} с`;
 }
