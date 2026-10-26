@@ -39,6 +39,7 @@ import { AgentsView } from '../features/agents/AgentsView';
 import { AgentLabelsContext, useAgentLabelsOf } from '../features/agents/agentLabels';
 import { McpLab } from '../features/mcp/McpLab';
 import { EvalLab } from '../features/evals/EvalLab';
+import { OpenSessionContext } from '../features/branch/BranchContext';
 import { McpSessionView } from '../features/mcp/session/McpSessionView';
 import { RagLab } from '../features/rag/RagLab';
 import { RetrievalView } from '../features/rag/session/RetrievalView';
@@ -56,11 +57,10 @@ import { ViewLinksContext, type SearchLink, type ViewLinks } from './viewLinks';
 
 export function App(): ReactElement {
   const [selection, select] = useSelection();
-  const { drawerOpen, setDrawerOpen, closeDrawer, pick } = useDrawer(select);
+  const { drawerOpen, setDrawerOpen, closeDrawer, pick, openSession } = useDrawer(select);
   const sessions = useServerList(listSessions);
   const traces = useServerList(listTraces);
   const { opened, stream, sessionId, pending } = useOpenedStream(selection);
-
   const { openLab, closeLab } = useLabNavigation(select, pick, opened);
   useReloadOnEnd(stream.state, sessions.reload, traces.reload);
 
@@ -81,38 +81,50 @@ export function App(): ReactElement {
       <div hidden={lab !== null}>
         {/* key: другая сессия или трейс — повтор, выбор в инспекторе и диалог начинаются заново. */}
         <LiveDeltasContext.Provider value={stream.deltas}>
-          <OpenStream
-            key={streamUrl(opened)}
-            events={stream.events}
-            sessionId={sessionId}
-            traceFile={opened.kind === 'trace' ? opened.file : null}
-            live={opened.kind === 'session' && stream.state !== 'ended'}
-            header={
-              <Topbar
-                {...describeSelection(opened, stream.events, traces.items)}
-                stream={stream}
-                onOpenSources={() => {
-                  setDrawerOpen(true);
-                }}
-                onOpenLab={openLab}
-              />
-            }
-            prompt={
-              sessionId !== null && pending !== null ? (
-                <PermissionCard
-                  sessionId={sessionId}
-                  pending={pending}
-                  askedAt={findAskedAt(stream.events, pending.toolCallId)}
+          <OpenSessionContext.Provider value={openSession}>
+            <OpenStream
+              key={streamUrl(opened)}
+              events={stream.events}
+              sessionId={sessionId}
+              traceFile={opened.kind === 'trace' ? opened.file : null}
+              live={opened.kind === 'session' && stream.state !== 'ended'}
+              header={
+                <Topbar
+                  {...describeSelection(opened, stream.events, traces.items)}
+                  stream={stream}
+                  onOpenSources={() => {
+                    setDrawerOpen(true);
+                  }}
+                  onOpenLab={openLab}
                 />
-              ) : null
-            }
-          />
+              }
+              prompt={permissionPrompt(sessionId, pending, stream.events)}
+            />
+          </OpenSessionContext.Provider>
         </LiveDeltasContext.Provider>
         <Drawer open={drawerOpen} label="Сессии и трейсы" onClose={closeDrawer}>
           {sources}
         </Drawer>
       </div>
     </>
+  );
+}
+
+// Чего сессия ждёт от человека прямо сейчас: разрешения на действие.
+function permissionPrompt(
+  sessionId: string | null,
+  pending: ReturnType<typeof usePendingPermission>,
+  events: readonly HarnessEvent[],
+): ReactNode {
+  if (sessionId === null || pending === null) {
+    return null;
+  }
+  return (
+    <PermissionCard
+      sessionId={sessionId}
+      pending={pending}
+      askedAt={findAskedAt(events, pending.toolCallId)}
+    />
   );
 }
 
@@ -140,7 +152,14 @@ function useDrawer(select: (next: Selection | null) => void) {
     },
     [select],
   );
-  return { drawerOpen, setDrawerOpen, closeDrawer, pick };
+  // Ветка запущена (этап 9) — открыть её как живую сессию.
+  const openSession = useCallback(
+    (sessionId: string) => {
+      pick({ kind: 'session', sessionId });
+    },
+    [pick],
+  );
+  return { drawerOpen, setDrawerOpen, closeDrawer, pick, openSession };
 }
 
 function LabScreen(props: {
@@ -467,6 +486,7 @@ function ViewSwitch({ events, replay, liveStartedAt, traceFile }: ViewSwitchProp
             shown={cursor}
             clock={clock}
             schedule={schedule}
+            traceFile={traceFile}
           />
         )}
         {viewName === 'context' && (
@@ -622,7 +642,7 @@ function describeSelection(
   };
 }
 
-function findAskedAt(events: HarnessEvent[], toolCallId: string): string {
+function findAskedAt(events: readonly HarnessEvent[], toolCallId: string): string {
   const request = events.find(
     (event) => event.type === 'permission_requested' && event.toolCallId === toolCallId,
   );

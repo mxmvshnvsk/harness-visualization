@@ -4,7 +4,10 @@
 // перематывает к ней. «Подробнее» раскрывает запрос к модели, тул или retrieval прямо в карточке.
 
 import type { HarnessEvent } from '@harness-visualization/harness';
-import { useMemo, type ReactElement } from 'react';
+import type { BranchStep } from '@harness-visualization/harness/branch';
+import { useCallback, useMemo, useState, type ReactElement } from 'react';
+import { BranchContext, useBranchSteps, type Branching } from '../branch/BranchContext';
+import { BranchDrawer } from '../branch/BranchDrawer';
 import { activeStage, projectStages } from '../../projections/projectStages';
 import type { SessionView } from '../../projections/sessionView';
 import { timeAt, type Schedule } from '../../timeline/schedule';
@@ -27,6 +30,8 @@ interface InspectorViewProps {
   schedule: Schedule;
   // Пришли из журнала MCP или «RAG»: какой вызов раскрыть.
   focus?: SearchLink | null;
+  // Записанный трейс — от его шагов можно ветвиться (этап 9); null — живая сессия.
+  traceFile?: string | null;
 }
 
 export function InspectorView({
@@ -36,6 +41,7 @@ export function InspectorView({
   clock,
   schedule,
   focus,
+  traceFile = null,
 }: InspectorViewProps): ReactElement {
   const stages = useMemo(() => projectStages(events), [events]);
   const active = activeStage(stages, shown);
@@ -47,36 +53,63 @@ export function InspectorView({
     () => ({ steps, focused: subagentOfCall(steps, focus?.toolCallId ?? null) }),
     [steps, focus?.toolCallId],
   );
+  const branch = useBranchDrawer(events, traceFile);
   if (stages.length === 0) {
     return <div className={styles.empty}>Событий пока нет.</div>;
   }
   return (
-    <McpPairsContext.Provider value={mcpPairs}>
-      <SubagentStepsContext.Provider value={subagents}>
-        <div className={styles.stages}>
-          {stages.map((stage) => (
-            <StageCard
-              key={stage.id}
-              stage={stage}
-              view={view}
-              shown={shown}
-              active={stage.id === active?.id}
-              focus={subagents.focused === null ? inStage(stage, target) : null}
-              cardRef={follow.register(stage.id)}
-              onSeek={(at) => {
-                clock.seek(timeAt(schedule, at));
-              }}
-            />
-          ))}
-          {follow.paused && (
-            <button type="button" className={styles.followChip} onClick={follow.resume}>
-              ↓ к текущему шагу
-            </button>
-          )}
-        </div>
-      </SubagentStepsContext.Provider>
-    </McpPairsContext.Provider>
+    <BranchContext.Provider value={branch.context}>
+      <McpPairsContext.Provider value={mcpPairs}>
+        <SubagentStepsContext.Provider value={subagents}>
+          <div className={styles.stages}>
+            {stages.map((stage) => (
+              <StageCard
+                key={stage.id}
+                stage={stage}
+                view={view}
+                shown={shown}
+                active={stage.id === active?.id}
+                focus={subagents.focused === null ? inStage(stage, target) : null}
+                cardRef={follow.register(stage.id)}
+                onSeek={(at) => {
+                  clock.seek(timeAt(schedule, at));
+                }}
+              />
+            ))}
+            {follow.paused && (
+              <button type="button" className={styles.followChip} onClick={follow.resume}>
+                ↓ к текущему шагу
+              </button>
+            )}
+          </div>
+        </SubagentStepsContext.Provider>
+      </McpPairsContext.Provider>
+      {traceFile !== null && (
+        <BranchDrawer traceFile={traceFile} step={branch.step} onClose={branch.close} />
+      )}
+    </BranchContext.Provider>
   );
+}
+
+// Шаги трейса, от которых можно ветвиться, и какой из них открыт в панели ветки.
+function useBranchDrawer(events: readonly HarnessEvent[], traceFile: string | null) {
+  const steps = useBranchSteps(events, traceFile);
+  const [step, setStep] = useState<BranchStep | null>(null);
+  const close = useCallback(() => {
+    setStep(null);
+  }, []);
+  const context = useMemo<Branching | null>(
+    () =>
+      traceFile === null || steps.length === 0
+        ? null
+        : {
+            traceFile,
+            stepOf: (requestId) => steps.find((item) => item.requestId === requestId) ?? null,
+            open: setStep,
+          },
+    [steps, traceFile],
+  );
+  return { context, step, close };
 }
 
 interface FocusTarget {

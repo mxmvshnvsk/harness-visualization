@@ -1,4 +1,5 @@
-// Выезжающая слева панель поверх экрана: закрывается фоном, кнопкой и Escape.
+// Выезжающая панель поверх экрана: закрывается фоном, кнопкой и Escape. Слева — «Сессии
+// и трейсы»; справа — панель ветки (этап 9): трейс под ней остаётся виден.
 
 import { useEffect, useRef, type ReactElement, type ReactNode } from 'react';
 import styles from './Drawer.module.css';
@@ -7,10 +8,17 @@ interface DrawerProps {
   open: boolean;
   label: string;
   onClose: () => void;
+  side?: 'left' | 'right';
   children: ReactNode;
 }
 
-export function Drawer({ open, label, onClose, children }: DrawerProps): ReactElement {
+export function Drawer({
+  open,
+  label,
+  onClose,
+  side = 'left',
+  children,
+}: DrawerProps): ReactElement {
   const panelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) {
@@ -35,6 +43,7 @@ export function Drawer({ open, label, onClose, children }: DrawerProps): ReactEl
         ref={panelRef}
         className={styles.panel}
         data-open={open}
+        data-side={side}
         role="dialog"
         aria-modal="true"
         aria-label={label}

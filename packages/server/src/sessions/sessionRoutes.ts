@@ -7,6 +7,7 @@
 //   POST /api/sessions/:sessionId/permissions — ответ на permission_requested;
 //   POST /api/sessions/:sessionId/messages    — следующий вопрос диалога (после awaiting_question);
 //   POST /api/sessions/:sessionId/finish      — закончить диалог.
+//   POST /api/sessions/branch             — ветка от шага записанного трейса (branchRoutes.ts).
 
 import {
   describeSubagentsOption,
@@ -64,7 +65,8 @@ export function registerSessionRoutes(app: FastifyInstance, options: SessionRout
     if (!parsed.success) {
       return reply.code(400).send({ error: parsed.error.message });
     }
-    const sessionId = await launchSession(parsed.data, options);
+    const input = toSessionInput(parsed.data, options.loadedSettings, options.projectRoot);
+    const sessionId = await launchSession(input, parsed.data.question, options);
     return reply.code(201).send({ sessionId, eventsUrl: `/api/sessions/${sessionId}/events` });
   });
 
@@ -151,21 +153,23 @@ function registerDialogRoutes(
   });
 }
 
-async function launchSession(
-  body: StartSessionRequest,
+// title — как сессия называется в списке: вопрос, у ветки — «⑂ вопрос».
+export async function launchSession(
+  input: SessionInput,
+  title: string,
   options: SessionRoutesOptions,
 ): Promise<string> {
-  const { loadedSettings, projectRoot, registry, permissions, questions } = options;
+  const { registry, permissions, questions } = options;
   // id сессии узнаём из первого события: permission_requested приходит раньше вопроса,
   // так что к вызову confirmAction он уже известен.
   let sessionId = '';
-  const session = await startSession(toSessionInput(body, loadedSettings, projectRoot), {
+  const session = await startSession(input, {
     confirmAction: (request) => permissions.ask(sessionId, request),
     nextQuestion: (turn) => questions.ask(sessionId, turn),
     listeners: [
       (event) => {
         sessionId = event.sessionId;
-        registry.ensure(event.sessionId, body.question);
+        registry.ensure(event.sessionId, title);
         registry.record(event);
       },
     ],
@@ -178,8 +182,8 @@ async function launchSession(
       console.log(`  ${message}`);
     },
   });
-  registry.ensure(session.sessionId, body.question);
-  console.log(`Сессия ${session.sessionId}: «${body.question}»`);
+  registry.ensure(session.sessionId, title);
+  console.log(`Сессия ${session.sessionId}: «${title}»`);
   session.completion
     .then((result) => {
       registry.finish(session.sessionId, result);

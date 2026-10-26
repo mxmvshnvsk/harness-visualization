@@ -10,6 +10,7 @@ import { SubagentBlock } from './SubagentBlock';
 import { PhaseLine } from './PhaseBar';
 import { inferenceTiming } from '../../projections/inferenceTiming';
 import { AgentChip } from '../agents/AgentChip';
+import { BranchButton } from '../branch/BranchButton';
 import { useSubagentSteps } from './subagentSteps';
 import styles from './Stages.module.css';
 
@@ -57,6 +58,7 @@ export function StageCard({
         <h2 className={styles.title}>{stage.title}</h2>
         {showBadge(stage, started, reached) && <span className={styles.badge}>{stage.badge}</span>}
         <span className={styles.when}>{statusOf(stage, started, active, reached)}</span>
+        {!nested && <BranchButton requestId={stage.requestId} />}
       </header>
       {showBadge(stage, started, reached) && <StagePhases stage={stage} view={view} />}
       <ul className={styles.rows}>

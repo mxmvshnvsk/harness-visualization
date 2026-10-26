@@ -44,6 +44,7 @@ export { collectSeenSources, normalizeReference } from './grounding/collectSeenS
 export { extractReferences } from './grounding/extractReferences.js';
 export { readTrace } from './grounding/readTrace.js';
 export { evalSetSchema } from './evals/evalSet.js';
+export { branchSessionInput } from './branch/branchInput.js';
 export { collectSeenTexts } from './grounding/collectSeenTexts.js';
 export { measureClaimSimilarity } from './grounding/measureClaimSimilarity.js';
 export {

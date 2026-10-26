@@ -33,6 +33,15 @@
   transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.panel[data-side='right'] {
+  right: 0;
+  left: auto;
+  width: min(480px, 94vw);
+  border-right: 0;
+  border-left: 1px solid var(--line);
+  transform: translateX(102%);
+}
+
 .panel[data-open='true'] {
   transform: none;
 }

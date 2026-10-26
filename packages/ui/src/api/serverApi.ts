@@ -12,6 +12,7 @@ import type {
   GroundingReportResponse,
   McpCourseResponse,
   EvalsResponse,
+  BranchRequest,
   SessionOptionsResponse,
 } from '@harness-visualization/server';
 
@@ -34,6 +35,11 @@ export async function getSessionOptions(): Promise<SessionOptionsResponse> {
 
 export async function startSession(request: StartSessionRequest): Promise<StartSessionResponse> {
   return postJson<StartSessionResponse>('/api/sessions', request);
+}
+
+// Ветка от шага записанного трейса (этап 9): ответ — как у новой сессии.
+export async function startBranch(request: BranchRequest): Promise<StartSessionResponse> {
+  return postJson<StartSessionResponse>('/api/sessions/branch', request);
 }
 
 export async function answerPermission(

@@ -11,6 +11,7 @@ import { PendingPermissions } from './permissions/PendingPermissions.js';
 import { PendingQuestions } from './sessions/PendingQuestions.js';
 import { SessionRegistry } from './sessions/SessionRegistry.js';
 import { registerSessionRoutes } from './sessions/sessionRoutes.js';
+import { registerBranchRoutes } from './sessions/branchRoutes.js';
 import { TraceCatalog } from './traces/TraceCatalog.js';
 import { registerTraceRoutes } from './traces/traceRoutes.js';
 import { registerMcpCourseRoutes } from './labs/mcpCourseRoutes.js';
@@ -38,6 +39,14 @@ export function createServer(options: ServerOptions): FastifyInstance {
   registerSessionRoutes(app, { ...options, registry, permissions, questions });
   const { traces } = options.loadedSettings.settings;
   const catalog = new TraceCatalog(join(options.projectRoot, traces.directory));
+  registerBranchRoutes(app, {
+    ...options,
+    registry,
+    permissions,
+    questions,
+    catalog,
+    tracesDirectory: traces.directory,
+  });
   registerTraceRoutes(app, catalog);
   // Трейсы учебных курсов лежат в репозитории: курсы работают и без своих трейсов.
   const courseCatalog = new TraceCatalog(join(options.projectRoot, 'examples', 'traces'));

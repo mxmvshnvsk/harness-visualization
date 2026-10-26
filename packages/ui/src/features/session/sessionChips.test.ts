@@ -21,25 +21,6 @@ describe('sessionChips', () => {
     ]);
   });
 
-  it('субагенты включены, а модель справилась сама — «не понадобились»', () => {
-    const log = new EventLog()
-      .add(sessionStarted('tool', { agents: ['researcher'], parallel: true }))
-      .add({ type: 'assistant_message', text: 'VPN нужен для внутренних систем.' });
-
-    expect(sessionChips(log.events)[0]).toEqual({
-      label: 'субагенты: researcher · не понадобились',
-      on: false,
-    });
-  });
-
-  it('поручения были — их число в чипе', () => {
-    const log = new EventLog()
-      .add(sessionStarted('tool', { agents: ['researcher'], parallel: true }))
-      .add(subagentStarted('researcher-1', 'call-1'));
-
-    expect(sessionChips(log.events)[0]?.label).toBe('субагенты: researcher · поручений 1');
-  });
-
   it('у трейса до этапа 6c — только поиск и effort', () => {
     const log = new EventLog().add(sessionStarted('tool'));
 
@@ -71,5 +52,48 @@ describe('sessionChips', () => {
       { label: 'оркестрация: пайплайн', on: true },
       { label: 'effort high', on: false },
     ]);
+  });
+});
+
+describe('sessionChips: субагенты и ветка', () => {
+  it('субагенты включены, а модель справилась сама — «не понадобились»', () => {
+    const log = new EventLog()
+      .add(sessionStarted('tool', { agents: ['researcher'], parallel: true }))
+      .add({ type: 'assistant_message', text: 'VPN нужен для внутренних систем.' });
+
+    expect(sessionChips(log.events)[0]).toEqual({
+      label: 'субагенты: researcher · не понадобились',
+      on: false,
+    });
+  });
+
+  it('поручения были — их число в чипе', () => {
+    const log = new EventLog()
+      .add(sessionStarted('tool', { agents: ['researcher'], parallel: true }))
+      .add(subagentStarted('researcher-1', 'call-1'));
+
+    expect(sessionChips(log.events)[0]?.label).toBe('субагенты: researcher · поручений 1');
+  });
+
+  it('ветка — первым чипом: от какой сессии, с какого шага, что поменяли', () => {
+    const log = new EventLog().add(sessionStarted('tool')).add({
+      type: 'branch_started',
+      sourceTracePath: 'traces/x_5930b821.jsonl',
+      sourceSessionId: '5930b821',
+      step: 4,
+      replayedSteps: 3,
+      replayedMessages: 11,
+      change: {
+        kind: 'toolResult',
+        toolCallId: 'call-1',
+        toolName: 'kedr__read_document',
+        before: 'FAQ',
+        after: 'не найден',
+      },
+    });
+    expect(sessionChips(log.events)[0]).toEqual({
+      label: '⑂ ветка от 5930b821 · шаг 4 · результат kedr__read_document изменён',
+      on: true,
+    });
   });
 });

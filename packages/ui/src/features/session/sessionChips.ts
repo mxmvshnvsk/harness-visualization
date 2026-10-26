@@ -30,6 +30,7 @@ export function sessionChips(events: readonly HarnessEvent[]): SessionChip[] {
   const workspace = events.find((event) => event.type === 'workspace_prepared');
   const cleaned = workspace?.type === 'workspace_prepared' && workspace.wasReset;
   return [
+    ...branchChip(events),
     ...switchedOn(started, cleaned, describeDelegation(events)),
     ...searchChip(started),
     { label: `effort ${started.reasoningEffort}`, on: false },
@@ -50,6 +51,18 @@ function switchedOn(started: Started, cleaned: boolean, delegation: Delegation):
     ...(subagents === null ? [] : [subagentsChip(subagents.agents, delegation)]),
     ...(cleaned ? [{ label: 'clean workspace', on: true }] : []),
   ];
+}
+
+// Ветка (этап 9): от какой записи, с какого шага и что поменяли.
+function branchChip(events: readonly HarnessEvent[]): SessionChip[] {
+  const branch = events.find((event) => event.type === 'branch_started');
+  if (branch?.type !== 'branch_started') {
+    return [];
+  }
+  const source = branch.sourceSessionId ?? branch.sourceTracePath;
+  const change =
+    branch.change.kind === 'replay' ? 'переиграть' : `результат ${branch.change.toolName} изменён`;
+  return [{ label: `⑂ ветка от ${source} · шаг ${String(branch.step)} · ${change}`, on: true }];
 }
 
 // Поручали ли субагентам: «Субагенты» — не обещание поручений, а тул в меню модели,
