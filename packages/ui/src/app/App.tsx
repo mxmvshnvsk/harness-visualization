@@ -414,7 +414,7 @@ function labEntries(mode: UiMode): typeof LAB_ENTRIES {
 
 const START_TEXT: Record<UiMode, { title: string; text: string }> = {
   learn: {
-    title: 'Как вопрос проходит через харнесс',
+    title: 'Как запрос проходит через харнесс',
     text: 'Задайте вопрос агенту или откройте трейс — и посмотрите по шагам: prompt, модель, политика, тулы, ответ.',
   },
   research: {
