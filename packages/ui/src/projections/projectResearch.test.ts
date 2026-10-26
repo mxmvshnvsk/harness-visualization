@@ -79,3 +79,14 @@ describe('режим «Исследование»: шаги', () => {
     expect(view.steps[0]?.response).toBeNull();
   });
 });
+
+describe('поиск в сыром JSON', () => {
+  it('без учёта регистра, все вхождения по порядку', async () => {
+    const { findMatches } = await import('../features/research/SearchableJson');
+    expect(findMatches('{"Отпуск": "отпуск — 28 дней"}', 'отпуск')).toEqual([
+      { start: 2, end: 8 },
+      { start: 12, end: 18 },
+    ]);
+    expect(findMatches('abc', '')).toEqual([]);
+  });
+});

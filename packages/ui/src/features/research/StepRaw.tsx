@@ -1,10 +1,11 @@
 // Сырое: ровно то, что ушло и пришло по сети. Тело запроса — model_request.body, ответ —
 // model_response.body (поток собран в один объект), заголовки — с ключом, скрытым ещё при записи.
-// Длинные строки по умолчанию свёрнуты; «копировать» берёт JSON целиком.
+// Длинные строки по умолчанию свёрнуты; «копировать» берёт JSON целиком; поиск — SearchableJson.
 
 import { useState, type ReactElement } from 'react';
 import { Segmented } from '../../components/Segmented';
 import type { ResearchStep } from '../../projections/projectResearch';
+import { SearchableJson } from './SearchableJson';
 import { formatSeconds } from './StepsView';
 import styles from './Research.module.css';
 
@@ -40,12 +41,12 @@ export function StepRaw({ step }: { step: ResearchStep }): ReactElement {
           <CopyButton text={full} />
         </span>
       </div>
-      <pre className={styles.json}>{folded ? JSON.stringify(value, foldLong, 2) : full}</pre>
+      <SearchableJson folded={folded ? JSON.stringify(value, foldLong, 2) : full} full={full} />
       <p className={styles.muted}>
         {part === 'response' && step.response?.timing
           ? `Поток: первый токен ${formatSeconds(step.response.timing.firstTokenMs ?? 0)}, ответ с ${formatSeconds(step.response.timing.firstAnswerTokenMs ?? 0)}, кусков ${String(step.response.timing.chunks)}. `
           : ''}
-        Поиск по тексту — поиском браузера (⌘F): свёрнутое не ищется, разверните.
+        Поиск идёт по полному JSON: пока он открыт, длинные строки развёрнуты.
       </p>
     </div>
   );

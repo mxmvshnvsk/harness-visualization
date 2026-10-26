@@ -286,3 +286,44 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+.searchBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.search {
+  flex: 1;
+  min-width: 160px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--text);
+  font: 12.5px var(--font-mono);
+}
+
+.chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.json {
+  position: relative;
+  /* Длинные строки переносятся: найденное не уезжает вправо за край. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.mark {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+  color: inherit;
+}
+
+.mark[data-current='true'] {
+  background: var(--accent);
+  color: var(--selected-text);
+}
