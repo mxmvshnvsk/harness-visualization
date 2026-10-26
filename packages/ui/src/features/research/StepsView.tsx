@@ -11,14 +11,14 @@ import { timeAt, type Schedule } from '../../timeline/schedule';
 import type { TimelineClock } from '../../timeline/TimelineClock';
 import { StepContext } from './StepContext';
 import { StepRaw } from './StepRaw';
-import { StepReply } from './StepReply';
+import { StepResponse } from './StepResponse';
 import { StepsTable } from './StepsTable';
 import styles from './Research.module.css';
 
 const TABS = [
   { value: 'context', label: 'Контекст' },
-  { value: 'raw', label: 'Сырое' },
-  { value: 'reply', label: 'Ответ модели' },
+  { value: 'request', label: 'Запрос' },
+  { value: 'response', label: 'Ответ' },
 ] as const;
 
 type Tab = (typeof TABS)[number]['value'];
@@ -63,8 +63,8 @@ export function StepsView({ events, shown, clock, schedule }: StepsViewProps): R
           />
         </div>
         {tab === 'context' && <StepContext step={step} steps={view.steps} />}
-        {tab === 'raw' && <StepRaw step={step} />}
-        {tab === 'reply' && <StepReply step={step} />}
+        {tab === 'request' && <StepRaw step={step} side="request" />}
+        {tab === 'response' && <StepResponse step={step} />}
       </section>
     </div>
   );

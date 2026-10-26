@@ -327,3 +327,7 @@
   background: var(--accent);
   color: var(--selected-text);
 }
+
+.subTabs {
+  padding: 12px 14px 0;
+}

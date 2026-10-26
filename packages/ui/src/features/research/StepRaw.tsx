@@ -1,4 +1,4 @@
-// Сырое: ровно то, что ушло и пришло по сети. Тело запроса — model_request.body, ответ —
+// Сырое (вкладки «Запрос» и «Ответ»): ровно то, что ушло и пришло по сети. Тело запроса — model_request.body, ответ —
 // model_response.body (поток собран в один объект), заголовки — с ключом, скрытым ещё при записи.
 // Длинные строки по умолчанию свёрнуты; «копировать» берёт JSON целиком; поиск — SearchableJson.
 
@@ -9,26 +9,38 @@ import { SearchableJson } from './SearchableJson';
 import { formatSeconds } from './StepsView';
 import styles from './Research.module.css';
 
-const PARTS = [
-  { value: 'request', label: 'запрос' },
-  { value: 'response', label: 'ответ' },
+// Вкладка «Запрос»: тело или заголовки с маршрутом; во вкладке «Ответ» сырое — одно тело.
+const REQUEST_PARTS = [
+  { value: 'request', label: 'тело' },
   { value: 'headers', label: 'заголовки и сеть' },
 ] as const;
 
-type Part = (typeof PARTS)[number]['value'];
+type Part = 'request' | 'headers' | 'response';
 
 // Строки длиннее — свёрнуты до начала и пометки, сколько символов спрятано.
 const FOLD_AT = 240;
 
-export function StepRaw({ step }: { step: ResearchStep }): ReactElement {
-  const [part, setPart] = useState<Part>('request');
+export function StepRaw(props: { step: ResearchStep; side: 'request' | 'response' }): ReactElement {
+  const { step } = props;
+  const [requestPart, setRequestPart] = useState<'request' | 'headers'>('request');
+  const part: Part = props.side === 'response' ? 'response' : requestPart;
   const [folded, setFolded] = useState(true);
   const value = valueOf(step, part);
   const full = JSON.stringify(value, null, 2);
   return (
     <div className={styles.body}>
       <div className={styles.rawBar}>
-        <Segmented label="Часть" size="small" options={PARTS} value={part} onChange={setPart} />
+        {props.side === 'request' ? (
+          <Segmented
+            label="Часть"
+            size="small"
+            options={REQUEST_PARTS}
+            value={requestPart}
+            onChange={setRequestPart}
+          />
+        ) : (
+          <span />
+        )}
         <span className={styles.compare}>
           <button
             type="button"
