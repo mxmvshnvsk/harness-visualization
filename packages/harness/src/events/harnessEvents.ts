@@ -76,6 +76,9 @@ export interface ArenaRun {
   directory: string;
   // false — режим «вслепую»: тула run_tests у модели нет.
   runTests: boolean;
+  // Пресет контекста и лимит шагов прогона: у арены свои (по умолчанию real и 25).
+  contextPreset: 'demo' | 'stress' | 'real';
+  maxIterations: number;
   // Закрыта ли сеть для запускаемого кода: модель разрешений Node закрывает её с Node 25.
   network: 'closed' | 'open';
   nodeVersion: string;

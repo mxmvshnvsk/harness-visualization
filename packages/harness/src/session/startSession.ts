@@ -23,6 +23,7 @@ import { readProxyUrl } from '../network/proxyFromEnvironment.js';
 import type { LoadedSettings } from '../settings/loadSettings.js';
 import type { BudgetSettings } from '../context/promptBudget.js';
 import type {
+  ContextPreset,
   ContextSettings,
   RetrievalMode,
   SearchProviderName,
@@ -172,7 +173,7 @@ async function runDialog(
 ): Promise<void> {
   const options = {
     reasoningEffort: input.reasoningEffort,
-    maxIterations: input.loadedSettings.settings.agent.maxIterations,
+    maxIterations: input.arena?.maxIterations ?? input.loadedSettings.settings.agent.maxIterations,
     retrieval: createRetrievalOptions(input),
   };
   const conversation: ChatMessage[] = [];
@@ -380,7 +381,7 @@ function createAgentDependencies(
     skills: resources.skills,
     memory: resources.memory,
     progress: resources.progress,
-    budget: budgetSettings(settings.context),
+    budget: budgetSettings(settings.context, input.arena?.contextPreset ?? null),
     parallelDelegation: settings.subagents.parallel,
     demoProject: input.demoProject,
     arena: Boolean(input.arena),
@@ -533,11 +534,16 @@ async function acceptArenaTurn(
   );
 }
 
-function budgetSettings(context: ContextSettings): BudgetSettings {
+// preset — свой у прогона арены; null — из раздела context.
+function budgetSettings(
+  context: ContextSettings,
+  presetOverride: ContextPreset | null,
+): BudgetSettings {
+  const preset = presetOverride ?? context.preset;
   return {
-    preset: context.preset,
-    limitTokens: context.limits[context.preset],
-    toolResultMaxTokens: context.toolResultLimits[context.preset],
+    preset,
+    limitTokens: context.limits[preset],
+    toolResultMaxTokens: context.toolResultLimits[preset],
     thresholdPercent: context.thresholdPercent,
     clearTargetPercent: context.clearTargetPercent,
     charsPerToken: context.charsPerToken,

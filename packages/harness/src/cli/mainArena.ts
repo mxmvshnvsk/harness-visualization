@@ -2,6 +2,8 @@
 //   pnpm arena --list                           — задачи
 //   pnpm arena --task trip-deadline             — прогон: агент в копии проекта, потом приёмка
 //   pnpm arena --task trip-deadline --blind     — «вслепую»: без run_tests
+//   pnpm arena --task refactor --context demo --max-steps 10
+//                                               — «харнесс зажат»: контекст и шаги как у demo
 //   pnpm arena --verify                         — у каждой задачи заготовка не проходит
 //                                                 приёмку, а эталонное решение проходит
 
@@ -13,7 +15,7 @@ import { arenaSessionInput } from '../arena/arenaSessionInput.js';
 import { checkAcceptance } from '../arena/checkAcceptance.js';
 import { REASONING_EFFORTS, type ReasoningEffort } from '../model/chatTypes.js';
 import { loadSettings, readConfigFile, type LoadedSettings } from '../settings/loadSettings.js';
-import type { ArenaSettings } from '../settings/settingsSchema.js';
+import type { ArenaSettings, ContextPreset } from '../settings/settingsSchema.js';
 import { runCliSession } from './runCliSession.js';
 
 async function main(): Promise<void> {
@@ -25,6 +27,8 @@ async function main(): Promise<void> {
       task: { type: 'string' },
       blind: { type: 'boolean', default: false },
       effort: { type: 'string' },
+      context: { type: 'string' },
+      'max-steps': { type: 'string' },
     },
   });
   const projectRoot = process.cwd();
@@ -44,6 +48,8 @@ async function main(): Promise<void> {
     settings: loadedSettings.settings.arena,
     taskId: values.task,
     runTests: !values.blind,
+    contextPreset: parsePreset(values.context),
+    maxIterations: parseSteps(values['max-steps']),
   });
   const result = await runCliSession({
     ...arenaSessionInput({
@@ -60,6 +66,27 @@ async function main(): Promise<void> {
   if (result.failed) {
     process.exitCode = 1;
   }
+}
+
+function parsePreset(value: string | undefined): ContextPreset | null {
+  if (value === undefined) {
+    return null;
+  }
+  if (value !== 'demo' && value !== 'stress' && value !== 'real') {
+    throw new Error('--context: одно из demo, stress, real');
+  }
+  return value;
+}
+
+function parseSteps(value: string | undefined): number | null {
+  if (value === undefined) {
+    return null;
+  }
+  const steps = Number(value);
+  if (!Number.isInteger(steps) || steps < 1) {
+    throw new Error('--max-steps: целое число больше нуля');
+  }
+  return steps;
 }
 
 function parseEffort(value: string | undefined, loadedSettings: LoadedSettings): ReasoningEffort {

@@ -4,7 +4,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
 import type { ArenaRun } from '../events/harnessEvents.js';
-import type { ArenaSettings } from '../settings/settingsSchema.js';
+import type { ArenaSettings, ContextPreset } from '../settings/settingsSchema.js';
 import { readArenaTask, type ArenaTaskDetails } from './arenaTasks.js';
 import { prepareArenaCopy, readTestFiles } from './prepareArenaCopy.js';
 import { networkClosedByPermissions } from './runNodeTests.js';
@@ -18,6 +18,9 @@ export interface ArenaSessionInput {
   runTests: boolean;
   // Видимые тесты до работы агента: путь → текст. Их и запускает приёмка.
   originalTests: Record<string, string>;
+  // Пресет контекста и лимит шагов прогона: по умолчанию — из раздела arena настроек.
+  contextPreset: ContextPreset;
+  maxIterations: number;
 }
 
 export interface ArenaRunRequest {
@@ -27,6 +30,9 @@ export interface ArenaRunRequest {
   runTests: boolean;
   // Наложить эталонное решение (pnpm arena --verify).
   withSolution?: boolean;
+  // null — как в настройках арены.
+  contextPreset?: ContextPreset | null;
+  maxIterations?: number | null;
 }
 
 // Новая копия на каждый прогон: попытки не должны видеть работу друг друга.
@@ -53,6 +59,8 @@ export async function prepareArenaRun(request: ArenaRunRequest): Promise<ArenaSe
     directory,
     runTests: request.runTests,
     originalTests: await readTestFiles(directory),
+    contextPreset: request.contextPreset ?? request.settings.contextPreset,
+    maxIterations: request.maxIterations ?? request.settings.maxIterations,
   };
 }
 
@@ -61,6 +69,8 @@ export function describeArenaRun(arena: ArenaSessionInput, projectRoot: string):
     taskId: arena.task?.id ?? null,
     directory: relative(projectRoot, arena.directory).split('\\').join('/'),
     runTests: arena.runTests,
+    contextPreset: arena.contextPreset,
+    maxIterations: arena.maxIterations,
     network: networkClosedByPermissions() ? 'closed' : 'open',
     nodeVersion: process.versions.node,
   };

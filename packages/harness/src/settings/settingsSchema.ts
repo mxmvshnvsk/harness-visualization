@@ -77,8 +77,10 @@ const agentSettingsSchema = z.object({
 
 // Контекст (этап 6): сколько харнесс отводит prompt. Лимит задаёт харнесс, а не провайдер —
 // чтобы обрезка и компакция были видны на коротких учебных сессиях.
+const contextPresetSchema = z.enum(['demo', 'stress', 'real']);
+
 const contextSettingsSchema = z.object({
-  preset: z.enum(['demo', 'stress', 'real']).default('demo'),
+  preset: contextPresetSchema.default('demo'),
   // Лимиты пресетов, в токенах: demo — компакция на 3–4-м вопросе диалога, stress — обрезка уже
   // на первом вопросе с поиском, real — окно модели (deepseek-flash — 1M токенов по странице
   // цен DeepSeek, проверено 25.10.2026). Числа — по трейсам автора, docs/plan.md, этап 6.
@@ -129,6 +131,11 @@ const arenaSettingsSchema = z.object({
   testTimeoutSeconds: z.number().int().positive().default(30),
   // Вывод тестов для модели обрезается: длинный stack trace съедает контекст.
   outputMaxCharacters: z.number().int().positive().default(4000),
+  // Пресет контекста и лимит шагов арены — свои: на 12 тыс. токенов demo и 10 шагах агент
+  // в прогоне 26.10.2026 терял вывод тестов и не успевал доделать работу (план, этап 10).
+  // demo и 10 шагов остаются переключателем — как экспонат «харнесс зажат».
+  contextPreset: contextPresetSchema.default('real'),
+  maxIterations: z.number().int().positive().default(25),
 });
 
 const webFetchSettingsSchema = z.object({
@@ -433,6 +440,8 @@ export const harnessSettingsSchema = z.object({
     workspaceDirectory: 'workspace-arena',
     testTimeoutSeconds: 30,
     outputMaxCharacters: 4000,
+    contextPreset: 'real',
+    maxIterations: 25,
   }),
 });
 
@@ -460,6 +469,7 @@ export type NetworkRule = z.infer<typeof networkRuleSchema>;
 export type NetworkRoute = z.infer<typeof networkRouteSchema>;
 export type ServerSettings = z.infer<typeof serverSettingsSchema>;
 export type ArenaSettings = z.infer<typeof arenaSettingsSchema>;
+export type ContextPreset = z.infer<typeof contextPresetSchema>;
 export type GroundingSettings = z.infer<typeof groundingSettingsSchema>;
 export type RetrievalSettings = z.infer<typeof retrievalSettingsSchema>;
 export type SkillsSettings = z.infer<typeof skillsSettingsSchema>;
