@@ -6,7 +6,7 @@ import { join, relative, resolve } from 'node:path';
 import type { ArenaRun } from '../events/harnessEvents.js';
 import type { ArenaSettings } from '../settings/settingsSchema.js';
 import { readArenaTask, type ArenaTaskDetails } from './arenaTasks.js';
-import { fingerprintTests, prepareArenaCopy } from './prepareArenaCopy.js';
+import { prepareArenaCopy, readTestFiles } from './prepareArenaCopy.js';
 import { networkClosedByPermissions } from './runNodeTests.js';
 
 export interface ArenaSessionInput {
@@ -16,8 +16,8 @@ export interface ArenaSessionInput {
   directory: string;
   // false — режим «вслепую»: без run_tests.
   runTests: boolean;
-  // Видимые тесты до работы агента — для приёмки.
-  testFingerprints: Record<string, string>;
+  // Видимые тесты до работы агента: путь → текст. Их и запускает приёмка.
+  originalTests: Record<string, string>;
 }
 
 export interface ArenaRunRequest {
@@ -52,7 +52,7 @@ export async function prepareArenaRun(request: ArenaRunRequest): Promise<ArenaSe
     task,
     directory,
     runTests: request.runTests,
-    testFingerprints: await fingerprintTests(directory),
+    originalTests: await readTestFiles(directory),
   };
 }
 

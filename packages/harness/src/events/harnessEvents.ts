@@ -670,7 +670,8 @@ export interface AcceptanceCheckedPayload {
   passed: boolean;
   visible: { passed: number; failed: number };
   hidden: { passed: number; failed: number; tests: AcceptanceTestCase[] };
-  // Видимые тесты, которые агент изменил или удалил, хотя задача этого не разрешала.
+  // Видимые тесты, которые агент изменил или удалил. На итог не влияет: приёмка запускает
+  // исходные (кроме разрешённых задачей), а дописывать свои тесты агенту можно.
   changedTests: string[];
   timedOut: boolean;
   durationMs: number;

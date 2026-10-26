@@ -39,7 +39,7 @@ const DESCRIBERS: Describers = {
   grounding_check_started: (event) =>
     `${event.sourceTracePath}: ${String(event.claimCount)} claims, судья ${event.judgeModel}`,
   acceptance_checked: (event) =>
-    `Приёмка ${event.taskId}: ${event.passed ? 'пройдена' : 'не пройдена'} — видимые ${String(event.visible.passed)} из ${String(event.visible.passed + event.visible.failed)}, скрытые ${String(event.hidden.passed)} из ${String(event.hidden.passed + event.hidden.failed)}${event.changedTests.length > 0 ? `, изменены тесты: ${event.changedTests.join(', ')}` : ''}`,
+    `Приёмка ${event.taskId}: ${event.passed ? 'пройдена' : 'не пройдена'} — видимые ${String(event.visible.passed)} из ${String(event.visible.passed + event.visible.failed)}, скрытые ${String(event.hidden.passed)} из ${String(event.hidden.passed + event.hidden.failed)}${event.changedTests.length > 0 ? `; агент менял тесты: ${event.changedTests.join(', ')}` : ''}`,
   branch_started: (event) =>
     `ветка от ${event.sourceTracePath}, шаг ${String(event.step)}: ${event.change.kind === 'replay' ? 'переиграть' : `результат ${event.change.toolName} изменён`}`,
   claim_judged: (event) => `#${String(event.claimNumber)} ${event.verdict}: ${event.claim}`,

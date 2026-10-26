@@ -527,7 +527,7 @@ async function acceptArenaTurn(
       arenaRoot: arenaRoot(input.projectRoot, arena),
       task,
       directory: input.arena.directory,
-      testFingerprints: input.arena.testFingerprints,
+      originalTests: input.arena.originalTests,
       settings: arena,
     }),
   );

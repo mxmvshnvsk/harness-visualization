@@ -1,15 +1,20 @@
 // Приёмка (этап 10): когда агент ответил, харнесс сам проверяет работу. Агенту не верим
 // на слово: его «тесты проходят» — это его тесты.
-//   1. видимые тесты не изменены (кроме editableTests задачи) — иначе «подогнал тесты»;
-//   2. видимые и скрытые тесты зелёные.
-// Скрытые тесты запускаются в отдельной копии работы агента — его папку не трогаем.
+//   1. исходные видимые тесты — такие, какими они были до агента (кроме editableTests задачи:
+//      их агенту можно и нужно править), — зелёные на его коде;
+//   2. скрытые тесты зелёные.
+// Агент может дописывать тесты — это не подгонка. Подгонка — ослабить исходные, и её ловит
+// пункт 1: запускаются не его правки, а исходники. Сначала было иначе — правка файла теста
+// сама по себе проваливала приёмку, и на первом прогоне автора (trip-deadline, 26.10.2026)
+// приёмка отвергла верное решение: агент дописал в test/tripReport.test.js свои краевые тесты.
+// Всё запускается в отдельной копии работы агента — его папку не трогаем.
 
-import { cp, mkdir, rm } from 'node:fs/promises';
-import { join } from 'node:path';
+import { cp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import type { AcceptanceCheckedPayload } from '../events/harnessEvents.js';
 import type { ArenaSettings } from '../settings/settingsSchema.js';
 import { tasksDirectory, type ArenaTask } from './arenaTasks.js';
-import { fingerprintTests } from './prepareArenaCopy.js';
+import { readTestFiles } from './prepareArenaCopy.js';
 import { runNodeTests } from './runNodeTests.js';
 import type { NodeTestCase, NodeTestResult } from './testResults.js';
 
@@ -18,19 +23,19 @@ export interface AcceptanceRequest {
   task: ArenaTask;
   // Папка, где работал агент.
   directory: string;
-  // Отпечатки видимых тестов до работы агента.
-  testFingerprints: Record<string, string>;
+  // Видимые тесты до работы агента: путь → текст.
+  originalTests: Record<string, string>;
   settings: ArenaSettings;
 }
 
 export async function checkAcceptance(
   request: AcceptanceRequest,
 ): Promise<AcceptanceCheckedPayload> {
-  const changedTests = await changedProtectedTests(request);
   const checkDirectory = `${request.directory}.acceptance`;
   await rm(checkDirectory, { recursive: true, force: true });
   await mkdir(checkDirectory, { recursive: true });
   await cp(request.directory, checkDirectory, { recursive: true });
+  const changedTests = await restoreOriginalTests(request, checkDirectory);
   await cp(
     join(tasksDirectory(request.arenaRoot), request.task.id, 'acceptance'),
     join(checkDirectory, 'acceptance'),
@@ -50,11 +55,7 @@ export async function checkAcceptance(
   return {
     type: 'acceptance_checked',
     taskId: request.task.id,
-    passed:
-      changedTests.length === 0 &&
-      !timedOut &&
-      hidden.length > 0 &&
-      [...visible, ...hidden].every((test) => test.ok),
+    passed: !timedOut && hidden.length > 0 && [...visible, ...hidden].every((test) => test.ok),
     visible: { passed: count(visible, true), failed: count(visible, false) },
     hidden: { passed: count(hidden, true), failed: count(hidden, false), tests: hidden },
     changedTests,
@@ -80,11 +81,23 @@ function count(tests: readonly NodeTestCase[], ok: boolean): number {
   return tests.filter((test) => test.ok === ok).length;
 }
 
-async function changedProtectedTests(request: AcceptanceRequest): Promise<string[]> {
-  const now = await fingerprintTests(request.directory);
+// Кладёт исходные видимые тесты поверх правок агента (кроме editableTests) и отвечает, какие
+// из них агент менял или удалял, — для отчёта, на итог это не влияет.
+async function restoreOriginalTests(
+  request: AcceptanceRequest,
+  checkDirectory: string,
+): Promise<string[]> {
   const editable = new Set(request.task.editableTests);
-  // Новые тесты агента — не подгонка: сверяем только те, что были до него.
-  return Object.keys(request.testFingerprints)
-    .filter((path) => !editable.has(path) && request.testFingerprints[path] !== now[path])
-    .sort();
+  const now = await readTestFiles(request.directory);
+  const changed: string[] = [];
+  for (const [path, text] of Object.entries(request.originalTests)) {
+    if (now[path] !== text) {
+      changed.push(path);
+    }
+    if (!editable.has(path)) {
+      await mkdir(dirname(join(checkDirectory, path)), { recursive: true });
+      await writeFile(join(checkDirectory, path), text, 'utf8');
+    }
+  }
+  return changed.sort();
 }

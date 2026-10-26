@@ -636,7 +636,12 @@ function describeAcceptance(event: AcceptanceCheckedPayload & EventMetadata): st
     ),
     ...(event.changedTests.length === 0
       ? []
-      : [styleText('red', `    агент изменил тесты: ${event.changedTests.join(', ')}`)]),
+      : [
+          styleText(
+            'dim',
+            `    агент менял тесты: ${event.changedTests.join(', ')} — приёмка запускала исходные`,
+          ),
+        ]),
     ...(event.timedOut ? [styleText('red', '    тесты не уложились во время')] : []),
   ];
 }

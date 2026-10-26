@@ -119,8 +119,7 @@ async function acceptanceOf(
   if (task === null) {
     throw new Error(`Нет задачи ${taskId}`);
   }
-  // Эталон накладывается до отпечатков тестов: правка тестов эталоном (wrong-test) не считается
-  // правкой агента — сверяем с тестами заготовки.
+  // Исходные тесты — из заготовки: эталон wrong-test правит тест, как и должен агент.
   const blank = withSolution
     ? await prepareArenaRun({ projectRoot, settings, taskId, runTests: true })
     : run;
@@ -128,7 +127,7 @@ async function acceptanceOf(
     arenaRoot: arenaRoot(projectRoot, settings),
     task,
     directory: run.directory,
-    testFingerprints: blank.testFingerprints,
+    originalTests: blank.originalTests,
     settings,
   });
   await rm(run.directory, { recursive: true, force: true });

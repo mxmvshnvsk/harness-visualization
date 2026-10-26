@@ -2,7 +2,6 @@
 // регламентов. Агент работает только в копии; скрытые тесты (acceptance/) и эталонное
 // решение (solution/) в неё не попадают.
 
-import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { cp, mkdir, readdir, readFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
@@ -49,19 +48,18 @@ async function copyIfExists(source: string, target: string): Promise<void> {
   }
 }
 
-// Отпечатки видимых тестов до работы агента: приёмка сверит, не правил ли он их.
-export async function fingerprintTests(directory: string): Promise<Record<string, string>> {
+// Видимые тесты до работы агента. Приёмка запускает их, а не то, что лежит в копии после
+// агента: дописать свои тесты можно, а ослабить исходные — нет.
+export async function readTestFiles(directory: string): Promise<Record<string, string>> {
   const testDirectory = join(directory, 'test');
   if (!existsSync(testDirectory)) {
     return {};
   }
   const files = await readdir(testDirectory, { recursive: true, withFileTypes: true });
-  const fingerprints: Record<string, string> = {};
+  const contents: Record<string, string> = {};
   for (const file of files.filter((entry) => entry.isFile())) {
     const path = join(file.parentPath, file.name);
-    fingerprints[relative(directory, path).split(sep).join('/')] = createHash('sha256')
-      .update(await readFile(path))
-      .digest('hex');
+    contents[relative(directory, path).split(sep).join('/')] = await readFile(path, 'utf8');
   }
-  return fingerprints;
+  return contents;
 }
