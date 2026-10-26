@@ -90,6 +90,15 @@ describe('OpenCode', () => {
     expect(ofType(events, 'assistant_message')[0]?.text).toBe('Ключ в .env.');
   });
 
+  it('бюджет prompt восстановлен: история собрана, остаток — system и тулы того харнесса', () => {
+    const requests = ofType(events, 'model_request');
+    expect(requests.map((request) => (request.body.messages as unknown[]).length)).toEqual([1, 3]);
+    const second = requests[1]?.budget;
+    expect(second?.estimate.total).toBe(1050);
+    expect(second?.reconstructed?.hiddenTokens).toBeGreaterThan(0);
+    expect(second?.limitTokens).toBe(0);
+  });
+
   it('маскирует ключи и домашнюю папку; цена сессии — от OpenCode', () => {
     const json = JSON.stringify(events);
     expect(json).not.toContain('sk-abcdef');

@@ -15,6 +15,7 @@
 import type { HarnessEvent, HarnessEventPayload, ImportedFrom } from '../events/harnessEvents.js';
 import type { ModelReply, ReasoningEffort, TokenUsage, ToolCall } from '../model/chatTypes.js';
 import { maskHomePaths, maskSecretText } from './maskSecretText.js';
+import { reconstructRequests } from './reconstructRequests.js';
 
 interface Usage {
   input?: number;
@@ -85,7 +86,7 @@ export function convertOpenCode(text: string): HarnessEvent[] {
   }
   const writer = new Writer(parsed);
   writer.convert();
-  return writer.events;
+  return reconstructRequests(writer.events);
 }
 
 class Writer {
@@ -152,7 +153,7 @@ class Writer {
 
   private importedFrom(): ImportedFrom {
     const missing = [
-      'тело запроса к модели (system prompt, история, описания тулов) — в экспорте только ответы',
+      'system prompt и описания тулов — в экспорте их нет; во вкладке «Контекст» это остаток от настоящего input, история собрана заново',
       'решения политики разрешений и сетевые маршруты — OpenCode их не пишет',
       'цена — только итог по шагу от OpenCode, без разбивки на кэш и вывод',
     ];

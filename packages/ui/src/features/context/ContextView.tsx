@@ -86,7 +86,17 @@ export function ContextView({ events, shown, clock, schedule }: ContextViewProps
 }
 
 function Summary({ request, count }: { request: ContextRequest; count: number }): ReactElement {
-  const { preset, limitTokens, thresholdTokens } = request.budget;
+  const { preset, limitTokens, thresholdTokens, reconstructed } = request.budget;
+  if (reconstructed !== undefined) {
+    return (
+      <p className={styles.summary}>
+        <Term topic="context-budget">Бюджет prompt</Term> восстановлен по чужой записи: история
+        собрана заново, а system prompt и описания тулов того харнесса — остаток до настоящего input
+        (на этом шаге ≈ {formatTokens(reconstructed.hiddenTokens)}). Лимита в записи нет · запросов
+        к модели: {count}
+      </p>
+    );
+  }
   return (
     <p className={styles.summary}>
       <Term topic="context-budget">Бюджет prompt</Term>: пресет {preset}, лимит{' '}

@@ -16,6 +16,7 @@
 import type { HarnessEvent, HarnessEventPayload, ImportedFrom } from '../events/harnessEvents.js';
 import type { ModelReply, TokenUsage, ToolCall } from '../model/chatTypes.js';
 import { maskHomePaths, maskSecretText } from './maskSecretText.js';
+import { reconstructRequests } from './reconstructRequests.js';
 
 interface Block {
   type: string;
@@ -98,7 +99,7 @@ export function convertClaudeCode(text: string): HarnessEvent[] {
   }
   const builder = new EventBuilder(entries);
   builder.convert();
-  return builder.events;
+  return reconstructRequests(builder.events);
 }
 
 class EventBuilder {
@@ -176,7 +177,7 @@ class EventBuilder {
   private importedFrom(): ImportedFrom {
     const sidechain = this.entries.filter((entry) => entry.isSidechain === true).length;
     const missing = [
-      'тело запроса к модели (system prompt, история, описания тулов) — в записи только ответы',
+      'system prompt и описания тулов — в записи их нет; во вкладке «Контекст» это остаток от настоящего input, история собрана заново',
       'решения политики разрешений и сетевые маршруты — Claude Code их не пишет',
       'цена: тарифы Anthropic в адаптере не заданы',
     ];

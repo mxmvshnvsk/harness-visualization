@@ -15,18 +15,24 @@ interface BudgetBlockProps {
 
 export function BudgetBlock({ budget, exactTokens }: BudgetBlockProps): ReactElement {
   const { estimate, limitTokens, thresholdTokens } = budget;
-  // Шкала — до лимита, а если prompt больше — до prompt: перебор тоже видно.
-  const scale = Math.max(limitTokens, estimate.total);
+  // Шкала — до лимита, а если prompt больше — до prompt: перебор тоже видно. У чужой записи
+  // лимита нет (0) — шкала до самого prompt.
+  const scale = Math.max(limitTokens, estimate.total, 1);
+  const hasLimit = limitTokens > 0;
   return (
     <section className={styles.budget} aria-label="Бюджет prompt">
       <div className={styles.head}>
         <span className={styles.title}>
-          <Term topic="context-budget">Бюджет prompt</Term> ≈ {format(estimate.total)} из{' '}
-          {format(limitTokens)} · пресет {budget.preset}
+          <Term topic="context-budget">Бюджет prompt</Term> ≈ {format(estimate.total)}
+          {hasLimit
+            ? ` из ${format(limitTokens)} · пресет ${budget.preset}`
+            : ' · лимита в записи нет'}
         </span>
-        <span className={styles.share}>
-          {String(Math.round((estimate.total / limitTokens) * 100))} %
-        </span>
+        {hasLimit && (
+          <span className={styles.share}>
+            {String(Math.round((estimate.total / limitTokens) * 100))} %
+          </span>
+        )}
       </div>
       <div className={styles.track} role="img" aria-label={describe(budget)}>
         {PARTS.map((part) => (
@@ -39,10 +45,12 @@ export function BudgetBlock({ budget, exactTokens }: BudgetBlockProps): ReactEle
             }}
           />
         ))}
-        <span
-          className={styles.threshold}
-          style={{ left: `${String((thresholdTokens / scale) * 100)}%` }}
-        />
+        {hasLimit && (
+          <span
+            className={styles.threshold}
+            style={{ left: `${String((thresholdTokens / scale) * 100)}%` }}
+          />
+        )}
       </div>
       <ul className={styles.legend}>
         {PARTS.map((part) => (
@@ -51,14 +59,30 @@ export function BudgetBlock({ budget, exactTokens }: BudgetBlockProps): ReactEle
           </li>
         ))}
       </ul>
+      <ReconstructedNote budget={budget} />
       <p className={styles.note}>
         Разбивка — оценка: символы JSON запроса ÷ {budget.charsPerToken.toLocaleString('ru-RU')}.{' '}
         {exactTokens === null
           ? 'Точное число придёт в usage ответа.'
           : `Точно, по usage ответа, — ${format(exactTokens)} (оценка ошиблась на ${String(errorPercent(estimate.total, exactTokens))} %).`}{' '}
-        Пунктир — порог {format(thresholdTokens)}: с него харнесс начнёт освобождать место.
+        {hasLimit &&
+          `Пунктир — порог ${format(thresholdTokens)}: с него харнесс начнёт освобождать место.`}
       </p>
     </section>
+  );
+}
+
+// Чужая запись (адаптер, этап 9.4): тела запроса нет, бюджет собран заново.
+function ReconstructedNote({ budget }: { budget: PromptBudget }): ReactElement | null {
+  if (budget.reconstructed === undefined) {
+    return null;
+  }
+  return (
+    <p className={styles.note}>
+      Восстановлено по чужой записи: тела запроса в ней нет, история собрана заново. В system ≈{' '}
+      {format(budget.reconstructed.hiddenTokens)} — остаток до настоящего input: system prompt и
+      описания тулов того харнесса, по отдельности их не разделить.
+    </p>
   );
 }
 

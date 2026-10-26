@@ -39,6 +39,13 @@ export function PromptContents({ request, previous }: PromptContentsProps): Reac
           {previous !== null && ` · новых с прошлого запроса: ${String(fresh)}`}
         </span>
       </div>
+      {request.budget.reconstructed !== undefined && (
+        <p className={styles.contentsMeta}>
+          История собрана заново по записи. В начале prompt было ещё ≈{' '}
+          {formatTokens(request.budget.reconstructed.hiddenTokens)} токенов — system prompt и
+          описания тулов того харнесса; их текста в записи нет.
+        </p>
+      )}
       <div className={styles.strip} role="img" aria-label="Доля каждого сообщения в prompt">
         {items.map((item, index) => (
           <span

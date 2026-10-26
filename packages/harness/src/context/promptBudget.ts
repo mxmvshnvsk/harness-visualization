@@ -40,6 +40,10 @@ export interface PromptBudget {
   charsPerToken: number;
   // Оценка по частям, в токенах (≈).
   estimate: PromptBreakdown;
+  // Бюджет восстановлен по чужой записи (адаптер, этап 9.4): тела запроса в ней нет. Видимая
+  // часть — оценка по истории, hiddenTokens — остаток до настоящего input из usage: system prompt
+  // и описания тулов чужого харнесса, по отдельности их не разделить. Лимита в записи нет — 0.
+  reconstructed?: { hiddenTokens: number };
 }
 
 export interface BudgetSettings {
