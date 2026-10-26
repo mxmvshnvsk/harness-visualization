@@ -5,7 +5,8 @@
 // чтение ничего не меняет, запись можно исправить, удаление — нет,
 // а запрос в сеть отправляет данные за пределы компьютера. delegate — поручить задачу субагенту
 // (этап 6c): сам он ничего не меняет, а каждый вызов субагента проверяется политикой отдельно.
-export const TOOL_EFFECTS = ['read', 'write', 'delete', 'network', 'delegate'] as const;
+// execute — запустить код на машине пользователя (этап 10: тесты и программы Код-арены).
+export const TOOL_EFFECTS = ['read', 'write', 'delete', 'network', 'delegate', 'execute'] as const;
 
 export type ToolEffect = (typeof TOOL_EFFECTS)[number];
 

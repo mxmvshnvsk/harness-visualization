@@ -157,3 +157,5 @@ vite.config.ts.timestamp-*
 /workspace/
 # Песочница сессий без демо-проекта: создаётся пустой
 /workspace-blank/
+# Копии проектов Код-арены (этап 10): в них работает агент
+/workspace-arena/

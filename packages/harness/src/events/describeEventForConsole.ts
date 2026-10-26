@@ -5,7 +5,12 @@
 import { styleText } from 'node:util';
 import type { ResponseTiming } from '../model/chatTypes.js';
 import type { RetrievalMode } from '../settings/settingsSchema.js';
-import type { HarnessEvent, HarnessEventType } from './harnessEvents.js';
+import type {
+  AcceptanceCheckedPayload,
+  EventMetadata,
+  HarnessEvent,
+  HarnessEventType,
+} from './harnessEvents.js';
 import { describeJsonRpcMessage } from '../mcp/describeJsonRpcMessage.js';
 import {
   formatAmount,
@@ -151,12 +156,7 @@ const EVENT_DESCRIBERS: EventDescribers = {
         : `Сеть: прокси для маршрута proxy — ${event.networkProxy}`,
     ),
     styleText('dim', `Поиск: ${event.searchProvider ?? 'выключен'}`),
-    styleText(
-      'dim',
-      event.demoProject === false
-        ? 'Без демо-проекта: ни «Кедр Софт», ни MCP, ни базы знаний — пустая песочница, файлы и веб'
-        : `База знаний: ${RETRIEVAL_MODE_DESCRIPTIONS[event.retrievalMode]}`,
-    ),
+    styleText('dim', describeSessionMode(event)),
     styleText(
       'dim',
       event.subagents === undefined || event.subagents === null
@@ -167,6 +167,7 @@ const EVENT_DESCRIBERS: EventDescribers = {
       ? []
       : [styleText('dim', `Оркестрация: ${ORCHESTRATION_MODE_NAMES[event.orchestration]}`)]),
   ],
+  acceptance_checked: describeAcceptance,
   workspace_prepared: describeWorkspacePrepared,
   mcp_server_starting: (event) => [
     styleText(
@@ -573,11 +574,20 @@ function describeToolResult(event: EventOfType<'tool_result'>): string[] {
   return lines;
 }
 
-// { credits: 1, downloadedBytes: 52000 } → credits: 1, downloadedBytes: 52000
+// { credits: 1, downloadedBytes: 52000 } → credits: 1, downloadedBytes: 52000.
+// Длинное (вывод тестов, списки) — только размером: целиком оно в трейсе.
 function describeDetails(details: Record<string, unknown>): string {
   return Object.entries(details)
-    .map(([key, value]) => `${key}: ${typeof value === 'string' ? value : JSON.stringify(value)}`)
+    .map(([key, value]) => `${key}: ${describeDetailValue(value)}`)
     .join(', ');
+}
+
+function describeDetailValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${String(value.length)}]`;
+  }
+  const text = typeof value === 'string' ? value : JSON.stringify(value);
+  return text.length > 120 ? `«${String(text.length)} символов»` : text;
 }
 
 function describeSessionFinished(event: EventOfType<'session_finished'>): string[] {
@@ -608,4 +618,37 @@ function describePermissionAnswer(event: { approved: boolean; answeredBy: string
     default:
       return event.approved ? 'Пользователь разрешил' : 'Пользователь отказал';
   }
+}
+
+// Приёмка Код-арены (этап 10): итог, скрытые тесты по одному, изменённые тесты агента.
+function describeAcceptance(event: AcceptanceCheckedPayload & EventMetadata): string[] {
+  const verdict = event.passed ? '✓ приёмка пройдена' : '✗ приёмка не пройдена';
+  return [
+    styleText(
+      event.passed ? 'green' : 'red',
+      `${verdict}: видимые ${String(event.visible.passed)} из ${String(event.visible.passed + event.visible.failed)}, скрытые ${String(event.hidden.passed)} из ${String(event.hidden.passed + event.hidden.failed)}`,
+    ),
+    ...event.hidden.tests.map((test) =>
+      styleText(
+        test.ok ? 'dim' : 'red',
+        `    ${test.ok ? '✓' : '✗'} ${test.name}${test.error === null ? '' : ` — ${test.error}`}`,
+      ),
+    ),
+    ...(event.changedTests.length === 0
+      ? []
+      : [styleText('red', `    агент изменил тесты: ${event.changedTests.join(', ')}`)]),
+    ...(event.timedOut ? [styleText('red', '    тесты не уложились во время')] : []),
+  ];
+}
+
+function describeSessionMode(event: EventOfType<'session_started'>): string {
+  const arena = event.arena ?? null;
+  if (arena !== null) {
+    const tests = arena.runTests ? 'файлы и run_tests' : 'только файлы — «вслепую», без run_tests';
+    const network = arena.network === 'closed' ? 'сеть закрыта' : 'сеть открыта';
+    return `Код-арена: задача ${arena.taskId ?? 'своя'}, ${tests}; тесты в Node ${arena.nodeVersion} с --permission, ${network}`;
+  }
+  return event.demoProject === false
+    ? 'Без демо-проекта: ни «Кедр Софт», ни MCP, ни базы знаний — пустая песочница, файлы и веб'
+    : `База знаний: ${RETRIEVAL_MODE_DESCRIPTIONS[event.retrievalMode]}`;
 }

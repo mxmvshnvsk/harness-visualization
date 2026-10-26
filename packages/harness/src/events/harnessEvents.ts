@@ -64,6 +64,21 @@ export interface SessionStartedPayload {
   // Трейс переведён адаптером из записи чужого харнесса (этап 9.4): что это за харнесс
   // и чего в его записи нет; нет поля — запись нашего харнесса.
   importedFrom?: ImportedFrom | null;
+  // Прогон Код-арены (этап 10); нет поля — обычная сессия.
+  arena?: ArenaRun | null;
+}
+
+// Прогон Код-арены (этап 10): задача, копия проекта и чем ограничен запуск кода.
+export interface ArenaRun {
+  // null — свободный режим, без заготовленной задачи.
+  taskId: string | null;
+  // Папка копии от корня проекта.
+  directory: string;
+  // false — режим «вслепую»: тула run_tests у модели нет.
+  runTests: boolean;
+  // Закрыта ли сеть для запускаемого кода: модель разрешений Node закрывает её с Node 25.
+  network: 'closed' | 'open';
+  nodeVersion: string;
 }
 
 export interface ImportedFrom {
@@ -647,6 +662,29 @@ export interface ErrorPayload {
   message: string;
 }
 
+// Приёмка Код-арены (этап 10): агент ответил — харнесс сам запустил видимые и скрытые тесты
+// и сверил, не менял ли агент видимые тесты.
+export interface AcceptanceCheckedPayload {
+  type: 'acceptance_checked';
+  taskId: string;
+  passed: boolean;
+  visible: { passed: number; failed: number };
+  hidden: { passed: number; failed: number; tests: AcceptanceTestCase[] };
+  // Видимые тесты, которые агент изменил или удалил, хотя задача этого не разрешала.
+  changedTests: string[];
+  timedOut: boolean;
+  durationMs: number;
+  // Вывод TAP, обрезанный.
+  output: string;
+}
+
+export interface AcceptanceTestCase {
+  name: string;
+  file: string | null;
+  ok: boolean;
+  error: string | null;
+}
+
 export type HarnessEventPayload =
   | SessionStartedPayload
   | WorkspacePreparedPayload
@@ -692,6 +730,7 @@ export type HarnessEventPayload =
   | PipelineStepStartedPayload
   | PipelineStepFinishedPayload
   | OrchestrationFinishedPayload
+  | AcceptanceCheckedPayload
   | SessionFinishedPayload
   | ErrorPayload;
 

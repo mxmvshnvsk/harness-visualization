@@ -21,6 +21,8 @@ const EVENT_GROUPS: Record<HarnessEventType, EventGroup> = {
   context_retrieved: 'retrieval',
   grounding_check_started: 'judge',
   branch_started: 'meta',
+  // Приёмка Код-арены — проверка кодом, как судья проверяет опору ответа.
+  acceptance_checked: 'judge',
   claim_judged: 'judge',
   prompt_assembled: 'model',
   model_request: 'model',

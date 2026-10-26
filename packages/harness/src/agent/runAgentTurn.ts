@@ -7,6 +7,7 @@
 // История диалога (conversation) живёт дольше хода: следующий вопрос той же сессии
 // дописывается в неё, и модель снова получает всё с начала — сама она ничего не помнит.
 
+import { buildArenaSystemPrompt } from '../arena/arenaSession.js';
 import type { ChatMessage, ReasoningEffort } from '../model/chatTypes.js';
 import type { AgentDependencies } from './agentDependencies.js';
 import { runAgentLoop } from './agentLoop.js';
@@ -86,6 +87,9 @@ async function prepareRetrievalQuery(
 
 // Модель не помнит прошлых запросов: всё, что она должна знать, харнесс кладёт в начало истории.
 function systemMessage(dependencies: AgentDependencies): ChatMessage {
+  if (dependencies.arena === true) {
+    return { role: 'system', content: buildArenaSystemPrompt(dependencies.tools.names()) };
+  }
   if (!dependencies.demoProject) {
     return {
       role: 'system',

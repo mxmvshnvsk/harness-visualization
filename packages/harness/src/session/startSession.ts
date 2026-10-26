@@ -5,7 +5,7 @@
 // startSession возвращает id сессии и поток событий сразу, а завершение — отдельно
 // (completion): серверу нужно ответить на запрос о запуске, не дожидаясь конца сессии.
 
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import type { AgentDependencies, ConfirmAction } from '../agent/agentDependencies.js';
 import type { RetrievalOptions } from '../agent/retrieveContext.js';
 import { runAgentTurn } from '../agent/runAgentTurn.js';
@@ -33,6 +33,7 @@ import type { SearchProvider } from '../search/searchProvider.js';
 import { createFileTools } from '../tools/fileTools/createFileTools.js';
 import { createWebTools, type WebToolsOptions } from '../tools/webTools/createWebTools.js';
 import { ToolRegistry } from '../tools/ToolRegistry.js';
+import type { Tool } from '../tools/toolTypes.js';
 import type { SessionMemory } from '../agent/agentDependencies.js';
 import { createMemoryTool } from '../memory/createMemoryTool.js';
 import { MemoryStore } from '../memory/MemoryStore.js';
@@ -51,6 +52,9 @@ import { runPipelineTurn, type PipelineOptions } from '../orchestration/runPipel
 import { runSuperagentTurn, type SuperagentOptions } from '../orchestration/runSuperagentTurn.js';
 import { runHybridTurn, type HybridOptions } from '../orchestration/runHybridTurn.js';
 import { startSessionRecording, type SessionRecording } from './sessionRecording.js';
+import { arenaRoot, describeArenaRun, type ArenaSessionInput } from '../arena/arenaSession.js';
+import { checkAcceptance } from '../arena/checkAcceptance.js';
+import { createRunTestsTool } from '../arena/runTestsTool.js';
 
 export interface SessionInput {
   loadedSettings: LoadedSettings;
@@ -78,6 +82,9 @@ export interface SessionInput {
   workspaceDirectory: string | null;
   // Ветка (этап 9): первый ход — не новый вопрос, а продолжение чужой записи с шага N.
   branch?: BranchStart | null;
+  // Прогон Код-арены (этап 10): рабочая папка — копия проекта, после хода — приёмка.
+  // Только вместе с demoProject: false — базы знаний у арены нет.
+  arena?: ArenaSessionInput | null;
 }
 
 // То, что зависит от того, кто запустил сессию.
@@ -176,6 +183,7 @@ async function runDialog(
     await (branch === null
       ? runTurn(question, dependencies)
       : runBranchTurn(branch, dependencies, options, conversation));
+    await acceptArenaTurn(input, dependencies);
     if (hooks.nextQuestion === undefined) {
       return;
     }
@@ -208,6 +216,7 @@ async function prepareSession(
     subagents: subagentsOf(input),
     orchestration: orchestrationOf(input),
     demoProject: input.demoProject,
+    arena: input.arena ? describeArenaRun(input.arena, input.projectRoot) : null,
   });
   const workspace = new Workspace(resolve(input.projectRoot, workspaceSetting));
   const skills = await prepareSkills(input, events);
@@ -235,7 +244,9 @@ async function prepareSession(
 // Песочница: у демо-проекта — из примеров «Кедр Софт», без него — своя, в начале пустая.
 async function prepareSessionWorkspace(input: SessionInput) {
   const { workspace } = input.loadedSettings.settings;
+  const arenaDirectory = input.arena ? relative(input.projectRoot, input.arena.directory) : null;
   const workspaceSetting =
+    arenaDirectory ??
     input.workspaceDirectory ??
     (input.demoProject ? workspace.directory : workspace.blankDirectory);
   const preparedWorkspace = await prepareWorkspace({
@@ -337,16 +348,7 @@ function createAgentDependencies(
     fetchImpl: resources.fetchImpl,
   });
   const tools = new ToolRegistry();
-  // Без демо-проекта — только песочница и веб: память, план и скиллы — часть демо.
-  const ownTools = input.demoProject
-    ? [
-        ...createFileTools(),
-        createMemoryTool(resources.memory.store),
-        createProgressTool(resources.progress),
-        ...createSkillTools(resources.skills),
-        ...webTools,
-      ]
-    : [...createFileTools(), ...webTools];
+  const ownTools = ownToolsOf(input, resources, webTools);
   for (const tool of [...ownTools, ...resources.mcpServers.tools]) {
     tools.register(tool);
   }
@@ -381,9 +383,31 @@ function createAgentDependencies(
     budget: budgetSettings(settings.context),
     parallelDelegation: settings.subagents.parallel,
     demoProject: input.demoProject,
+    arena: Boolean(input.arena),
   };
   registerDelegateTool(input, dependencies);
   return dependencies;
+}
+
+// Свои тулы харнесса. Без демо-проекта — только песочница и веб: память, план и скиллы —
+// часть демо. Арене (этап 10) веб не нужен: файлы проекта и, если не «вслепую», запуск тестов.
+function ownToolsOf(input: SessionInput, resources: SessionResources, webTools: Tool[]): Tool[] {
+  if (input.arena) {
+    const runTests = input.arena.runTests
+      ? [createRunTestsTool(input.loadedSettings.settings.arena)]
+      : [];
+    return [...createFileTools(), ...runTests];
+  }
+  if (!input.demoProject) {
+    return [...createFileTools(), ...webTools];
+  }
+  return [
+    ...createFileTools(),
+    createMemoryTool(resources.memory.store),
+    createProgressTool(resources.progress),
+    ...createSkillTools(resources.skills),
+    ...webTools,
+  ];
 }
 
 // Субагентам — тулы сессии, поэтому delegate_task регистрируется последним, и только если
@@ -485,6 +509,28 @@ function subagentsOf(input: SessionInput): { agents: string[]; parallel: boolean
   const agents = Object.keys(settings.agents);
   const enabled = input.subagents ?? settings.enabled;
   return enabled && agents.length > 0 ? { agents, parallel: settings.parallel } : null;
+}
+
+// Приёмка после хода (этап 10): агент ответил — харнесс сам гоняет видимые и скрытые тесты.
+// У свободного режима скрытых тестов нет: принимает пользователь.
+async function acceptArenaTurn(
+  input: SessionInput,
+  dependencies: AgentDependencies,
+): Promise<void> {
+  const task = input.arena?.task ?? null;
+  if (!input.arena || task === null) {
+    return;
+  }
+  const { arena } = input.loadedSettings.settings;
+  dependencies.events.emit(
+    await checkAcceptance({
+      arenaRoot: arenaRoot(input.projectRoot, arena),
+      task,
+      directory: input.arena.directory,
+      testFingerprints: input.arena.testFingerprints,
+      settings: arena,
+    }),
+  );
 }
 
 function budgetSettings(context: ContextSettings): BudgetSettings {

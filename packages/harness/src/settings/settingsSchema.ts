@@ -119,6 +119,18 @@ const workspaceSettingsSchema = z.object({
   blankDirectory: z.string().min(1).default('workspace-blank'),
 });
 
+// Код-арена (этап 10): заготовленные задачи и копии проектов, в которых работает агент.
+const arenaSettingsSchema = z.object({
+  // Проект и задачи — в репозитории.
+  directory: z.string().min(1).default('arena'),
+  // Копии проектов для прогонов — вне песочницы демо-проекта, чтобы их не видел агент
+  // обычных сессий.
+  workspaceDirectory: z.string().min(1).default('workspace-arena'),
+  testTimeoutSeconds: z.number().int().positive().default(30),
+  // Вывод тестов для модели обрезается: длинный stack trace съедает контекст.
+  outputMaxCharacters: z.number().int().positive().default(4000),
+});
+
 const webFetchSettingsSchema = z.object({
   requestTimeoutMs: z.number().int().positive(),
   // Больше этого страницу не скачиваем: огромные страницы не нужны модели и съедают память.
@@ -199,6 +211,9 @@ const permissionsSchema = z.object({
     network: permissionDecisionSchema,
     // Поручить задачу субагенту (этап 6c). В конфигах до 6c этого класса нет — allow.
     delegate: permissionDecisionSchema.default('allow'),
+    // Запустить код (этап 10): тесты Код-арены идут в Node с --permission, только в копии
+    // проекта. В конфигах до этапа 10 класса нет — allow.
+    execute: permissionDecisionSchema.default('allow'),
   }),
   // Решения для конкретных тулов — важнее классов действий.
   tools: z.record(z.string(), permissionDecisionSchema).default({}),
@@ -413,6 +428,12 @@ export const harnessSettingsSchema = z.object({
   }),
   prices: z.record(z.string(), modelPricesSchema).default({}),
   traces: tracesSettingsSchema,
+  arena: arenaSettingsSchema.default({
+    directory: 'arena',
+    workspaceDirectory: 'workspace-arena',
+    testTimeoutSeconds: 30,
+    outputMaxCharacters: 4000,
+  }),
 });
 
 export type HarnessSettings = z.infer<typeof harnessSettingsSchema>;
@@ -438,6 +459,7 @@ export type NetworkSettings = z.infer<typeof networkSettingsSchema>;
 export type NetworkRule = z.infer<typeof networkRuleSchema>;
 export type NetworkRoute = z.infer<typeof networkRouteSchema>;
 export type ServerSettings = z.infer<typeof serverSettingsSchema>;
+export type ArenaSettings = z.infer<typeof arenaSettingsSchema>;
 export type GroundingSettings = z.infer<typeof groundingSettingsSchema>;
 export type RetrievalSettings = z.infer<typeof retrievalSettingsSchema>;
 export type SkillsSettings = z.infer<typeof skillsSettingsSchema>;
