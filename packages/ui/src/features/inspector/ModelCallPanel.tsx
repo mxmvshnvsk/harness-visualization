@@ -11,6 +11,7 @@ import { explainCache, type CacheExplanation } from './explainCache';
 import type { Focus } from './focus';
 import styles from './Inspector.module.css';
 import { MessageList } from './MessageList';
+import { ReplyTokens } from '../tokens/ReplyTokens';
 import { HelpButton, Term } from '../../help/HelpLinks';
 
 interface ModelCallPanelProps {
@@ -133,11 +134,19 @@ function Reply({ call, onFocus }: Omit<ModelCallPanelProps, 'calls'>): ReactElem
       {reply.reasoningText !== null && reply.reasoningText !== '' && (
         <>
           <div className={styles.caption}>reasoning</div>
-          <pre className={styles.code}>{reply.reasoningText}</pre>
+          <ReplyTokens
+            reply={reply}
+            part="reasoning"
+            fallback={<pre className={styles.code}>{reply.reasoningText}</pre>}
+          />
         </>
       )}
       {reply.text !== null && reply.text !== '' && (
-        <div className={styles.answer}>{reply.text}</div>
+        <ReplyTokens
+          reply={reply}
+          part="content"
+          fallback={<div className={styles.answer}>{reply.text}</div>}
+        />
       )}
       {reply.toolCalls.map((toolCall) => (
         <button

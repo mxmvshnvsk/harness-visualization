@@ -97,16 +97,19 @@ export type ForkHandler = (position: number, token: string) => void;
 export function TokenExplorer({
   tokens,
   onFork,
+  stacked = false,
 }: {
   tokens: readonly TokenView[];
   onFork?: ForkHandler;
+  // В узкой колонке (инспектор, экран шагов): текст, под ним альтернативы.
+  stacked?: boolean;
 }): ReactElement {
   const firstFork = tokens.findIndex((token) => token.probability < FORK_THRESHOLD);
   const [picked, setPicked] = useState(Math.max(0, firstFork));
   const [colored, setColored] = useState(true);
   const token = tokens[picked];
   return (
-    <div className={styles.explorer}>
+    <div className={stacked ? styles.explorerStacked : styles.explorer}>
       <div className={styles.stack}>
         <div className={styles.answer} data-colored={colored}>
           {tokens.map((item, index) => (

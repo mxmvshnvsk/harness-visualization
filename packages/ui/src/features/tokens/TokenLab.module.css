@@ -331,3 +331,10 @@
   background: var(--accent-soft);
   outline: 1px solid var(--accent);
 }
+
+.explorerStacked {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}

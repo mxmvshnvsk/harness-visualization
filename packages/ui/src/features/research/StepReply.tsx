@@ -3,6 +3,7 @@
 import type { ReactElement } from 'react';
 import type { ResearchStep } from '../../projections/projectResearch';
 import { formatNumber, percent } from './StepsView';
+import { ReplyTokens } from '../tokens/ReplyTokens';
 import styles from './Research.module.css';
 
 export function StepReply({ step }: { step: ResearchStep }): ReactElement {
@@ -45,11 +46,21 @@ function ReplyText({ reply }: { reply: Response['reply'] }): ReactElement {
           <h3 className={styles.subTitle}>
             Рассуждение · {formatNumber(reply.usage.reasoningTokens)} ток.
           </h3>
-          <pre className={styles.text}>{reply.reasoningText}</pre>
+          <ReplyTokens
+            reply={reply}
+            part="reasoning"
+            fallback={<pre className={styles.text}>{reply.reasoningText}</pre>}
+          />
         </>
       )}
       <h3 className={styles.subTitle}>Текст ответа</h3>
-      <pre className={styles.text}>{reply.text ?? '— нет: модель только вызвала тулы'}</pre>
+      <ReplyTokens
+        reply={reply}
+        part="content"
+        fallback={
+          <pre className={styles.text}>{reply.text ?? '— нет: модель только вызвала тулы'}</pre>
+        }
+      />
     </div>
   );
 }
