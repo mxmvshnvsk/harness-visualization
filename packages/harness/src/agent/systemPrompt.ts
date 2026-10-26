@@ -40,12 +40,17 @@ const BLANK_INSTRUCTIONS = [
 ];
 
 // Про веб — только то, что есть: веб-поиск выключен без ключа, и звать его модели незачем.
-export function buildBlankSystemPrompt(now: Date, toolNames: readonly string[]): string {
+// skills — раздел своих скиллов из skills-custom/ (describeSkills); пустой — скиллов нет.
+export function buildBlankSystemPrompt(
+  now: Date,
+  toolNames: readonly string[],
+  skills: readonly string[] = [],
+): string {
   const web = [
     ...(toolNames.includes('web_search') ? ['Для сведений из интернета есть web_search.'] : []),
     ...(toolNames.includes('fetch_url') ? ['Прочитать страницу по адресу — fetch_url.'] : []),
   ];
-  return [...BLANK_INSTRUCTIONS, ...web, describeToday(now)].join('\n');
+  return [...BLANK_INSTRUCTIONS, ...web, ...skills, describeToday(now)].join('\n');
 }
 
 export function buildSystemPrompt(now: Date, parts: SystemPromptParts): string {

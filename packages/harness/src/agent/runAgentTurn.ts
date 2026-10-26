@@ -88,15 +88,31 @@ async function prepareRetrievalQuery(
 // Модель не помнит прошлых запросов: всё, что она должна знать, харнесс кладёт в начало истории.
 function systemMessage(dependencies: AgentDependencies): ChatMessage {
   if (dependencies.arena === 'task') {
-    return { role: 'system', content: buildArenaSystemPrompt(dependencies.tools.names()) };
+    return {
+      role: 'system',
+      content: buildArenaSystemPrompt(
+        dependencies.tools.names(),
+        describeSkills(dependencies.skills),
+      ),
+    };
   }
   if (dependencies.arena === 'free') {
-    return { role: 'system', content: buildFreeSystemPrompt(dependencies.tools.names()) };
+    return {
+      role: 'system',
+      content: buildFreeSystemPrompt(
+        dependencies.tools.names(),
+        describeSkills(dependencies.skills),
+      ),
+    };
   }
   if (!dependencies.demoProject) {
     return {
       role: 'system',
-      content: buildBlankSystemPrompt(new Date(), dependencies.tools.names()),
+      content: buildBlankSystemPrompt(
+        new Date(),
+        dependencies.tools.names(),
+        describeSkills(dependencies.skills),
+      ),
     };
   }
   return {

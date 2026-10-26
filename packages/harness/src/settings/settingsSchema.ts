@@ -295,6 +295,9 @@ const retrievalSettingsSchema = z.object({
 // always — инструкция в system prompt сразу, manual — только по команде «/имя» пользователя.
 const skillsSettingsSchema = z.object({
   directory: z.string().min(1).default('skills'),
+  // Свои скиллы пользователя: папка вне git, доступна во всех режимах — и без демо-проекта,
+  // и в Код-арене. Скиллы из skills/ — про «Кедр Софт», они только в демо-проекте.
+  customDirectory: z.string().min(1).default('skills-custom'),
   always: z.array(z.string().min(1)).default([]),
   manual: z.array(z.string().min(1)).default([]),
 });
@@ -416,7 +419,12 @@ export const harnessSettingsSchema = z.object({
     limit: 5,
   }),
   grounding: groundingSettingsSchema.default({ similarityThreshold: 0.87 }),
-  skills: skillsSettingsSchema.default({ directory: 'skills', always: [], manual: [] }),
+  skills: skillsSettingsSchema.default({
+    directory: 'skills',
+    customDirectory: 'skills-custom',
+    always: [],
+    manual: [],
+  }),
   subagents: subagentsSettingsSchema.default({ enabled: false, parallel: true, agents: {} }),
   orchestration: orchestrationSettingsSchema.default({
     hybrid: { maxTasks: 4 },

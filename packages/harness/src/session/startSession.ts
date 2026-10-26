@@ -44,7 +44,7 @@ import { createProgressTool } from '../progress/createProgressTool.js';
 import { ProgressTracker } from '../progress/ProgressTracker.js';
 import { createSkillTools } from '../skills/createSkillTools.js';
 import { createDelegateTool } from '../subagents/createDelegateTool.js';
-import { loadSkills } from '../skills/loadSkills.js';
+import { loadSkillCatalog } from '../skills/loadSkills.js';
 import { SkillLibrary } from '../skills/SkillLibrary.js';
 import { prepareWorkspace } from '../workspace/prepareWorkspace.js';
 import { Workspace } from '../workspace/Workspace.js';
@@ -262,22 +262,26 @@ async function prepareSessionWorkspace(input: SessionInput) {
 }
 
 // Каталог скиллов — событием skill_catalog; скиллы always загружаются сразу: их инструкции
-// будут в system prompt с первого запроса. Без демо-проекта скиллов нет: они про «Кедр Софт».
+// будут в system prompt с первого запроса. Без демо-проекта и в Код-арене — только свои скиллы
+// из skills-custom/: скиллы проекта про «Кедр Софт».
 async function prepareSkills(input: SessionInput, events: EventStream): Promise<SkillLibrary> {
-  if (!input.demoProject) {
-    return new SkillLibrary({ skills: [], problems: [] }, events);
-  }
   const settings = input.loadedSettings.settings.skills;
-  const catalog = await loadSkills(resolve(input.projectRoot, settings.directory), settings);
+  const catalog = await loadSkillCatalog(input.projectRoot, settings, input.demoProject);
+  // Без демо-проекта и без своих скиллов каталога нет вовсе — как до skills-custom.
+  if (!input.demoProject && catalog.skills.length === 0 && catalog.problems.length === 0) {
+    return new SkillLibrary(catalog, events);
+  }
   events.emit({
     type: 'skill_catalog',
     directory: settings.directory,
+    customDirectory: settings.customDirectory,
     skills: catalog.skills.map((skill) => ({
       name: skill.name,
       description: skill.description,
       mode: skill.mode,
       files: skill.files,
       instructionCharacters: skill.instructions.length,
+      origin: skill.origin,
     })),
     problems: catalog.problems,
   });
@@ -401,10 +405,11 @@ function ownToolsOf(input: SessionInput, resources: SessionResources, webTools: 
       ...createFileTools(),
       ...(input.arena.runTests ? [createRunTestsTool(arena)] : []),
       ...(input.arena.runNode ? [createRunNodeTool(arena)] : []),
+      ...createSkillTools(resources.skills),
     ];
   }
   if (!input.demoProject) {
-    return [...createFileTools(), ...webTools];
+    return [...createFileTools(), ...webTools, ...createSkillTools(resources.skills)];
   }
   return [
     ...createFileTools(),

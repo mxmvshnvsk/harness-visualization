@@ -36,6 +36,8 @@ export interface SkillsMemoryView {
   // null — трейс до этапа 6b: каталога нет.
   catalog: {
     directory: string;
+    // Папка своих скиллов; null — трейс до skills-custom.
+    customDirectory: string | null;
     skills: SkillSummary[];
     problems: { folder: string; message: string }[];
   } | null;
@@ -109,7 +111,12 @@ function collect(
 ): void {
   switch (event.type) {
     case 'skill_catalog':
-      view.catalog = { directory: event.directory, skills: event.skills, problems: event.problems };
+      view.catalog = {
+        directory: event.directory,
+        customDirectory: event.customDirectory ?? null,
+        skills: event.skills,
+        problems: event.problems,
+      };
       break;
     case 'skill_loaded':
       view.loads.push({ ...moment, name: event.name, trigger: event.trigger });

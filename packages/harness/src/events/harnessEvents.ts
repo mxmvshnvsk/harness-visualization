@@ -449,6 +449,8 @@ export interface SkillCatalogPayload {
   type: 'skill_catalog';
   // Папка скиллов от корня проекта.
   directory: string;
+  // Папка своих скиллов (skills-custom); нет поля — трейс до них.
+  customDirectory?: string;
   skills: SkillSummary[];
   // Папки, которые не прочитались как скилл, — с причиной.
   problems: SkillProblem[];
@@ -461,6 +463,8 @@ export interface SkillSummary {
   files: string[];
   // Размер инструкции, символов: сколько она займёт в prompt, если её загрузить.
   instructionCharacters: number;
+  // custom — свой скилл из skills-custom/; нет поля — скилл проекта.
+  origin?: 'project' | 'custom';
 }
 
 // Инструкция скилла попала в prompt: харнесс при старте, модель тулом load_skill или

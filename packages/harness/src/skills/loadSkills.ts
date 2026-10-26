@@ -7,7 +7,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 import type { SkillsSettings } from '../settings/settingsSchema.js';
 import { parseSkillFile } from './parseSkillFile.js';
-import type { Skill, SkillMode, SkillProblem } from './skillTypes.js';
+import type { Skill, SkillMode, SkillOrigin, SkillProblem } from './skillTypes.js';
 
 export interface SkillCatalog {
   skills: Skill[];
@@ -20,20 +20,49 @@ const MAX_DEPTH = 3;
 export async function loadSkills(
   directory: string,
   settings: SkillsSettings,
+  origin: SkillOrigin = 'project',
 ): Promise<SkillCatalog> {
   const folders = await listFolders(directory);
   const skills: Skill[] = [];
   const problems: SkillProblem[] = [];
   for (const folder of folders) {
     try {
-      skills.push(await loadSkill(join(directory, folder), folder, settings));
+      skills.push({ ...(await loadSkill(join(directory, folder), folder, settings)), origin });
     } catch (error) {
       problems.push({ folder, message: error instanceof Error ? error.message : String(error) });
     }
   }
+  return { skills, problems };
+}
+
+// Каталог сессии: скиллы проекта (только в демо-проекте — они про «Кедр Софт») и свои из
+// skills-custom/ (всегда). Свой скилл с именем скилла проекта не грузится: имя занято.
+export async function loadSkillCatalog(
+  projectRoot: string,
+  settings: SkillsSettings,
+  withProjectSkills: boolean,
+): Promise<SkillCatalog> {
+  const project = withProjectSkills
+    ? await loadSkills(join(projectRoot, settings.directory), settings, 'project')
+    : { skills: [], problems: [] };
+  const custom = await loadSkills(join(projectRoot, settings.customDirectory), settings, 'custom');
+  const taken = new Set(project.skills.map((skill) => skill.name));
+  const clashes = custom.skills.filter((skill) => taken.has(skill.name));
+  const skills = [...project.skills, ...custom.skills.filter((skill) => !taken.has(skill.name))];
+  const problems = [
+    ...project.problems,
+    ...custom.problems.map((problem) => ({
+      ...problem,
+      folder: `${settings.customDirectory}/${problem.folder}`,
+    })),
+    ...clashes.map((skill) => ({
+      folder: `${settings.customDirectory}/${skill.name}`,
+      message: `имя занято скиллом проекта из ${settings.directory}/ — переименуйте папку и name`,
+    })),
+  ];
   const known = new Set(skills.map((skill) => skill.name));
   for (const name of [...settings.always, ...settings.manual]) {
-    if (!known.has(name)) {
+    if (!known.has(name) && withProjectSkills) {
       problems.push({ folder: name, message: 'скилл указан в настройках skills, но не найден' });
     }
   }
@@ -58,7 +87,7 @@ async function loadSkill(
   folderPath: string,
   folder: string,
   settings: SkillsSettings,
-): Promise<Skill> {
+): Promise<Omit<Skill, 'origin'>> {
   let text: string;
   try {
     text = await readFile(join(folderPath, 'SKILL.md'), 'utf8');

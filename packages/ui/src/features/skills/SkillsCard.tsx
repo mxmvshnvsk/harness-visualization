@@ -34,13 +34,14 @@ export function SkillsCard({ view, shown, ended, onSeek }: CardProps): ReactElem
   if (view.catalog === null) {
     return null;
   }
-  const { skills, problems, directory } = view.catalog;
+  const { skills, problems, directory, customDirectory } = view.catalog;
   return (
     <section className={styles.card} aria-label="Скиллы">
       <header className={styles.head}>
         <h2 className={styles.title}>Скиллы</h2>
         <span className={styles.meta}>
-          {directory}/ · {skills.length} в каталоге
+          {customDirectory === null ? `${directory}/` : `${directory}/ и ${customDirectory}/`} ·{' '}
+          {skills.length} в каталоге
         </span>
       </header>
       {skills.length === 0 && <p className={styles.muted}>Скиллов нет.</p>}
@@ -77,6 +78,7 @@ function SkillRow({ skill, load, ended, onSeek }: SkillRowProps): ReactElement {
       <div className={styles.skillHead}>
         <span className={styles.mono}>{skill.name}</span>
         <span className={styles.badge}>{MODES[skill.mode]}</span>
+        {skill.origin === 'custom' && <span className={styles.badge}>свой</span>}
         <SkillStatus skill={skill} load={load} ended={ended} onSeek={onSeek} />
       </div>
       <p className={styles.description}>{skill.description}</p>

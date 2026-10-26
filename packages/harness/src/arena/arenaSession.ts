@@ -92,7 +92,10 @@ export function describeArenaRun(arena: ArenaSessionInput, projectRoot: string):
 
 // System prompt арены: ни «Кедр Софт» как компании ассистента, ни базы знаний — проект
 // и задача. О скрытых тестах модель не знает: как разработчик, которому не показали приёмку.
-export function buildArenaSystemPrompt(toolNames: readonly string[]): string {
+export function buildArenaSystemPrompt(
+  toolNames: readonly string[],
+  skills: readonly string[] = [],
+): string {
   return [
     'Ты — разработчик. Отвечай на языке пользователя, кратко.',
     'Рабочая папка — копия проекта на JavaScript: Node, без зависимостей, только встроенные модули.',
@@ -107,11 +110,15 @@ export function buildArenaSystemPrompt(toolNames: readonly string[]): string {
         ]
       : []),
     'Когда закончишь, кратко скажи, что сделал.',
+    ...skills,
   ].join('\n');
 }
 
 // System prompt свободного режима: проект пользователя, задача — в его вопросах.
-export function buildFreeSystemPrompt(toolNames: readonly string[]): string {
+export function buildFreeSystemPrompt(
+  toolNames: readonly string[],
+  skills: readonly string[] = [],
+): string {
   return [
     'Ты — разработчик. Отвечай на языке пользователя, кратко.',
     'Рабочая папка — проект пользователя на JavaScript (Node). Задачу ставит пользователь в диалоге, проект живёт между сессиями.',
@@ -124,6 +131,7 @@ export function buildFreeSystemPrompt(toolNames: readonly string[]): string {
         ]
       : []),
     'Пути — от корня рабочей папки. Когда закончишь, кратко скажи, что сделал и как это проверить.',
+    ...skills,
   ].join('\n');
 }
 

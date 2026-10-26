@@ -159,3 +159,5 @@ vite.config.ts.timestamp-*
 /workspace-blank/
 # Копии проектов Код-арены (этап 10): в них работает агент
 /workspace-arena/
+# Свои скиллы пользователя (этап 10): пример — examples/skills-custom
+/skills-custom/

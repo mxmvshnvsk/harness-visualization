@@ -21,7 +21,11 @@ export interface Skill {
   files: string[];
   // Абсолютный путь к папке скилла.
   directory: string;
+  // project — из skills/ репозитория (про «Кедр Софт»); custom — свой, из skills-custom/.
+  origin: SkillOrigin;
 }
+
+export type SkillOrigin = 'project' | 'custom';
 
 // Папка, которую харнесс не смог прочитать как скилл, и почему.
 export interface SkillProblem {
