@@ -10,8 +10,13 @@
 //     ответ ещё пишется, поэтому результат бывает раньше последнего блока своего ответа.
 //   - запись system compact_boundary и следующая за ней сводка (isCompactSummary) —
 //     компакция истории, как наша history_compacted.
-// Остальное (служебные записи интерфейса, субагенты isSidechain) пропускается
-// и перечисляется в importedFrom.missing — честно, а не пустотой.
+//   - субагенты: их записи помечены isSidechain и agentId. В Claude Code 2.1 они лежат отдельно,
+//     в <id сессии>/subagents/agent-<agentId>.jsonl, — их добавляют к главной записи (строки
+//     просто идут следом). Связь с поручением — toolUseResult.agentId у результата тула Agent
+//     (раньше — Task). Становятся нашими subagent_started, событиями с agentId
+//     и subagent_finished — как у субагентов нашего харнесса (этап 6c).
+// Остальное (служебные записи интерфейса) пропускается и перечисляется
+// в importedFrom.missing — честно, а не пустотой.
 
 import type { HarnessEvent, HarnessEventPayload, ImportedFrom } from '../events/harnessEvents.js';
 import type { ModelReply, TokenUsage, ToolCall } from '../model/chatTypes.js';
@@ -111,6 +116,12 @@ class EventBuilder {
   readonly events: HarnessEvent[] = [];
   private readonly sessionId: string;
   private readonly main: Entry[];
+  // Записи субагентов по agentId.
+  private readonly subagents = new Map<string, Entry[]>();
+  // Субагенты, чьё поручение нашлось в главной записи.
+  private readonly linked = new Set<string>();
+  // Чьи события сейчас пишем: null — главного агента.
+  private agentId: string | null = null;
   private readonly groups = new Map<string, Entry[]>();
   private readonly emitted = new Set<string>();
   private readonly toolCalls = new Map<string, { name: string; input: unknown }>();
@@ -130,12 +141,11 @@ class EventBuilder {
     );
     this.main = entries.filter((entry) => entry.isSidechain !== true);
     this.cwd = this.main.find((entry) => typeof entry.cwd === 'string')?.cwd ?? null;
-    for (const entry of this.main) {
-      const id = entry.type === 'assistant' ? entry.message?.id : undefined;
-      if (id !== undefined) {
-        this.groups.set(id, [...(this.groups.get(id) ?? []), entry]);
-      }
-    }
+    const sidechain = entries.filter((entry) => entry.isSidechain === true);
+    groupInto(this.subagents, sidechain, (entry) => entry.agentId);
+    groupInto(this.groups, entries, (entry) =>
+      entry.type === 'assistant' ? entry.message?.id : undefined,
+    );
   }
 
   convert(): void {
@@ -143,7 +153,19 @@ class EventBuilder {
     const startedAt = timeOf(this.main.find((entry) => isDialogEntry(entry)));
     this.time = startedAt;
     this.emit(this.time, this.sessionStarted());
-    for (const entry of this.main) {
+    this.convertEntries(this.main);
+    this.emit(this.time, {
+      type: 'session_finished',
+      durationMs: this.time - startedAt,
+      modelRequests: this.requests,
+      usage: this.usage,
+      modelCost: null,
+      toolCosts: [],
+    });
+  }
+
+  private convertEntries(entries: readonly Entry[]): void {
+    for (const entry of entries) {
       if (entry.type === 'user') {
         this.user(entry);
       } else if (entry.type === 'assistant') {
@@ -154,13 +176,44 @@ class EventBuilder {
       }
     }
     this.flushBoundary('');
+  }
+
+  // Результат тула Agent с agentId, чья запись открыта, — сначала показываем работу субагента.
+  private subagentOf(block: Block, entry: Entry | null): void {
+    const result = asFields(entry?.toolUseResult);
+    const agentId = stringOf(result?.agentId) ?? '';
+    if (result !== null && this.subagents.has(agentId) && !this.linked.has(agentId)) {
+      this.subagent(agentId, block.tool_use_id ?? '', result);
+    }
+  }
+
+  // Субагент — между вызовом тула Agent и его результатом: его события с agentId, его шаги
+  // считаются заново, вопрос — это поручение (оно уже в subagent_started).
+  private subagent(agentId: string, toolCallId: string, result: Fields): void {
+    const input = asFields(this.toolCalls.get(toolCallId)?.input) ?? {};
+    const agent = stringOf(input.subagent_type ?? result.agentType) ?? 'subagent';
+    this.linked.add(agentId);
     this.emit(this.time, {
-      type: 'session_finished',
-      durationMs: this.time - startedAt,
-      modelRequests: this.requests,
-      usage: this.usage,
-      modelCost: null,
-      toolCosts: [],
+      type: 'subagent_started',
+      subagentId: agentId,
+      agent,
+      parentToolCallId: toolCallId,
+      task: stringOf(input.prompt) ?? '',
+      // Какие тулы и какой лимит шагов Claude Code дал субагенту, в записи нет.
+      toolNames: [],
+      maxIterations: 0,
+      reasoningEffort: 'high',
+    });
+    const saved = { iteration: this.iteration, requests: this.requests, usage: { ...this.usage } };
+    this.agentId = agentId;
+    this.iteration = 0;
+    this.convertEntries(this.subagents.get(agentId) ?? []);
+    this.agentId = null;
+    this.iteration = saved.iteration;
+    this.emit(this.time, {
+      ...subagentFinished(agentId, agent, toolCallId, result),
+      modelRequests: this.requests - saved.requests,
+      usage: subtractUsage(this.usage, saved.usage),
     });
   }
 
@@ -183,45 +236,85 @@ class EventBuilder {
   }
 
   private importedFrom(): ImportedFrom {
-    const sidechain = this.entries.filter((entry) => entry.isSidechain === true).length;
     const missing = [
       'system prompt и описания тулов — в записи их нет; во вкладке «Контекст» это остаток от настоящего input, история собрана заново',
       'решения политики разрешений и сетевые маршруты — Claude Code их не пишет',
       'цена: тарифы Anthropic в адаптере не заданы',
     ];
-    if (sidechain > 0) {
-      missing.push(`субагенты: ${String(sidechain)} записей пропущено`);
-    }
+    missing.push(...this.missingSubagents());
     if (this.entries.some((entry) => entry.subtype === 'compact_boundary')) {
       missing.push(
         'компакция: запрос, которым модель писала сводку, — в записи только сама сводка',
       );
     }
     const version = this.entries.find((entry) => entry.version !== undefined)?.version ?? null;
-    return { harness: 'Claude Code', version, missing };
+    const absent = this.delegatedWithoutRecord();
+    return {
+      harness: 'Claude Code',
+      version,
+      missing,
+      ...(absent > 0 ? { subagentsWithoutRecord: absent } : {}),
+    };
+  }
+
+  // Субагенты, которых нельзя показать: их записи не открыли вместе с главной или к ним
+  // не нашлось поручения (старые версии писали субагентов без agentId).
+  private missingSubagents(): string[] {
+    const missing: string[] = [];
+    const delegated = new Set(this.delegatedAgentIds());
+    const absent = this.delegatedWithoutRecord();
+    if (absent > 0) {
+      missing.push(
+        `субагенты: у ${String(absent)} записи лежат отдельно, в папке <id сессии>/subagents/, — их можно добавить`,
+      );
+    }
+    const orphan = this.entries.filter(
+      (entry) => entry.isSidechain === true && !delegated.has(entry.agentId ?? ''),
+    ).length;
+    if (orphan > 0) {
+      missing.push(`субагенты: ${String(orphan)} записей без поручения — пропущены`);
+    }
+    if (delegated.size > absent) {
+      missing.push('субагенты: какие тулы и лимит шагов им дали — в записи нет');
+    }
+    return missing;
+  }
+
+  // agentId всех поручений тулом Agent в главной записи.
+  private delegatedAgentIds(): string[] {
+    return this.main.flatMap((entry) => {
+      const agentId = stringOf(asFields(entry.toolUseResult)?.agentId);
+      return agentId === null ? [] : [agentId];
+    });
+  }
+
+  private delegatedWithoutRecord(): number {
+    return this.delegatedAgentIds().filter((agentId) => !this.subagents.has(agentId)).length;
   }
 
   private user(entry: Entry): void {
     const content = entry.message?.content ?? '';
     const at = this.at(entry);
     if (Array.isArray(content) && content.some((block) => block.type === 'tool_result')) {
-      this.toolResults(entry, content, at);
+      this.toolResults(entry, content);
       return;
     }
-    const text = typeof content === 'string' ? content : textOf(content);
+    const text = withoutReminders(typeof content === 'string' ? content : textOf(content));
     if (entry.isCompactSummary === true) {
       this.flushBoundary(text);
-    } else if (entry.isMeta !== true && text.trim() !== '') {
+    } else if (entry.isMeta !== true && text.trim() !== '' && this.agentId === null) {
       this.iteration = 0;
       this.emit(at, { type: 'user_message', text });
     }
   }
 
-  private toolResults(entry: Entry, content: readonly Block[], at: number): void {
+  private toolResults(entry: Entry, content: readonly Block[]): void {
     const results = content.filter((item) => item.type === 'tool_result');
     for (const block of results) {
       // toolUseResult один на запись — относится к результату, только если он один.
-      this.toolResult(block, at, results.length === 1 ? entry : null);
+      const own = results.length === 1 ? entry : null;
+      this.subagentOf(block, own);
+      this.toolResult(block, this.at(own ?? entry), own);
     }
   }
 
@@ -316,6 +409,7 @@ class EventBuilder {
   private emit(at: number, payload: HarnessEventPayload): void {
     this.events.push({
       ...payload,
+      ...(this.agentId === null ? {} : { agentId: this.agentId }),
       sequence: this.events.length + 1,
       sessionId: this.sessionId,
       timestamp: new Date(at).toISOString(),
@@ -435,4 +529,72 @@ function addUsage(total: TokenUsage, usage: TokenUsage): void {
   total.inputCacheMissTokens += usage.inputCacheMissTokens;
   total.outputTokens += usage.outputTokens;
   total.reasoningTokens += usage.reasoningTokens;
+}
+
+type Fields = Record<string, unknown>;
+
+function asFields(value: unknown): Fields | null {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Fields)
+    : null;
+}
+
+function stringOf(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function subtractUsage(total: TokenUsage, before: TokenUsage): TokenUsage {
+  return {
+    inputTokens: total.inputTokens - before.inputTokens,
+    inputCacheHitTokens: total.inputCacheHitTokens - before.inputCacheHitTokens,
+    inputCacheMissTokens: total.inputCacheMissTokens - before.inputCacheMissTokens,
+    outputTokens: total.outputTokens - before.outputTokens,
+    reasoningTokens: total.reasoningTokens - before.reasoningTokens,
+  };
+}
+
+// Итог субагента из toolUseResult тула Agent: статус, отчёт, время работы.
+function subagentFinished(
+  agentId: string,
+  agent: string,
+  toolCallId: string,
+  result: Fields,
+): Extract<HarnessEventPayload, { type: 'subagent_finished' }> {
+  const done = result.status === 'completed';
+  const report = stringOf(asFields(result.handbackReport)?.text) ?? textOf(result.content);
+  return {
+    type: 'subagent_finished',
+    subagentId: agentId,
+    agent,
+    parentToolCallId: toolCallId,
+    status: done ? 'done' : 'failed',
+    report: report === '' ? null : report,
+    errorMessage: done ? null : `статус в записи: ${String(result.status)}`,
+    durationMs: typeof result.totalDurationMs === 'number' ? result.totalDurationMs : 0,
+    modelRequests: 0,
+    usage: emptyUsage(),
+    modelCost: null,
+  };
+}
+
+function groupInto(
+  groups: Map<string, Entry[]>,
+  entries: readonly Entry[],
+  keyOf: (entry: Entry) => string | undefined,
+): void {
+  for (const entry of entries) {
+    const key = keyOf(entry);
+    if (key !== undefined && key !== '') {
+      groups.set(key, [...(groups.get(key) ?? []), entry]);
+    }
+  }
+}
+
+// Claude Code дописывает в сообщение пользователя служебные вставки <system-reminder> (дата,
+// контекст). Модель их видела, но вопросом они не являются: в вопросе их убираем, их токены
+// остаются в восстановленном остатке «Контекста».
+const REMINDER = /<system-reminder>[\s\S]*?<\/system-reminder>\s*/g;
+
+function withoutReminders(text: string): string {
+  return text.replace(REMINDER, '').trim();
 }

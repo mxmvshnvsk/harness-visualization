@@ -94,6 +94,9 @@ export interface ImportedFrom {
   version: string | null;
   // Чего в чужой записи нет или что адаптер пропустил: интерфейс показывает это, а не пустоту.
   missing: string[];
+  // Claude Code 2.1: сколько субагентов поручено, а их записей (subagents/agent-<id>.jsonl)
+  // среди открытых файлов нет — интерфейс предложит их добавить.
+  subagentsWithoutRecord?: number;
 }
 
 export interface WorkspacePreparedPayload {

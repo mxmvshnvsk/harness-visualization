@@ -16,31 +16,44 @@ const CHARS_PER_TOKEN = 3.24;
 
 type WireMessage = Record<string, unknown>;
 
+const MAIN = '';
+
 export function reconstructRequests(events: HarnessEvent[]): HarnessEvent[] {
-  let history: WireMessage[] = [];
-  const pending = new Map<string, Extract<HarnessEvent, { type: 'model_request' }>>();
+  // История у каждого агента своя: у субагента она начинается с поручения.
+  const state: State = { histories: new Map([[MAIN, []]]), pending: new Map() };
   for (const event of events) {
-    if (event.agentId !== undefined) {
-      continue;
-    }
-    if (event.type === 'user_message') {
-      history.push({ role: 'user', content: event.text });
-    } else if (event.type === 'history_compacted') {
-      history = [{ role: 'user', content: event.summary }];
-    } else if (event.type === 'model_request' && event.purpose === 'agentStep') {
-      event.body = { messages: [...history] };
-      pending.set(event.requestId, event);
-    } else if (event.type === 'model_response') {
-      const request = pending.get(event.requestId);
-      if (request !== undefined) {
-        request.budget = budgetOf(request.body, event.reply.usage.inputTokens);
-      }
-      history.push(assistantMessage(event.reply));
-    } else if (event.type === 'tool_result') {
-      history.push({ role: 'tool', tool_call_id: event.toolCallId, content: event.content });
-    }
+    const key = event.agentId ?? MAIN;
+    const history = state.histories.get(key) ?? [];
+    state.histories.set(key, history);
+    apply(state, key, history, event);
   }
   return events;
+}
+
+interface State {
+  histories: Map<string, WireMessage[]>;
+  pending: Map<string, Extract<HarnessEvent, { type: 'model_request' }>>;
+}
+
+function apply(state: State, key: string, history: WireMessage[], event: HarnessEvent): void {
+  if (event.type === 'subagent_started') {
+    state.histories.set(event.subagentId, [{ role: 'user', content: event.task }]);
+  } else if (event.type === 'user_message') {
+    history.push({ role: 'user', content: event.text });
+  } else if (event.type === 'history_compacted') {
+    state.histories.set(key, [{ role: 'user', content: event.summary }]);
+  } else if (event.type === 'model_request' && event.purpose === 'agentStep') {
+    event.body = { messages: [...history] };
+    state.pending.set(event.requestId, event);
+  } else if (event.type === 'model_response') {
+    const request = state.pending.get(event.requestId);
+    if (request !== undefined) {
+      request.budget = budgetOf(request.body, event.reply.usage.inputTokens);
+    }
+    history.push(assistantMessage(event.reply));
+  } else if (event.type === 'tool_result') {
+    history.push({ role: 'tool', tool_call_id: event.toolCallId, content: event.content });
+  }
 }
 
 function assistantMessage(

@@ -1,6 +1,7 @@
 // Импорт записи чужого харнесса (этап 9.4):
 //   POST /api/traces/import  { format: 'auto' | 'claude-code' | 'opencode', text }
 //                            — перевести и сохранить в traces/; auto — формат по содержимому.
+//                            Записи субагентов Claude Code — строками следом за главной.
 // Запись передаётся текстом из браузера (выбор файла), сервер переводит её адаптером
 // харнесса, маскирует ключи и домашнюю папку и отвечает именем нового трейса.
 
@@ -20,6 +21,8 @@ const IMPORT_BODY_LIMIT = 200 * 1024 * 1024;
 export interface ImportTraceResponse {
   file: string;
   eventCount: number;
+  // Субагенты Claude Code, чьих записей не прислали (они в отдельных файлах).
+  subagentsWithoutRecord: number;
 }
 
 const importRequestSchema = z.object({
@@ -38,7 +41,13 @@ export function registerImportRoutes(app: FastifyInstance, tracesDirectory: stri
       const resolved = format === 'auto' ? detectImportFormat(text) : format;
       const events = convertImported(text, resolved);
       const filePath = await writeImportedTrace(tracesDirectory, events, IMPORT_PREFIXES[resolved]);
-      const response: ImportTraceResponse = { file: basename(filePath), eventCount: events.length };
+      const started = events[0];
+      const imported = started?.type === 'session_started' ? started.importedFrom : null;
+      const response: ImportTraceResponse = {
+        file: basename(filePath),
+        eventCount: events.length,
+        subagentsWithoutRecord: imported?.subagentsWithoutRecord ?? 0,
+      };
       return await reply.code(201).send(response);
     } catch (error) {
       return reply
