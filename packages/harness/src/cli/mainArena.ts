@@ -13,7 +13,8 @@
 //   pnpm arena --verify                         — у каждой задачи заготовка не проходит
 //                                                 приёмку, а эталонное решение проходит
 
-import { rm } from 'node:fs/promises';
+import { access, rm } from 'node:fs/promises';
+import { join } from 'node:path';
 import { parseArgs, styleText } from 'node:util';
 import { listArenaTasks, readArenaTask } from '../arena/arenaTasks.js';
 import { arenaRoot, prepareArenaRun } from '../arena/arenaSession.js';
@@ -215,13 +216,44 @@ async function verifyTasks(
   for (const task of tasks) {
     const blank = await acceptanceOf(settings, projectRoot, task.id, false);
     const solved = await acceptanceOf(settings, projectRoot, task.id, true);
-    const good = !blank && solved;
+    const missing = await missingReferences(settings, projectRoot, task.id);
+    const good = !blank && solved && missing.length === 0;
     allGood &&= good;
     console.log(
-      `${good ? styleText('green', '✓') : styleText('red', '✗')} ${task.id}: заготовка ${blank ? 'проходит (плохо)' : 'не проходит'}, эталон ${solved ? 'проходит' : 'не проходит (плохо)'}`,
+      `${good ? styleText('green', '✓') : styleText('red', '✗')} ${task.id}: заготовка ${blank ? 'проходит (плохо)' : 'не проходит'}, эталон ${solved ? 'проходит' : 'не проходит (плохо)'}${missing.length === 0 ? '' : `; в копии нет файлов из TASK.md: ${missing.join(', ')} (плохо)`}`,
     );
   }
   return allGood;
+}
+
+// Файлы, которые TASK.md называет в обратных кавычках (`docs/regulations/sickLeave.md`), должны
+// быть в копии: в первом прогоне capability-задач 26.10.2026 регламента о больничном в копии
+// не было — агенты искали его, писали свой, и провал был задачи, а не агента.
+async function missingReferences(
+  settings: ArenaSettings,
+  projectRoot: string,
+  taskId: string,
+): Promise<string[]> {
+  const run = await prepareArenaRun({ projectRoot, settings, taskId, runTests: true });
+  const text = run.task?.text ?? '';
+  const paths = [...text.matchAll(/`([\w.-]+(?:\/[\w.-]+)+\.\w+)`/g)].map(
+    (match) => match[1] ?? '',
+  );
+  const missing: string[] = [];
+  for (const path of new Set(paths)) {
+    if (!(await exists(join(run.directory, path)))) {
+      missing.push(path);
+    }
+  }
+  await rm(run.directory, { recursive: true, force: true });
+  return missing;
+}
+
+async function exists(path: string): Promise<boolean> {
+  return access(path).then(
+    () => true,
+    () => false,
+  );
 }
 
 async function acceptanceOf(

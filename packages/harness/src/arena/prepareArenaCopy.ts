@@ -8,7 +8,7 @@ import { join, relative, sep } from 'node:path';
 import { ARENA_PROJECT, tasksDirectory } from './arenaTasks.js';
 
 // Регламенты, на которые ссылается код проекта, — из базы знаний «Кедр Софт».
-const REGULATIONS = ['vacation', 'businessTrips', 'expenses'];
+const REGULATIONS = ['vacation', 'businessTrips', 'expenses', 'sickLeave'];
 const REGULATIONS_SOURCE = join('packages', 'mcp-server', 'data', 'regulations');
 
 export interface ArenaCopyRequest {
