@@ -413,6 +413,14 @@ function describeModelRequest(event: EventOfType<'model_request'>): string[] {
       ...describeBudget(event.budget),
     ];
   }
+  if (event.purpose === 'tokenLab') {
+    return [
+      styleText(
+        'cyan',
+        `Харнесс → модель (лаборатория «Выбор токена»: logprobs, без тулов): ${target}`,
+      ),
+    ];
+  }
   if (event.purpose === 'evalJudge') {
     return [styleText('cyan', `Харнесс → модель (судья evals: ответ против рубрики): ${target}`)];
   }

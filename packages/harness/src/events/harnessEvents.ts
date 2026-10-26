@@ -66,6 +66,16 @@ export interface SessionStartedPayload {
   importedFrom?: ImportedFrom | null;
   // Прогон Код-арены (этап 10); нет поля — обычная сессия.
   arena?: ArenaRun | null;
+  // Прогон лаборатории «Выбор токена» (этап 11); нет поля — обычная сессия.
+  tokenLab?: TokenLabRun | null;
+}
+
+// Лаборатория «Выбор токена» (этап 11): один вопрос, по запросу на каждую температуру,
+// с вероятностями токенов — без тулов и без базы знаний.
+export interface TokenLabRun {
+  topLogprobs: number;
+  // Температуры по порядку запросов; первая — 1, от неё лаборатория пересчитывает остальные.
+  temperatures: number[];
 }
 
 // Прогон Код-арены (этап 10): задача, копия проекта и чем ограничен запуск кода.
@@ -285,7 +295,10 @@ export type ModelRequestPurpose =
   | 'groundingJudge'
   | 'compaction'
   // Судья evals (этап 8e): ответ агента против рубрики задачи.
-  | 'evalJudge';
+  | 'evalJudge'
+  // Лаборатория «Выбор токена» (этап 11): тот же вопрос с вероятностями токенов при разной
+  // температуре.
+  | 'tokenLab';
 
 export interface ModelRequestPayload {
   type: 'model_request';

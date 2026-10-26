@@ -145,6 +145,7 @@ function describeRequest(event: HarnessEvent): string {
     case 'queryRewrite':
     case 'groundingJudge':
     case 'evalJudge':
+    case 'tokenLab':
       return 'служебный запрос к модели';
   }
 }

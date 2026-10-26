@@ -5,8 +5,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type LabName = 'rag' | 'mcp' | 'evals' | 'arena';
-const LABS: readonly LabName[] = ['rag', 'mcp', 'evals', 'arena'];
+export type LabName = 'rag' | 'mcp' | 'evals' | 'arena' | 'tokens';
+const LABS: readonly LabName[] = ['rag', 'mcp', 'evals', 'arena', 'tokens'];
 
 // Открытый поток событий: живая сессия или записанный трейс.
 export type OpenedSelection =

@@ -20,6 +20,9 @@ import type {
   FreeRunRequest,
   ArenaTasksResponse,
   SessionOptionsResponse,
+  TokenLabResponse,
+  TokenLabRunRequest,
+  TokenLabRunResponse,
 } from '@harness-visualization/server';
 
 export async function listSessions(): Promise<SessionSummary[]> {
@@ -117,6 +120,18 @@ export async function getEvals(): Promise<EvalsResponse> {
 
 export async function getEvalReport(file: string): Promise<EvalReport> {
   return getJson(`/api/evals/reports/${encodeURIComponent(file)}`);
+}
+
+export async function getTokenLab(): Promise<TokenLabResponse> {
+  return getJson('/api/token-lab');
+}
+
+export async function getTokenLabRun(file: string): Promise<TokenLabRunResponse> {
+  return getJson(`/api/token-lab/runs/${encodeURIComponent(file)}`);
+}
+
+export async function startTokenLabRun(request: TokenLabRunRequest): Promise<TokenLabRunResponse> {
+  return postJson<TokenLabRunResponse>('/api/token-lab/runs', request);
 }
 
 export async function getMcpCourse(): Promise<McpCourseResponse> {

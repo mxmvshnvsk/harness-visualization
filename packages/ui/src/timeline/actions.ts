@@ -800,6 +800,14 @@ function describeModelRequest(event: EventOfType<'model_request'>): ExchangeStar
         what: 'Судья evals сверяет ответ с рубрикой задачи',
         detail: 'служебный запрос харнесса, не шаг агента',
       };
+    case 'tokenLab':
+      return {
+        ...base,
+        group: 'model',
+        out: 'logprobs',
+        what: 'Модель отвечает и отдаёт вероятности токенов',
+        detail: 'запрос лаборатории «Выбор токена»: без тулов, с logprobs и заданной температурой',
+      };
     case 'compaction':
       // Сводку заказывает часть «Контекст и prompt» — через тот же клиент модели, что у цикла.
       return {

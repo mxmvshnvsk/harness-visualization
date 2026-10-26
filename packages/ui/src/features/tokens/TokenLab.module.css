@@ -1,0 +1,304 @@
+/* Лаборатория «Выбор токена» (этап 11). Уверенность — один оттенок акцента: гуще — модель
+   сомневалась сильнее (--doubt от 0 до 90 — доля акцента в фоне токена). */
+.muted {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.error {
+  margin: 0;
+  color: var(--error);
+}
+
+.mono {
+  font: 12.5px var(--font-mono);
+}
+
+.note {
+  margin: 0;
+  max-width: 76ch;
+  padding: 12px 14px;
+  border-radius: var(--radius-inner);
+  background: var(--accent-soft);
+  font-size: 14px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.subTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.preset,
+.run {
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.preset[aria-pressed='true'],
+.run[aria-current='true'] {
+  border-color: var(--selected);
+  background: var(--selected);
+  color: var(--selected-text);
+}
+
+.runs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.question {
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  resize: vertical;
+}
+
+.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.explorer {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+@media (max-width: 860px) {
+  .explorer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.answer {
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  background: var(--raised);
+  font-size: 16px;
+  line-height: 2.1;
+  overflow-wrap: anywhere;
+}
+
+.token {
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  white-space: pre-wrap;
+  cursor: pointer;
+}
+
+.answer[data-colored='true'] .token {
+  background: color-mix(in srgb, var(--accent) calc(var(--doubt) * 1%), transparent);
+}
+
+.token[aria-pressed='true'] {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.token:focus-visible {
+  outline: 2px solid var(--accent);
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.bars li {
+  display: grid;
+  grid-template-columns: minmax(0, 9em) minmax(0, 1fr) 5em;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.bars code {
+  overflow: hidden;
+  font: 12.5px var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: pre;
+}
+
+.bars li[data-chosen='true'] code {
+  font-weight: 600;
+}
+
+.bars li > span:last-child {
+  text-align: right;
+  color: var(--muted);
+}
+
+.bar {
+  position: relative;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 0 6px 6px 0;
+  background: var(--accent-soft);
+}
+
+.bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 0 6px 6px 0;
+  background: var(--accent);
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  background: var(--raised);
+}
+
+.stat b {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.stat small {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 860px) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  background: var(--raised);
+}
+
+.column p {
+  margin: 0;
+}
+
+.slider {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.slider input {
+  flex: 1;
+  min-width: 160px;
+  accent-color: var(--accent);
+}
+
+.slider output {
+  min-width: 4em;
+  font: 600 14px var(--font-mono);
+}
+
+.cursor {
+  display: inline-block;
+  width: 9px;
+  height: 1.1em;
+  margin-left: 2px;
+  vertical-align: -3px;
+  background: var(--accent);
+}
+
+.draws {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.draws code {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: 12.5px var(--font-mono);
+}
+
+.draws code[data-rare='true'] {
+  border-color: var(--accent);
+}

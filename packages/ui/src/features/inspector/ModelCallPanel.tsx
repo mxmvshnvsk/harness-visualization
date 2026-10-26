@@ -175,6 +175,8 @@ function describePurpose(call: ModelCall): string {
       return 'Сводка истории · compaction';
     case 'evalJudge':
       return 'Вопрос судье evals · evalJudge';
+    case 'tokenLab':
+      return 'Вероятности токенов · tokenLab';
   }
 }
 

@@ -42,6 +42,8 @@ export interface TraceSummary {
   branch: TraceBranch | null;
   // Запись чужого харнесса, переведённая адаптером (этап 9.4): его название; null — наша.
   importedFrom: string | null;
+  // Прогон лаборатории «Выбор токена» (этап 11).
+  tokenLab: boolean;
 }
 
 export interface TraceBranch {
@@ -161,7 +163,7 @@ function buildSummary(
 
 type SessionFacts = Pick<
   TraceSummary,
-  'sessionId' | 'model' | 'startedAt' | 'finishedAt' | 'importedFrom'
+  'sessionId' | 'model' | 'startedAt' | 'finishedAt' | 'importedFrom' | 'tokenLab'
 >;
 
 function sessionFacts(events: HarnessEvent[]): SessionFacts {
@@ -176,11 +178,15 @@ function sessionFacts(events: HarnessEvent[]): SessionFacts {
 
 function startedFacts(
   first: HarnessEvent | undefined,
-): Pick<TraceSummary, 'model' | 'importedFrom'> {
+): Pick<TraceSummary, 'model' | 'importedFrom' | 'tokenLab'> {
   if (first?.type !== 'session_started') {
-    return { model: null, importedFrom: null };
+    return { model: null, importedFrom: null, tokenLab: false };
   }
-  return { model: first.model, importedFrom: first.importedFrom?.harness ?? null };
+  return {
+    model: first.model,
+    importedFrom: first.importedFrom?.harness ?? null,
+    tokenLab: (first.tokenLab ?? null) !== null,
+  };
 }
 
 function branchOf(events: HarnessEvent[]): TraceBranch | null {

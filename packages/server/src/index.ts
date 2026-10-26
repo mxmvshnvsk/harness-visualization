@@ -14,6 +14,11 @@ export type { TraceBranch, TraceKind, TraceSummary } from './traces/TraceCatalog
 export type { TraceOutcome, TraceStreamEnd } from './traces/traceRoutes.js';
 export type { GroundingClaim, GroundingReportResponse } from './rag/groundingReport.js';
 export type { McpCourseResponse } from './labs/mcpCourseRoutes.js';
+export type {
+  TokenLabResponse,
+  TokenLabRunRequest,
+  TokenLabRunResponse,
+} from './labs/tokenLabRoutes.js';
 export type { EvalReportSummary, EvalsResponse } from './evals/evalRoutes.js';
 export type { BranchRequest } from './sessions/branchRoutes.js';
 export type { ImportTraceResponse } from './traces/importRoutes.js';

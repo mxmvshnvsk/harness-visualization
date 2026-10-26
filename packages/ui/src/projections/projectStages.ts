@@ -438,6 +438,7 @@ const PURPOSES: Record<EventOfType<'model_request'>['purpose'], string> = {
   queryRewrite: ': переформулировать вопрос в поисковый query',
   groundingJudge: ': судья оценивает claim',
   evalJudge: ': судья evals сверяет ответ с рубрикой',
+  tokenLab: ': ответ с вероятностями токенов',
   compaction: ': сжать прошлые ходы в сводку',
 };
 

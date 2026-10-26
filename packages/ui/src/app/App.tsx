@@ -37,6 +37,7 @@ import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
 import { CodeView } from '../features/code/CodeView';
 import { ArenaLab } from '../features/arena/ArenaLab';
+import { TokenLab } from '../features/tokens/TokenLab';
 import { AgentsView } from '../features/agents/AgentsView';
 import { AgentLabelsContext, useAgentLabelsOf } from '../features/agents/agentLabels';
 import { McpLab } from '../features/mcp/McpLab';
@@ -196,6 +197,8 @@ function LabScreen(props: {
       return <McpLab backLabel={backLabel} onBack={props.onBack} />;
     case 'evals':
       return <EvalLab backLabel={backLabel} onBack={props.onBack} onOpenTrace={openTrace} />;
+    case 'tokens':
+      return <TokenLab backLabel={backLabel} onBack={props.onBack} onOpenTrace={openTrace} />;
     case 'arena':
       return (
         <ArenaLab
@@ -355,6 +358,12 @@ const LAB_ENTRIES: readonly { lab: LabName; title: string; short: string; text: 
     title: 'Лаборатория Evals',
     short: 'задачи, попытки, pass@k',
     text: 'Как понять, что агент стал лучше, а не «вроде лучше»: набор задач, несколько попыток, проверки по трейсу и итог по конфигурациям.',
+  },
+  {
+    lab: 'tokens',
+    title: 'Выбор токена',
+    short: 'вероятности, температура',
+    text: 'Как модель выбирает следующий кусочек текста: где она уверена, где колеблется и что меняет температура.',
   },
   {
     lab: 'arena',

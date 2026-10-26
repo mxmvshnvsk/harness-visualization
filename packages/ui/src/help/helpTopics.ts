@@ -26,6 +26,7 @@ export const HELP_TOPICS = [
   'branches',
   'imported-traces',
   'code-arena',
+  'token-lab',
 ] as const;
 
 export type HelpTopic = (typeof HELP_TOPICS)[number];
