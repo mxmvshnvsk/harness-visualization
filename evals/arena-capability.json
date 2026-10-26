@@ -1,0 +1,31 @@
+{
+  "kind": "arena",
+  "name": "Код-арена: возможности",
+  "description": "Трудные задачи Код-арены (capability): много правил сразу, края, которых нет в видимых тестах, и ошибка, данная только симптомом. Здесь режимы арены должны разойтись: вслепую и с урезанным контекстом — ниже, с тестами — выше.",
+  "tasks": [
+    {
+      "id": "sick-pay",
+      "arenaTask": "sick-pay",
+      "question": "Кто платит за больничный: компания, фонд и доплата за первые 10 дней в году",
+      "origin": "arena/tasks/sick-pay: три правила п. 3 порядка о больничном, счётчик на календарный год, больничный через Новый год",
+      "suite": "capability",
+      "checks": [{ "kind": "acceptancePassed" }, { "kind": "noStrayFiles" }]
+    },
+    {
+      "id": "sick-vacation",
+      "arenaTask": "sick-vacation",
+      "question": "Заболел в отпуске — когда кончается продлённый отпуск",
+      "origin": "arena/tasks/sick-vacation: п. 5 порядка о больничном; больничный до, после и на стыке отпуска, несколько листов",
+      "suite": "capability",
+      "checks": [{ "kind": "acceptancePassed" }, { "kind": "noStrayFiles" }]
+    },
+    {
+      "id": "new-year-vacation",
+      "arenaTask": "new-year-vacation",
+      "question": "Отпуск через Новый год портал отклоняет — найти причину",
+      "origin": "arena/tasks/new-year-vacation: дан только симптом, ошибка в calendar.js, видимые тесты зелёные; починка «плюс 365 дней» проваливает високосный год",
+      "suite": "capability",
+      "checks": [{ "kind": "acceptancePassed" }, { "kind": "noStrayFiles" }]
+    }
+  ]
+}
