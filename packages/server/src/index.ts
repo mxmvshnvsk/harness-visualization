@@ -17,7 +17,13 @@ export type { McpCourseResponse } from './labs/mcpCourseRoutes.js';
 export type { EvalReportSummary, EvalsResponse } from './evals/evalRoutes.js';
 export type { BranchRequest } from './sessions/branchRoutes.js';
 export type { ImportTraceResponse } from './traces/importRoutes.js';
-export type { ArenaRunRequest, ArenaTaskSummary, ArenaTasksResponse } from './arena/arenaRoutes.js';
+export type {
+  ArenaRunRequest,
+  ArenaTaskSummary,
+  ArenaTasksResponse,
+  FreeProjectsResponse,
+  FreeRunRequest,
+} from './arena/arenaRoutes.js';
 
 // GET /api/sessions/:sessionId
 export interface SessionDetails extends SessionSummary {

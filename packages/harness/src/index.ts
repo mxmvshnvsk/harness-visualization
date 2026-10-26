@@ -51,6 +51,8 @@ export { arenaRoot, prepareArenaRun } from './arena/arenaSession.js';
 export { networkClosedByPermissions } from './arena/nodeSandbox.js';
 export type { ArenaSessionInput } from './arena/arenaSession.js';
 export { arenaSessionInput } from './arena/arenaSessionInput.js';
+export { listFreeProjects, prepareFreeRun } from './arena/freeProjects.js';
+export type { FreeProject, FreeSource } from './arena/freeProjects.js';
 export { countTaskTests, listArenaTasks, readArenaTask } from './arena/arenaTasks.js';
 export type { ArenaTask, ArenaTaskDetails } from './arena/arenaTasks.js';
 export { collectSeenTexts } from './grounding/collectSeenTexts.js';

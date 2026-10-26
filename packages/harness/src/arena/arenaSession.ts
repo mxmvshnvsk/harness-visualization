@@ -12,6 +12,8 @@ import { networkClosedByPermissions } from './nodeSandbox.js';
 export interface ArenaSessionInput {
   // null — свободный режим (этап 10.4).
   task: ArenaTaskDetails | null;
+  // Проект свободного режима: имя папки в workspace-arena/free; null — задача «Кедр Софт».
+  project: string | null;
   // Абсолютный путь копии.
   directory: string;
   // false — режим «вслепую»: без run_tests.
@@ -63,6 +65,7 @@ export async function prepareArenaRun(request: ArenaRunRequest): Promise<ArenaSe
   });
   return {
     task,
+    project: null,
     directory,
     runTests: request.runTests,
     runNode: request.runNode ?? false,
@@ -76,6 +79,7 @@ export async function prepareArenaRun(request: ArenaRunRequest): Promise<ArenaSe
 export function describeArenaRun(arena: ArenaSessionInput, projectRoot: string): ArenaRun {
   return {
     taskId: arena.task?.id ?? null,
+    project: arena.project,
     directory: relative(projectRoot, arena.directory).split('\\').join('/'),
     runTests: arena.runTests,
     runNode: arena.runNode,
@@ -103,6 +107,23 @@ export function buildArenaSystemPrompt(toolNames: readonly string[]): string {
         ]
       : []),
     'Когда закончишь, кратко скажи, что сделал.',
+  ].join('\n');
+}
+
+// System prompt свободного режима: проект пользователя, задача — в его вопросах.
+export function buildFreeSystemPrompt(toolNames: readonly string[]): string {
+  return [
+    'Ты — разработчик. Отвечай на языке пользователя, кратко.',
+    'Рабочая папка — проект пользователя на JavaScript (Node). Задачу ставит пользователь в диалоге, проект живёт между сессиями.',
+    'Сначала посмотри, что уже есть: list_files, README.md, package.json.',
+    'Сети и установки пакетов (npm install) нет: пользуйся встроенными модулями Node и тем, что уже лежит в node_modules.',
+    'Пиши тесты на node:test в test/ — тул run_tests запускает node --test.',
+    ...(toolNames.includes('run_node')
+      ? [
+          'Программу можно запустить тулом run_node; каждый запуск подтверждает пользователь. Временные файлы удаляй.',
+        ]
+      : []),
+    'Пути — от корня рабочей папки. Когда закончишь, кратко скажи, что сделал и как это проверить.',
   ].join('\n');
 }
 

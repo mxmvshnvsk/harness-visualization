@@ -60,7 +60,8 @@ export interface AgentDependencies {
   // false — сессия без демо-проекта: короткий system prompt без «Кедр Софт».
   demoProject: boolean;
   // Прогон Код-арены (этап 10): свой system prompt — проект и задача.
-  arena?: boolean;
+  // task — задача «Кедр Софт» с приёмкой, free — свободный режим (этап 10.4).
+  arena?: 'task' | 'free' | null;
   // Несколько delegate_task в одном шаге — одновременно (subagents.parallel, этап 6c).
   parallelDelegation: boolean;
   // Кто сжимает историю в сводку (этап 6.5): та же модель или указанная в context.compactionModel.

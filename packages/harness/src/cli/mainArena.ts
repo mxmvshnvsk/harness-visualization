@@ -4,6 +4,12 @@
 //   pnpm arena --task trip-deadline --blind     — «вслепую»: без run_tests
 //   pnpm arena --task refactor --context demo --max-steps 10
 //                                               — «харнесс зажат»: контекст и шаги как у demo
+//   pnpm arena --project csv-tool --new "Сделай CLI: CSV → JSON"
+//                                               — свободный режим (этап 10.4): новый проект с нуля,
+//                                                 дальше диалог; принимаете вы
+//   pnpm arena --project csv-tool "Добавь флаг --pretty"   — продолжить проект
+//   pnpm arena --project my-app --copy /абсолютный/путь "…" — начать с копии своей папки
+//                                                 (как есть, с node_modules: npm install в арене нет)
 //   pnpm arena --verify                         — у каждой задачи заготовка не проходит
 //                                                 приёмку, а эталонное решение проходит
 
@@ -13,15 +19,20 @@ import { listArenaTasks, readArenaTask } from '../arena/arenaTasks.js';
 import { arenaRoot, prepareArenaRun } from '../arena/arenaSession.js';
 import { arenaSessionInput } from '../arena/arenaSessionInput.js';
 import { checkAcceptance } from '../arena/checkAcceptance.js';
+import { prepareFreeRun, type FreeSource } from '../arena/freeProjects.js';
 import { REASONING_EFFORTS, type ReasoningEffort } from '../model/chatTypes.js';
 import { loadSettings, readConfigFile, type LoadedSettings } from '../settings/loadSettings.js';
 import type { ArenaSettings, ContextPreset } from '../settings/settingsSchema.js';
 import { runCliSession } from './runCliSession.js';
 
 async function main(): Promise<void> {
-  const { values } = parseArgs({
+  const { values, positionals } = parseArgs({
     args: process.argv.slice(2),
+    allowPositionals: true,
     options: {
+      project: { type: 'string' },
+      new: { type: 'boolean', default: false },
+      copy: { type: 'string' },
       list: { type: 'boolean', default: false },
       verify: { type: 'boolean', default: false },
       task: { type: 'string' },
@@ -38,20 +49,94 @@ async function main(): Promise<void> {
     process.exitCode = (await verifyTasks(arenaSettings, projectRoot, values.task)) ? 0 : 1;
     return;
   }
+  if (values.project !== undefined) {
+    const flags: FreeFlags = {
+      project: values.project,
+      isNew: values.new,
+      copy: values.copy,
+      effort: values.effort,
+      context: values.context,
+      maxSteps: values['max-steps'],
+    };
+    process.exitCode = (await runFreeProject(projectRoot, flags, positionals.join(' '))) ? 0 : 1;
+    return;
+  }
   if (values.list || values.task === undefined) {
     await printTasks(arenaSettings, projectRoot);
     return;
   }
+  const flags = { blind: values.blind, effort: values.effort, context: values.context };
+  process.exitCode = (await runTask(projectRoot, values.task, {
+    ...flags,
+    maxSteps: values['max-steps'],
+  }))
+    ? 0
+    : 1;
+}
+
+async function runTask(
+  projectRoot: string,
+  taskId: string,
+  flags: {
+    blind: boolean;
+    effort: string | undefined;
+    context: string | undefined;
+    maxSteps: string | undefined;
+  },
+): Promise<boolean> {
   const loadedSettings = await loadSettings(projectRoot);
   const arena = await prepareArenaRun({
     projectRoot,
     settings: loadedSettings.settings.arena,
-    taskId: values.task,
-    runTests: !values.blind,
+    taskId,
+    runTests: !flags.blind,
     // В терминале есть кого спросить: каждый запуск run_node харнесс подтверждает у вас.
     runNode: true,
+    contextPreset: parsePreset(flags.context),
+    maxIterations: parseSteps(flags.maxSteps),
+  });
+  const result = await runCliSession({
+    ...arenaSessionInput({
+      loadedSettings,
+      projectRoot,
+      arena,
+      reasoningEffort: parseEffort(flags.effort, loadedSettings),
+      question: null,
+    }),
+    verbose: false,
+    quiet: false,
+  });
+  console.log(styleText('dim', `Копия проекта: ${arena.directory}`));
+  return !result.failed;
+}
+
+interface FreeFlags {
+  project: string;
+  isNew: boolean;
+  copy: string | undefined;
+  effort: string | undefined;
+  context: string | undefined;
+  maxSteps: string | undefined;
+}
+
+async function runFreeProject(
+  projectRoot: string,
+  values: FreeFlags,
+  question: string,
+): Promise<boolean> {
+  if (question.trim() === '') {
+    throw new Error(
+      'Напишите задачу: pnpm arena --project <имя> [--new | --copy <путь>] "что сделать"',
+    );
+  }
+  const loadedSettings = await loadSettings(projectRoot);
+  const arena = await prepareFreeRun({
+    projectRoot,
+    settings: loadedSettings.settings.arena,
+    name: values.project,
+    source: freeSource(values.isNew, values.copy),
     contextPreset: parsePreset(values.context),
-    maxIterations: parseSteps(values['max-steps']),
+    maxIterations: parseSteps(values.maxSteps),
   });
   const result = await runCliSession({
     ...arenaSessionInput({
@@ -59,15 +144,23 @@ async function main(): Promise<void> {
       projectRoot,
       arena,
       reasoningEffort: parseEffort(values.effort, loadedSettings),
-      question: null,
+      question,
     }),
     verbose: false,
     quiet: false,
   });
-  console.log(styleText('dim', `Копия проекта: ${arena.directory}`));
-  if (result.failed) {
-    process.exitCode = 1;
+  console.log(styleText('dim', `Проект: ${arena.directory}`));
+  return !result.failed;
+}
+
+function freeSource(isNew: boolean, copy: string | undefined): FreeSource {
+  if (isNew && copy !== undefined) {
+    throw new Error('--new или --copy, не оба');
   }
+  if (copy !== undefined) {
+    return { kind: 'copy', from: copy };
+  }
+  return isNew ? { kind: 'new' } : { kind: 'continue' };
 }
 
 function parsePreset(value: string | undefined): ContextPreset | null {

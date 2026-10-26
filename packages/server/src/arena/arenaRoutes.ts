@@ -2,6 +2,9 @@
 //   GET  /api/arena/tasks  — заготовленные задачи с текстом и числом видимых и скрытых тестов;
 //   POST /api/arena/runs   { taskId, runTests, reasoningEffort, contextPreset?, maxIterations? }
 //                          — копия проекта и живая сессия-прогон; ответ — как у новой сессии.
+//   GET  /api/arena/projects — проекты свободного режима (этап 10.4);
+//   POST /api/arena/free   { project, source, copyFrom?, question, reasoningEffort }
+//                          — новый проект, продолжение или копия папки; дальше — диалог.
 // Прогон — обычная сессия: тот же поток событий, разрешения и диалог, что у «Новый вопрос».
 
 import {
@@ -9,6 +12,9 @@ import {
   arenaSessionInput,
   countTaskTests,
   listArenaTasks,
+  listFreeProjects,
+  prepareFreeRun,
+  type FreeProject,
   networkClosedByPermissions,
   prepareArenaRun,
   readArenaTask,
@@ -46,6 +52,23 @@ export const arenaRunRequestSchema = z.object({
 
 export type ArenaRunRequest = z.input<typeof arenaRunRequestSchema>;
 
+export const freeRunRequestSchema = z.object({
+  project: z.string().min(1),
+  source: z.enum(['new', 'continue', 'copy']),
+  // Абсолютный путь папки на этой машине — для source: copy.
+  copyFrom: z.string().nullable().default(null),
+  question: z.string().min(1),
+  reasoningEffort: z.enum(['off', 'low', 'high', 'max']),
+});
+
+export type FreeRunRequest = z.input<typeof freeRunRequestSchema>;
+
+export interface FreeProjectsResponse {
+  projects: FreeProject[];
+  // Где лежат проекты — путь от корня репозитория.
+  directory: string;
+}
+
 export function registerArenaRoutes(app: FastifyInstance, options: SessionRoutesOptions): void {
   const { settings } = options.loadedSettings;
   const root = arenaRoot(options.projectRoot, settings.arena);
@@ -70,6 +93,8 @@ export function registerArenaRoutes(app: FastifyInstance, options: SessionRoutes
       network: networkClosedByPermissions() ? 'closed' : 'open',
     };
   });
+
+  registerFreeRoutes(app, options);
 
   app.post('/api/arena/runs', async (request, reply) => {
     const parsed = arenaRunRequestSchema.safeParse(request.body);
@@ -97,6 +122,46 @@ export function registerArenaRoutes(app: FastifyInstance, options: SessionRoutes
       });
       const title = `Код-арена: ${arena.task?.title ?? taskId}`;
       const sessionId = await launchSession(input, title, options);
+      return await reply
+        .code(201)
+        .send({ sessionId, eventsUrl: `/api/sessions/${sessionId}/events` });
+    } catch (error) {
+      return reply
+        .code(400)
+        .send({ error: error instanceof Error ? error.message : String(error) });
+    }
+  });
+}
+
+// Свободный режим (этап 10.4): проекты в workspace-arena/free и запуск по ним.
+function registerFreeRoutes(app: FastifyInstance, options: SessionRoutesOptions): void {
+  const { settings } = options.loadedSettings;
+  app.get('/api/arena/projects', async (): Promise<FreeProjectsResponse> => ({
+    projects: await listFreeProjects(options.projectRoot, settings.arena),
+    directory: `${settings.arena.workspaceDirectory}/free`,
+  }));
+
+  app.post('/api/arena/free', async (request, reply) => {
+    const parsed = freeRunRequestSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: parsed.error.message });
+    }
+    const { project, source, copyFrom, question, reasoningEffort } = parsed.data;
+    try {
+      const arena = await prepareFreeRun({
+        projectRoot: options.projectRoot,
+        settings: settings.arena,
+        name: project,
+        source: source === 'copy' ? { kind: 'copy', from: copyFrom ?? '' } : { kind: source },
+      });
+      const input = arenaSessionInput({
+        loadedSettings: options.loadedSettings,
+        projectRoot: options.projectRoot,
+        arena,
+        reasoningEffort,
+        question,
+      });
+      const sessionId = await launchSession(input, `Код-арена · ${project}`, options);
       return await reply
         .code(201)
         .send({ sessionId, eventsUrl: `/api/sessions/${sessionId}/events` });

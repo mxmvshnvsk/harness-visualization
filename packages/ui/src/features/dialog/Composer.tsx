@@ -12,9 +12,11 @@ export type DialogMode = 'record' | 'ended' | 'working' | 'awaiting';
 interface ComposerProps {
   mode: DialogMode;
   sessionId: string | null;
+  // Пример следующего вопроса: у вопросов к базе свой, у Код-арены — свой.
+  placeholder?: string;
 }
 
-export function Composer({ mode, sessionId }: ComposerProps): ReactElement {
+export function Composer({ mode, sessionId, placeholder }: ComposerProps): ReactElement {
   const [text, setText] = useState('');
   const { error, sending, send } = useSend();
   if (mode === 'record' || mode === 'ended' || sessionId === null) {
@@ -42,7 +44,7 @@ export function Composer({ mode, sessionId }: ComposerProps): ReactElement {
         className={styles.input}
         value={text}
         rows={3}
-        placeholder="Например: а что с гибридным графиком?"
+        placeholder={placeholder ?? 'Например: а что с гибридным графиком?'}
         onChange={(event) => {
           setText(event.target.value);
         }}

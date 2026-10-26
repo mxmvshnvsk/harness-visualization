@@ -88,7 +88,10 @@ function arenaChips(started: Started): SessionChip[] {
   }
   return [
     {
-      label: `арена · ${arena.taskId ?? 'своя задача'} · ${arena.runTests ? 'с run_tests' : 'вслепую'}`,
+      label:
+        arena.taskId === null
+          ? `арена · свободный · ${arena.project ?? 'проект'}`
+          : `арена · ${arena.taskId} · ${arena.runTests ? 'с run_tests' : 'вслепую'}`,
       on: true,
     },
     {

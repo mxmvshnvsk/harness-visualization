@@ -1,6 +1,6 @@
 // Лаборатория «Код-арена» (этап 10) — по мокапу, одобренному автором: здесь выбирают задачу
 // и режим, а прогон — обычная живая сессия с вкладкой «Код» и приёмкой в «Диалоге».
-// Свободный режим (код с нуля) — шаг 10.4.
+// Свободный режим — FreePanel (этап 10.4).
 
 import type {
   ArenaRunRequest,
@@ -18,6 +18,7 @@ import { MarkdownView } from '../../help/MarkdownView';
 import labStyles from '../rag/RagLab.module.css';
 import { useLoaded } from '../rag/useRagData';
 import styles from './Arena.module.css';
+import { FreePanel } from './FreePanel';
 
 type Mode = 'kedr' | 'free';
 type Effort = ArenaTasksResponse['defaults']['reasoningEffort'];
@@ -69,12 +70,7 @@ export function ArenaLab({ backLabel, onBack, onStarted }: ArenaLabProps): React
         <Segmented label="Режим" options={MODES} value={mode} onChange={setMode} />
       </div>
       {mode === 'free' ? (
-        <div className={labStyles.card}>
-          <p className={styles.muted}>
-            Свободный режим — простая песочница: новый проект с нуля, задача словами, принимаете вы.
-            Появится на шаге 10.4.
-          </p>
-        </div>
+        <FreePanel onStarted={onStarted} />
       ) : (
         <>
           <TasksPanel tasks={tasks} onStarted={onStarted} />

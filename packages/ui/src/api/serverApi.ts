@@ -16,6 +16,8 @@ import type {
   BranchRequest,
   ImportTraceResponse,
   ArenaRunRequest,
+  FreeProjectsResponse,
+  FreeRunRequest,
   ArenaTasksResponse,
   SessionOptionsResponse,
 } from '@harness-visualization/server';
@@ -49,6 +51,15 @@ export async function startSession(request: StartSessionRequest): Promise<StartS
 // Код-арена (этап 10): задачи и запуск прогона — ответ как у новой сессии.
 export async function getArenaTasks(): Promise<ArenaTasksResponse> {
   return getJson<ArenaTasksResponse>('/api/arena/tasks');
+}
+
+// Свободный режим арены (этап 10.4): проекты и запуск — новый, продолжение, копия папки.
+export async function getFreeProjects(): Promise<FreeProjectsResponse> {
+  return getJson<FreeProjectsResponse>('/api/arena/projects');
+}
+
+export async function startFreeRun(request: FreeRunRequest): Promise<StartSessionResponse> {
+  return postJson<StartSessionResponse>('/api/arena/free', request);
 }
 
 export async function startArenaRun(request: ArenaRunRequest): Promise<StartSessionResponse> {

@@ -386,7 +386,7 @@ function createAgentDependencies(
     budget: budgetSettings(settings.context, input.arena?.contextPreset ?? null),
     parallelDelegation: settings.subagents.parallel,
     demoProject: input.demoProject,
-    arena: Boolean(input.arena),
+    arena: arenaModeOf(input),
   };
   registerDelegateTool(input, dependencies);
   return dependencies;
@@ -514,6 +514,13 @@ function subagentsOf(input: SessionInput): { agents: string[]; parallel: boolean
   const agents = Object.keys(settings.agents);
   const enabled = input.subagents ?? settings.enabled;
   return enabled && agents.length > 0 ? { agents, parallel: settings.parallel } : null;
+}
+
+function arenaModeOf(input: SessionInput): 'task' | 'free' | null {
+  if (!input.arena) {
+    return null;
+  }
+  return input.arena.task === null ? 'free' : 'task';
 }
 
 // run_node — код модели на машине пользователя: по умолчанию каждый запуск спрашиваем.

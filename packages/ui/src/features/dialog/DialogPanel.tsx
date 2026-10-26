@@ -71,9 +71,21 @@ export function DialogPanel(props: DialogPanelProps): ReactElement {
         ))}
         {request}
       </div>
-      <Composer mode={mode} sessionId={sessionId} />
+      <Composer mode={mode} sessionId={sessionId} placeholder={placeholderOf(props.events)} />
     </aside>
   );
+}
+
+// В прогоне Код-арены следующий вопрос — про код, а не про регламенты.
+function placeholderOf(events: readonly HarnessEvent[]): string | undefined {
+  const started = events.find((event) => event.type === 'session_started');
+  const arena = started?.type === 'session_started' ? (started.arena ?? null) : null;
+  if (arena === null) {
+    return undefined;
+  }
+  return arena.taskId === null
+    ? 'Например: добавь флаг --pretty и тест на него'
+    : 'Например: учти праздники';
 }
 
 function isAnswered(turn: { answeredIndex: number | null }, shown: number): boolean {

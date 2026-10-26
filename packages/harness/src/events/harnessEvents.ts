@@ -72,6 +72,8 @@ export interface SessionStartedPayload {
 export interface ArenaRun {
   // null — свободный режим, без заготовленной задачи.
   taskId: string | null;
+  // Проект свободного режима (этап 10.4); нет поля или null — задача «Кедр Софт».
+  project?: string | null;
   // Папка копии от корня проекта.
   directory: string;
   // false — режим «вслепую»: тула run_tests у модели нет.
