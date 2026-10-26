@@ -1,5 +1,5 @@
-// «Открыть трейс другого харнесса…» (этап 9.4): запись сессии Claude Code из
-// ~/.claude/projects/<проект>/<id>.jsonl переводится в наш трейс и открывается как свой.
+// «Открыть трейс другого харнесса…» (этап 9.4): запись сессии Claude Code или экспорт OpenCode;
+// формат сервер определяет по содержимому. Запись переводится в наш трейс и открывается как своя.
 
 import { useRef, useState, type ReactElement } from 'react';
 import { importTrace } from '../api/serverApi';
@@ -33,7 +33,7 @@ export function ImportTrace({ onImported }: ImportTraceProps): ReactElement {
       <input
         ref={input}
         type="file"
-        accept=".jsonl,application/x-ndjson"
+        accept=".jsonl,.json,application/x-ndjson,application/json"
         hidden
         onChange={(event) => {
           const file = event.target.files?.[0];
@@ -45,7 +45,7 @@ export function ImportTrace({ onImported }: ImportTraceProps): ReactElement {
       />
       <span className={styles.importHint}>
         {state ??
-          'Сессия Claude Code: ~/.claude/projects/<проект>/<id>.jsonl. Папка скрытая — в окне выбора Cmd+Shift+. Ключи и домашняя папка маскируются.'}
+          'Claude Code: ~/.claude/projects/<проект>/<id>.jsonl (папка скрытая — в окне выбора Cmd+Shift+.). OpenCode: файл из opencode session export. Формат определится сам; ключи и домашняя папка маскируются.'}
       </span>
     </div>
   );

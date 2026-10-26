@@ -68,7 +68,7 @@ export async function startArenaRun(request: ArenaRunRequest): Promise<StartSess
 
 // Запись чужого харнесса (этап 9.4): сервер переводит её в наш трейс и сохраняет в traces/.
 export async function importTrace(text: string): Promise<ImportTraceResponse> {
-  return postJson<ImportTraceResponse>('/api/traces/import', { format: 'claude-code', text });
+  return postJson<ImportTraceResponse>('/api/traces/import', { format: 'auto', text });
 }
 
 // Ветка от шага записанного трейса (этап 9): ответ — как у новой сессии.

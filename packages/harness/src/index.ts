@@ -46,6 +46,7 @@ export { readTrace } from './grounding/readTrace.js';
 export { evalSetSchema } from './evals/evalSet.js';
 export { branchSessionInput } from './branch/branchInput.js';
 export { convertClaudeCode } from './adapters/claudeCode.js';
+export { convertImported, detectImportFormat, IMPORT_PREFIXES } from './adapters/importTrace.js';
 export { writeImportedTrace } from './adapters/writeImportedTrace.js';
 export { arenaRoot, prepareArenaRun } from './arena/arenaSession.js';
 export { networkClosedByPermissions } from './arena/nodeSandbox.js';

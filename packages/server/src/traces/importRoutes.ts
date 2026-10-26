@@ -1,9 +1,15 @@
 // Импорт записи чужого харнесса (этап 9.4):
-//   POST /api/traces/import  { format: 'claude-code', text } — перевести и сохранить в traces/.
+//   POST /api/traces/import  { format: 'auto' | 'claude-code' | 'opencode', text }
+//                            — перевести и сохранить в traces/; auto — формат по содержимому.
 // Запись передаётся текстом из браузера (выбор файла), сервер переводит её адаптером
 // харнесса, маскирует ключи и домашнюю папку и отвечает именем нового трейса.
 
-import { convertClaudeCode, writeImportedTrace } from '@harness-visualization/harness';
+import {
+  convertImported,
+  detectImportFormat,
+  IMPORT_PREFIXES,
+  writeImportedTrace,
+} from '@harness-visualization/harness';
 import type { FastifyInstance } from 'fastify';
 import { basename } from 'node:path';
 import { z } from 'zod';
@@ -17,7 +23,7 @@ export interface ImportTraceResponse {
 }
 
 const importRequestSchema = z.object({
-  format: z.literal('claude-code'),
+  format: z.enum(['auto', 'claude-code', 'opencode']).default('auto'),
   text: z.string().min(1),
 });
 
@@ -28,8 +34,10 @@ export function registerImportRoutes(app: FastifyInstance, tracesDirectory: stri
       return reply.code(400).send({ error: parsed.error.message });
     }
     try {
-      const events = convertClaudeCode(parsed.data.text);
-      const filePath = await writeImportedTrace(tracesDirectory, events, 'cc');
+      const { format, text } = parsed.data;
+      const resolved = format === 'auto' ? detectImportFormat(text) : format;
+      const events = convertImported(text, resolved);
+      const filePath = await writeImportedTrace(tracesDirectory, events, IMPORT_PREFIXES[resolved]);
       const response: ImportTraceResponse = { file: basename(filePath), eventCount: events.length };
       return await reply.code(201).send(response);
     } catch (error) {
