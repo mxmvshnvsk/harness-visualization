@@ -4,10 +4,12 @@
 //
 // Claude Code пишет рядом с результатом тула toolUseResult — то, что видел интерфейс: у Read —
 // текст файла без номеров строк, у Edit и Write — файл до правки (originalFile). Поэтому diff
-// у него точный. OpenCode в экспорте даёт только аргументы и текст результата: Read — строки
+// у него точный. OpenCode в экспорте даёт аргументы и текст результата: Read — строки
 // с номерами «12: …», правки — фрагментами, которые накладываем на последний известный текст.
+// К правке OpenCode кладёт и diff (metadata.files[].patch) — из него берём куски с соседними
+// строками: правку видно, даже если файл агент не читал.
 
-import type { FileEffect } from '../events/harnessEvents.js';
+import type { DiffHunkText, FileEffect } from '../events/harnessEvents.js';
 
 type Fields = Record<string, unknown>;
 
@@ -99,7 +101,7 @@ const OPEN_CODE_LINE = /^\d+: ?/;
 export function openCodeFileEffect(
   toolName: string,
   input: unknown,
-  output: { text: string; truncated: boolean },
+  output: { text: string; truncated: boolean; metadata?: unknown },
   cwd: string | null,
 ): FileEffect | null {
   const fields = asFields(input) ?? {};
@@ -115,8 +117,67 @@ export function openCodeFileEffect(
     const content = stringOf(fields.content);
     return content === null ? null : { kind: 'write', path, after: content };
   }
-  const edit = toolName === 'edit' ? editOf(fields) : null;
-  return edit === null ? null : { kind: 'edit', path, ...edit };
+  return toolName === 'edit' ? openCodeEdit(fields, path, output.metadata, cwd) : null;
+}
+
+function openCodeEdit(
+  fields: Fields,
+  path: string,
+  metadata: unknown,
+  cwd: string | null,
+): FileEffect | null {
+  const edit = editOf(fields);
+  if (edit === null) {
+    return null;
+  }
+  const hunks = patchHunks(patchOf(metadata, path, cwd));
+  return { kind: 'edit', path, ...edit, ...(hunks.length === 0 ? {} : { hunks }) };
+}
+
+// diff этого файла из metadata.files; у правки одного файла запись одна.
+function patchOf(metadata: unknown, path: string, cwd: string | null): string | null {
+  const files = asFields(metadata)?.files;
+  if (!Array.isArray(files)) {
+    return null;
+  }
+  const entries = files.map((item) => asFields(item) ?? {});
+  const own = entries.find((entry) => {
+    const file = stringOf(entry.file);
+    return file !== null && relativeTo(cwd, file) === path;
+  });
+  return stringOf((own ?? (entries.length === 1 ? entries[0] : undefined))?.patch);
+}
+
+// Unified diff → куски: строка « …» — в обоих, «-…» — только до, «+…» — только после.
+// Шапка (Index, ===, ---, +++) и «\ No newline at end of file» пропускаются.
+export function patchHunks(patch: string | null): DiffHunkText[] {
+  if (patch === null) {
+    return [];
+  }
+  const hunks: { old: string[]; now: string[] }[] = [];
+  for (const line of patch.split('\n')) {
+    if (line.startsWith('@@')) {
+      hunks.push({ old: [], now: [] });
+      continue;
+    }
+    const hunk = hunks.at(-1);
+    if (hunk !== undefined) {
+      addPatchLine(hunk, line);
+    }
+  }
+  return hunks.map((hunk) => ({ oldText: hunk.old.join('\n'), newText: hunk.now.join('\n') }));
+}
+
+function addPatchLine(hunk: { old: string[]; now: string[] }, line: string): void {
+  const text = line.slice(1);
+  if (line.startsWith(' ') || line === '') {
+    hunk.old.push(text);
+    hunk.now.push(text);
+  } else if (line.startsWith('-')) {
+    hunk.old.push(text);
+  } else if (line.startsWith('+')) {
+    hunk.now.push(text);
+  }
 }
 
 // Строки «12: текст»; хвост «[Output truncated…]» и offset — признак, что прочитана часть.

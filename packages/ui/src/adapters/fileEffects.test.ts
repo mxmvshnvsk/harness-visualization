@@ -78,15 +78,36 @@ const claudeCode = [
 
 const T0 = Date.UTC(2026, 9, 26, 10, 0, 0);
 
-function openCodeTool(id: string, name: string, input: unknown, text: string): unknown {
+// result — текст результата или текст вместе с metadata тула.
+function openCodeTool(
+  id: string,
+  name: string,
+  input: unknown,
+  result: string | { text: string; metadata: unknown },
+): unknown {
+  const { text, metadata } = typeof result === 'string' ? { text: result, metadata: {} } : result;
   return {
     type: 'tool',
     id,
     name,
-    state: { status: 'completed', input, content: [{ type: 'text', text }], metadata: {} },
+    state: { status: 'completed', input, content: [{ type: 'text', text }], metadata },
     time: { created: T0 + 100, completed: T0 + 200 },
   };
 }
+
+const CONFIG_PATCH = [
+  'Index: config.js',
+  '===================================================================',
+  '--- config.js',
+  '+++ config.js',
+  '@@ -1,4 +1,4 @@',
+  ' export default {',
+  "   name: 'app',",
+  '-  debug: true,',
+  '+  debug: false,',
+  ' };',
+  '\\ No newline at end of file',
+].join('\n');
 
 const openCode = JSON.stringify({
   info: {
@@ -120,6 +141,28 @@ const openCode = JSON.stringify({
           'edit',
           { path: `${CWD}/other.js`, oldString: 'x = 1', newString: 'x = 2' },
           'Edit applied.',
+        ),
+        // Правка с diff от OpenCode (metadata.files[].patch): файл не читали, но соседние
+        // строки видны из diff.
+        openCodeTool(
+          'c4',
+          'edit',
+          { path: `${CWD}/config.js`, oldString: 'debug: true', newString: 'debug: false' },
+          {
+            text: 'Edit applied.',
+            metadata: {
+              files: [
+                {
+                  file: `${CWD}/config.js`,
+                  status: 'modified',
+                  additions: 1,
+                  deletions: 1,
+                  patch: CONFIG_PATCH,
+                },
+              ],
+              truncated: false,
+            },
+          },
         ),
       ],
     },
@@ -161,6 +204,20 @@ describe('вкладка «Код» у импорта', () => {
     expect(other?.status).toBe('modified');
     expect(other?.current).toBeNull();
     expect(other?.fragments).toEqual([{ oldText: 'x = 1', newText: 'x = 2' }]);
+  });
+
+  it('OpenCode: правка с diff — фрагмент с соседними строками из metadata.files[].patch', () => {
+    const events = convertOpenCode(openCode);
+    const config = projectCode(events, events.length).files.find(
+      (file) => file.path === 'config.js',
+    );
+    expect(config?.status).toBe('modified');
+    expect(config?.fragments).toEqual([
+      {
+        oldText: "export default {\n  name: 'app',\n  debug: true,\n};",
+        newText: "export default {\n  name: 'app',\n  debug: false,\n};",
+      },
+    ]);
   });
 
   it('чтение куска файла помечено как частичное', () => {

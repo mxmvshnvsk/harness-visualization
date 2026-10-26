@@ -34,7 +34,8 @@ interface Block {
     status?: string;
     input?: unknown;
     content?: { type?: string; text?: string }[];
-    metadata?: { exit?: number; truncated?: boolean };
+    // У edit — ещё files[]: путь, статус и diff правки (patch).
+    metadata?: { exit?: number; truncated?: boolean; files?: unknown };
   };
   time?: { created?: number; ran?: number; completed?: number };
 }
@@ -268,14 +269,7 @@ function toolResult(
     .map((part) => part.text ?? `[${part.type ?? '?'}]`)
     .join('\n');
   const success = state.status === 'completed';
-  const fileEffect = success
-    ? openCodeFileEffect(
-        call.name,
-        state.input,
-        { text: content, truncated: state.metadata?.truncated === true },
-        directory,
-      )
-    : null;
+  const fileEffect = success ? fileEffectOf(call, state, content, directory) : null;
   const details = {
     ...state.metadata,
     ...(fileEffect === null ? {} : { fileEffect }),
@@ -290,6 +284,21 @@ function toolResult(
     cost: null,
     durationMs: Math.max(0, (time.completed ?? ranAt) - ranAt),
   };
+}
+
+function fileEffectOf(
+  call: ToolCall,
+  state: NonNullable<Block['state']>,
+  text: string,
+  directory: string | null,
+) {
+  const truncated = state.metadata?.truncated === true;
+  return openCodeFileEffect(
+    call.name,
+    state.input,
+    { text, truncated, metadata: state.metadata ?? null },
+    directory,
+  );
 }
 
 function sessionCost(cost: number | undefined): { currency: string; total: number } | null {

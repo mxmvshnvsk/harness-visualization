@@ -235,7 +235,11 @@ const EFFECT_HANDLERS: {
       status: 'modified',
       writes: file.writes + 1,
       step: builder.step,
-      fragments: [...file.fragments, { oldText: effect.oldString, newText: effect.newString }],
+      // Есть diff от самого тула — показываем его куски с соседними строками.
+      fragments: [
+        ...file.fragments,
+        ...(effect.hunks ?? [{ oldText: effect.oldString, newText: effect.newString }]),
+      ],
     });
   },
 };

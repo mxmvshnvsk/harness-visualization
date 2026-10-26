@@ -393,7 +393,22 @@ export type FileEffect =
   // before: null — файла не было; undefined — неизвестно, каким он был.
   | { kind: 'write'; path: string; before?: string | null; after: string }
   // Правка «заменить фрагмент»: применяем к последнему известному тексту файла.
-  | { kind: 'edit'; path: string; oldString: string; newString: string; replaceAll: boolean };
+  // hunks — куски diff с соседними строками, если тул сам прислал diff (OpenCode:
+  // metadata.files[].patch); по ним видно правку, когда текста файла в трейсе нет.
+  | {
+      kind: 'edit';
+      path: string;
+      oldString: string;
+      newString: string;
+      replaceAll: boolean;
+      hunks?: DiffHunkText[];
+    };
+
+// Кусок diff: строки до и после правки вместе с неизменными строками вокруг.
+export interface DiffHunkText {
+  oldText: string;
+  newText: string;
+}
 
 export interface ToolResultPayload {
   type: 'tool_result';
