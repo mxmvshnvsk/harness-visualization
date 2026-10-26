@@ -129,6 +129,31 @@
   gap: 10px;
 }
 
+/* С зумом отрезки лежат на слое шире дорожки, лишнее обрезает дорожка. */
+.layer {
+  position: absolute;
+  inset: 0;
+}
+
+.lanes[data-zoom='true'] .track,
+.lanes[data-zoom='true'] .segment {
+  cursor: grab;
+  touch-action: none;
+}
+
+.lanes[data-dragging='true'] .track,
+.lanes[data-dragging='true'] .segment {
+  cursor: grabbing;
+}
+
+.lanesHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
 .lane,
 .axis {
   display: grid;
@@ -199,7 +224,7 @@
   transform: translateX(-50%);
 }
 
-.ticks span:first-child {
+.ticks span[data-start] {
   transform: none;
 }
 

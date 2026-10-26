@@ -1,30 +1,37 @@
 // Дорожки агентов: запросы к модели, тулы и ожидание отчётов — по настоящему времени событий.
 // Наведение или фокус на отрезке — подпись под дорожками: кто, когда и что делал.
+// Длинную сессию можно приблизить — как ленту плеера (useLanesZoom.ts).
 
-import { useState, type ReactElement } from 'react';
+import { useCallback, useRef, useState, type ReactElement } from 'react';
+import { createStripView, type StripView, type StripWindow } from '../../player/stripWindow';
+import { useViewValue } from '../../player/useViewValue';
+import { formatWindow, ZoomControls } from '../../player/ZoomControls';
 import type { AgentLane, AgentSegment, AgentsView } from '../../projections/projectAgents';
 import { formatSeconds } from './agentFormat';
 import styles from './Agents.module.css';
+import { useLanesZoom } from './useLanesZoom';
 
 export function AgentLanes({ view }: { view: AgentsView }): ReactElement {
   const [hovered, setHovered] = useState<string | null>(null);
   const total = Math.max(view.now, 1);
+  const [zoom] = useState(createStripView);
+  const lanesRef = useRef<HTMLDivElement>(null);
+  const pointer = useLanesZoom(lanesRef, zoom, view);
+  const describe = useCallback((win: StripWindow) => formatWindow(win.to - win.from), []);
+  const head = useCallback(() => view.now, [view]);
   return (
     <section className={styles.card}>
-      <h2 className={styles.title}>Кто когда работал</h2>
-      <div className={styles.lanes}>
+      <div className={styles.lanesHead}>
+        <h2 className={styles.title}>Кто когда работал</h2>
+        <ZoomControls view={zoom} describe={describe} head={head} />
+      </div>
+      <div ref={lanesRef} className={styles.lanes} {...pointer}>
         {view.lanes.map((lane) => (
           <Lane key={lane.id} lane={lane} total={total} now={view.now} onHover={setHovered} />
         ))}
         <div className={styles.axis}>
           <span />
-          <div className={styles.ticks}>
-            {ticks(total).map((tick) => (
-              <span key={tick} style={{ left: `${String((tick / total) * 100)}%` }}>
-                {formatSeconds(tick)}
-              </span>
-            ))}
-          </div>
+          <AxisTicks zoom={zoom} />
         </div>
       </div>
       <p className={styles.caption} aria-live="polite">
@@ -69,27 +76,48 @@ function Lane(props: {
         {lane.label}
       </span>
       <div className={styles.track} role="group" aria-label={lane.label}>
-        {lane.segments.map((segment, index) => {
-          const label = describe(lane, segment, now);
-          return (
-            <button
-              key={`${String(segment.start)}-${String(index)}`}
-              type="button"
-              className={styles.segment}
-              data-kind={segment.kind}
-              data-rework={segment.rework}
-              style={placement(segment, total, now)}
-              aria-label={label}
-              onPointerEnter={() => {
-                onHover(label);
-              }}
-              onFocus={() => {
-                onHover(label);
-              }}
-            />
-          );
-        })}
+        <div className={styles.layer} data-zoom-layer="">
+          {lane.segments.map((segment, index) => {
+            const label = describe(lane, segment, now);
+            return (
+              <button
+                key={`${String(segment.start)}-${String(index)}`}
+                type="button"
+                className={styles.segment}
+                data-kind={segment.kind}
+                data-rework={segment.rework}
+                style={placement(segment, total, now)}
+                aria-label={label}
+                onPointerEnter={() => {
+                  onHover(label);
+                }}
+                onFocus={() => {
+                  onHover(label);
+                }}
+              />
+            );
+          })}
+        </div>
       </div>
+    </div>
+  );
+}
+
+// Деления оси — по видимому окну: при зуме мельче.
+function AxisTicks({ zoom }: { zoom: StripView }): ReactElement {
+  const win = useViewValue(zoom, (state) => state.win);
+  const span = Math.max(1, win.to - win.from);
+  return (
+    <div className={styles.ticks}>
+      {ticks(win.from, win.to).map((tick) => (
+        <span
+          key={tick}
+          data-start={tick - win.from < span * 0.02 ? '' : undefined}
+          style={{ left: `${String(((tick - win.from) / span) * 100)}%` }}
+        >
+          {formatSeconds(tick)}
+        </span>
+      ))}
     </div>
   );
 }
@@ -113,12 +141,12 @@ function describe(lane: AgentLane, segment: AgentSegment, now: number): string {
   return `${lane.label} · ${formatSeconds(segment.start)}–${formatSeconds(end)}${still}: ${rework}${segment.label}`;
 }
 
-// Деления оси: 1, 2, 5, 10… секунд — не больше шести.
-function ticks(total: number): number[] {
-  const steps = [500, 1000, 2000, 5000, 10000, 20000, 30000, 60000, 120000, 300000];
-  const step = steps.find((value) => total / value <= 6) ?? 600000;
+// Деления оси: 0,1, 0,2, 0,5, 1, 2, 5, 10… секунд — не больше шести на окно.
+function ticks(from: number, to: number): number[] {
+  const steps = [100, 200, 500, 1000, 2000, 5000, 10000, 20000, 30000, 60000, 120000, 300000];
+  const step = steps.find((value) => (to - from) / value <= 6) ?? 600000;
   const result: number[] = [];
-  for (let tick = 0; tick <= total; tick += step) {
+  for (let tick = Math.ceil(from / step) * step; tick <= to; tick += step) {
     result.push(tick);
   }
   return result;

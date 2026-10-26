@@ -30,6 +30,7 @@ export function timeAtX(strip: HTMLElement, win: StripWindow, clientX: number): 
 // Зум колесом с модификатором или щипком, сдвиг свайпом — и браузер при этом не зумит страницу
 // и не уходит «назад» по свайпу.
 function handleWheel(event: WheelEvent, strip: HTMLElement, view: StripView): void {
+  // strip — то, что измеряем: у дорожек «Агентов» события ловит весь блок, а время — по дорожке.
   const { enabled, win, total } = view.get();
   const zooming = event.ctrlKey || event.metaKey || event.altKey;
   const dx = event.shiftKey ? event.deltaY : event.deltaX;
@@ -52,12 +53,18 @@ interface GestureLike extends Event {
   clientX: number;
 }
 
-export function useStripWheel(stripRef: RefObject<HTMLElement | null>, view: StripView): void {
+// measure — элемент, по которому считать время под курсором; по умолчанию сама лента.
+export function useStripWheel(
+  stripRef: RefObject<HTMLElement | null>,
+  view: StripView,
+  measure?: () => HTMLElement | null,
+): void {
   useEffect(() => {
-    const strip = stripRef.current;
-    if (strip === null) {
+    const area = stripRef.current;
+    if (area === null) {
       return undefined;
     }
+    const strip = measure?.() ?? area;
     let scale = 1;
     const onWheel = (event: WheelEvent): void => {
       handleWheel(event, strip, view);
@@ -79,17 +86,17 @@ export function useStripWheel(stripRef: RefObject<HTMLElement | null>, view: Str
       );
       scale = gesture.scale;
     };
-    strip.addEventListener('wheel', onWheel, { passive: false });
+    area.addEventListener('wheel', onWheel, { passive: false });
     for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
-      strip.addEventListener(type, onGesture);
+      area.addEventListener(type, onGesture);
     }
     return () => {
-      strip.removeEventListener('wheel', onWheel);
+      area.removeEventListener('wheel', onWheel);
       for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
-        strip.removeEventListener(type, onGesture);
+        area.removeEventListener(type, onGesture);
       }
     };
-  }, [stripRef, view]);
+  }, [stripRef, view, measure]);
 }
 
 interface Drag {

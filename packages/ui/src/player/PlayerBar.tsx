@@ -2,7 +2,7 @@
 // скорость, зум ленты и лента действий, по которой можно перематывать. Позиция и лента обновляются
 // прямо в DOM по кадрам часов — React их не перерисовывает.
 
-import { useEffect, useRef, useState, type ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react';
 import { Segmented } from '../components/Segmented';
 import { realAt, stepTime, type Schedule } from '../timeline/schedule';
 import type { TimelineClock } from '../timeline/TimelineClock';
@@ -11,8 +11,8 @@ import { ActionStrip } from './ActionStrip';
 import { IconButton } from './IconButton';
 import styles from './PlayerBar.module.css';
 import { StripMinimap } from './StripMinimap';
-import { createStripView } from './stripWindow';
-import { ZoomControls } from './ZoomControls';
+import { createStripView, type StripView, type StripWindow } from './stripWindow';
+import { formatWindow, ZoomControls } from './ZoomControls';
 
 // Скорости — группой кнопок: все видны сразу и переключаются одним нажатием.
 const SPEED_OPTIONS = [0.5, 1, 2, 4].map((value) => ({
@@ -51,7 +51,7 @@ export function PlayerBar(props: PlayerBarProps): ReactElement {
       <div className={styles.buttons}>
         <Transport clock={clock} schedule={schedule} />
         <FollowAndSpeed clock={clock} live={live} />
-        <ZoomControls clock={clock} schedule={schedule} view={view} />
+        <PlayerZoom clock={clock} schedule={schedule} view={view} />
         <Position clock={clock} schedule={schedule} />
         <ToggleButton collapsed={false} onToggle={onToggle} />
       </div>
@@ -181,4 +181,20 @@ function Position({ clock, schedule }: { clock: TimelineClock; schedule: Schedul
 
 function formatSeconds(ms: number): string {
   return `${(ms / 1000).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} с`;
+}
+
+// Окно ленты — в секундах записи: в повторе долгие ожидания сжаты, поэтому при сдвиге окно
+// одной ширины вмещает разное время записи.
+function PlayerZoom(props: {
+  clock: TimelineClock;
+  schedule: Schedule;
+  view: StripView;
+}): ReactElement {
+  const { clock, schedule, view } = props;
+  const describe = useCallback(
+    (win: StripWindow) => formatWindow(realAt(schedule, win.to) - realAt(schedule, win.from)),
+    [schedule],
+  );
+  const head = useCallback(() => clock.getState().time, [clock]);
+  return <ZoomControls view={view} describe={describe} head={head} />;
 }
