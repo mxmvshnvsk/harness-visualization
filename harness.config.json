@@ -5,7 +5,7 @@
     "model": "deepseek-flash",
     "apiKeyVariable": "DEEPSEEK_API_KEY",
     "requestTimeoutMs": 120000,
-    "maxOutputTokens": 2048,
+    "maxOutputTokens": 8192,
     "reasoningStyle": "deepseek",
     "defaultReasoningEffort": "high",
     "requestExtras": {}

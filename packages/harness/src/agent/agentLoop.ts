@@ -51,13 +51,16 @@ export async function runAgentLoop(
     );
     rejectEmptyReply(reply);
     messages.push(toAssistantMessage(reply));
-    if (reply.toolCalls.length === 0 || (last && (reply.text ?? '') !== '')) {
-      return reply.text ?? '';
+    const answer = finalAnswer(reply, last);
+    if (answer !== null) {
+      return answer;
     }
     if (last) {
       break;
     }
-    await runRequestedTools(reply.toolCalls, messages, dependencies);
+    await (reply.finishReason === 'length'
+      ? refuseTruncatedCalls(reply.toolCalls, messages, dependencies)
+      : runRequestedTools(reply.toolCalls, messages, dependencies));
   }
   throw new Error(
     `Агент не закончил работу за ${String(options.maxIterations)} шагов. ` +
@@ -172,6 +175,54 @@ function rejectEmptyReply(reply: ModelReply): void {
           '(model.maxOutputTokens в harness.config.json)'
       : `Модель вернула пустой ответ (finish_reason: ${reply.finishReason})`,
   );
+}
+
+export const TRUNCATED_ANSWER_NOTE =
+  '[Харнесс] Ответ обрезан: модель упёрлась в лимит длины ответа ' +
+  '(model.maxOutputTokens в harness.config.json).';
+
+const TRUNCATED_CALL_NOTE =
+  '[Харнесс] Вызов не выполнен: ответ модели обрезан по лимиту длины (model.maxOutputTokens), ' +
+  'аргументы неполные. Повтори вызов короче.';
+
+// Ответ текстом — конец цикла. Обрезанный по лимиту длины харнесс не выдаёт за целый: дописывает
+// пометку (в историю модели — без неё). В прогоне d7839b6c итог обрывался на полуслове молча.
+function finalAnswer(reply: ModelReply, last: boolean): string | null {
+  const text = reply.text ?? '';
+  if (reply.toolCalls.length > 0 && !(last && text !== '')) {
+    return null;
+  }
+  return reply.finishReason === 'length' ? `${text}\n\n${TRUNCATED_ANSWER_NOTE}` : text;
+}
+
+// Вызовы тулов из обрезанного ответа: аргументы оборваны, выполнять их нельзя — каждому вызову
+// харнесс отвечает ошибкой с причиной, а не «некорректный JSON» без объяснений.
+async function refuseTruncatedCalls(
+  toolCalls: ToolCall[],
+  messages: ChatMessage[],
+  dependencies: AgentDependencies,
+): Promise<void> {
+  for (const toolCall of toolCalls) {
+    dependencies.events.emit({
+      type: 'tool_call',
+      toolCallId: toolCall.id,
+      toolName: toolCall.name,
+      argumentsText: toolCall.argumentsText,
+      arguments: null,
+    });
+    dependencies.events.emit({
+      type: 'tool_result',
+      toolCallId: toolCall.id,
+      toolName: toolCall.name,
+      status: 'error',
+      content: TRUNCATED_CALL_NOTE,
+      details: null,
+      cost: null,
+      durationMs: 0,
+    });
+    messages.push({ role: 'tool', toolCallId: toolCall.id, content: TRUNCATED_CALL_NOTE });
+  }
+  return Promise.resolve();
 }
 
 function toAssistantMessage(reply: ModelReply): AssistantMessage {
