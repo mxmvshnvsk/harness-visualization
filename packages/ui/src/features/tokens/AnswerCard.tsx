@@ -57,7 +57,7 @@ export function AnswerCard(props: { view: TokenLabView; answer: TokenLabAnswer }
           note="геометрическое среднее"
         />
       </div>
-      <p className={styles.note}>
+      <p className={styles.note} data-teaching>
         Высокая уверенность — не доказательство правды: модель бывает уверена и в выдуманном. Опору
         ответа на источники проверяет другое — лаборатория RAG, «Опора ответа».
       </p>

@@ -45,9 +45,13 @@ export function ThreeSearches({ base, search, question }: ThreeSearchesProps): R
         {METHODS.map((method) => (
           <div key={method.key} className={styles.column}>
             <h3>{method.title}</h3>
-            <p className={styles.note}>{method.how}</p>
+            <p className={styles.note} data-teaching>
+              {method.how}
+            </p>
             {search[method.key].length === 0 ? (
-              <p className={styles.note}>Ни у одного документа нет слов из запроса.</p>
+              <p className={styles.note} data-teaching>
+                Ни у одного документа нет слов из запроса.
+              </p>
             ) : (
               <ol className={styles.rank}>
                 {search[method.key].slice(0, SHOWN).map((item, index) => (

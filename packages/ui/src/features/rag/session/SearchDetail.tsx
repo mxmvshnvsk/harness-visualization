@@ -55,7 +55,7 @@ function ReadDetail(props: { action: ReadAction } & Omit<DetailProps, 'action'>)
           <b>{action.chars}</b> симв. в контекст
         </span>
       </div>
-      <p className={styles.note}>
+      <p className={styles.note} data-teaching>
         Поиск отдаёт фрагменты, а за полным текстом модель приходит сама.{' '}
         {seenIn.length > 0
           ? `Этот документ она видела в выдаче ${seenIn.map((search) => `«${search.query}»`).join(', ')} и решила, что фрагмента мало.`
@@ -93,7 +93,9 @@ function SearchResult(props: { action: SearchAction } & Omit<DetailProps, 'actio
         </span>
       </div>
       {action.failed ? (
-        <p className={styles.note}>Поиск вернул ошибку — модель получила её текст.</p>
+        <p className={styles.note} data-teaching>
+          Поиск вернул ошибку — модель получила её текст.
+        </p>
       ) : (
         <ul className={styles.rows}>
           {action.documents.map((document) => (
@@ -109,7 +111,9 @@ function SearchResult(props: { action: SearchAction } & Omit<DetailProps, 'actio
           ))}
         </ul>
       )}
-      <p className={styles.note}>Нажмите на строку — покажем фрагмент, который увидела модель.</p>
+      <p className={styles.note} data-teaching>
+        Нажмите на строку — покажем фрагмент, который увидела модель.
+      </p>
     </div>
   );
 }
@@ -131,7 +135,7 @@ function QueryChain({ action }: { action: SearchAction }): ReactElement {
             {action.query}
           </div>
         </div>
-        <p className={styles.note}>
+        <p className={styles.note} data-teaching>
           Харнесс искал до первого шага модели и положил найденное прямо в запрос — модель его не
           просила, а увидела сразу.
         </p>

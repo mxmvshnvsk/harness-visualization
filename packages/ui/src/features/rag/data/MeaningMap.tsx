@@ -82,7 +82,7 @@ export function MeaningMap({ base, search, question }: MapProps): ReactElement {
 
 function MapNote({ count, method }: { count: number; method: MapMethod }): ReactElement {
   return (
-    <p className={styles.note}>
+    <p className={styles.note} data-teaching>
       {count} фрагментов базы — точки, звезда — запрос. На плоскость 384 измерения сжимает{' '}
       {method === 'umap' ? (
         <>
@@ -248,7 +248,9 @@ function NearestList({ search, question, hovered }: NearestProps): ReactElement 
               );
             })}
           </ul>
-          <p className={styles.note}>{question.checks}</p>
+          <p className={styles.note} data-teaching>
+            {question.checks}
+          </p>
         </>
       )}
       <div className={styles.hover}>

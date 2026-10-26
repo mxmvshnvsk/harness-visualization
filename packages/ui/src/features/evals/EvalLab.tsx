@@ -34,7 +34,7 @@ export function EvalLab({ backLabel, onBack, onOpenTrace }: EvalLabProps): React
       </header>
       <div>
         <h1 className={labStyles.title}>Лаборатория Evals</h1>
-        <p className={labStyles.lead}>
+        <p className={labStyles.lead} data-teaching>
           Как понять, что агент стал лучше, а не «вроде лучше»: набор задач, несколько попыток на
           каждую, проверки по трейсу и итог по конфигурациям. Задачи — из настоящих уроков стенда
           «Кедр Софт». <HelpButton topic="evals" />

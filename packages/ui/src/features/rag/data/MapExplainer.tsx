@@ -38,7 +38,7 @@ export function MapExplainer({ method }: { method: MapMethod }): ReactElement {
   return (
     <details className={styles.explainer}>
       <summary>Как читать карту: что такое PCA и UMAP</summary>
-      <p className={styles.note}>
+      <p className={styles.note} data-teaching>
         У каждого фрагмента вектор из 384 чисел — точка в 384-мерном пространстве. Нарисовать его
         нельзя, поэтому карту сжимают до двух измерений. Сжатие всегда что-то теряет; два способа
         теряют разное. Переключайте PCA и UMAP наверху карты и сравнивайте.
@@ -48,7 +48,7 @@ export function MapExplainer({ method }: { method: MapMethod }): ReactElement {
           <MethodCard key={key} method={METHODS[key]} active={method === key} />
         ))}
       </div>
-      <p className={styles.note}>
+      <p className={styles.note} data-teaching>
         <b>Общее правило:</b> карта — для того, чтобы увидеть форму базы, а не чтобы мерить. Какой
         фрагмент ближе к запросу, говорит косинус в списке справа: он считается по всем 384 числам,
         без сжатия. Попробуйте «удалёнка»: пунктир идёт к пяти ближайшим по косинусу — и на PCA

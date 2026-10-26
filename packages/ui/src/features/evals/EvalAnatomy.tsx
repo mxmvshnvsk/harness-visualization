@@ -76,7 +76,7 @@ function TwoHarnesses(): ReactElement {
           </span>
         </div>
       </div>
-      <p className={styles.note}>
+      <p className={styles.note} data-teaching>
         Поменяли инструкцию, способ поиска или модель — прогнали тот же набор задач. Так видно, что
         изменение починило и что сломало, а не «вроде стало лучше».
       </p>

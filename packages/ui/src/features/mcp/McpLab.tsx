@@ -38,7 +38,7 @@ export function McpLab({
       </header>
       <div>
         <h1 className={styles.title}>Лаборатория MCP</h1>
-        <p className={styles.lead}>
+        <p className={styles.lead} data-teaching>
           Как модель пользуется тулами, что меняет MCP и чем за это платят. Четыре шага на настоящих
           сообщениях протокола из записанной сессии
           {course.status === 'ready' && <span className={styles.mono}> {course.value.file}</span>}.

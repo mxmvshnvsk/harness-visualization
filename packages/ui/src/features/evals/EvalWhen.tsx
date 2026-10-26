@@ -34,7 +34,7 @@ export function EvalWhen(): ReactElement {
           </span>
         </div>
       </div>
-      <p className={styles.note}>
+      <p className={styles.note} data-teaching>
         Источник терминов и подхода — статья Anthropic{' '}
         <a href="https://anthropic.com/engineering/demystifying-evals-for-ai-agents">
           Demystifying evals for AI agents

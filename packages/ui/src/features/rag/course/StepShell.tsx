@@ -31,11 +31,11 @@ export function StepShell(props: StepShellProps): ReactElement {
       </h2>
       <div className={styles.prose}>{props.prose}</div>
       {props.lab}
-      <div className={styles.notice}>
+      <div className={styles.notice} data-teaching>
         <b>Обратите внимание</b>
         <div>{props.notice}</div>
       </div>
-      <div className={styles.takeaway}>
+      <div className={styles.takeaway} data-teaching>
         <b>Вывод</b>
         <div>{props.takeaway}</div>
       </div>

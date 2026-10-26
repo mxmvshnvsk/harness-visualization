@@ -59,7 +59,7 @@ export function ArenaLab({ backLabel, onBack, onStarted }: ArenaLabProps): React
       </header>
       <div>
         <h1 className={labStyles.title}>Код-арена</h1>
-        <p className={labStyles.lead}>
+        <p className={labStyles.lead} data-teaching>
           Агент правит маленький проект и сам запускает тесты, а харнесс принимает работу тестами,
           которых агент не видел. Главный вопрос: когда агент говорит «готово» — это правда? Прогон
           откроется обычной сессией: поток, инспектор, вкладка «Код» и приёмка в «Диалоге».{' '}
@@ -153,7 +153,9 @@ function TaskCard(props: {
       <div className={styles.taskText}>
         <MarkdownView text={task.text} />
       </div>
-      <p className={styles.lesson}>{task.lesson}</p>
+      <p className={styles.lesson} data-teaching>
+        {task.lesson}
+      </p>
       <LaunchForm task={task} response={response} onStarted={props.onStarted} />
     </section>
   );

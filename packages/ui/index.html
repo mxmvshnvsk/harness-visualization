@@ -15,6 +15,10 @@
           choice === 'dark' ||
           (choice === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
         document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        try {
+          document.documentElement.dataset.mode =
+            localStorage.getItem('hv-mode') === 'research' ? 'research' : 'learn';
+        } catch (error) {}
       })();
     </script>
   </head>

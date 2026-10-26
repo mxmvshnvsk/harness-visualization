@@ -20,7 +20,7 @@ export function TwoPhrases(): ReactElement {
   return (
     <section className={styles.card}>
       <h2 className={styles.title}>Две фразы</h2>
-      <p className={styles.note}>
+      <p className={styles.note} data-teaching>
         Впишите две фразы — сервер посчитает их векторы, а сходство — браузер. Попробуйте одинаковый
         смысл разными словами и разный смысл одинаковыми.
       </p>

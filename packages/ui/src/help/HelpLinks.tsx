@@ -9,13 +9,15 @@ import type { HelpTopic } from './helpTopics';
 export function HelpButton({ topic }: { topic: HelpTopic }): ReactElement {
   const openHelp = useOpenHelp();
   return (
-    <Button
-      onClick={() => {
-        openHelp(topic);
-      }}
-    >
-      Что это?
-    </Button>
+    <span data-teaching>
+      <Button
+        onClick={() => {
+          openHelp(topic);
+        }}
+      >
+        Что это?
+      </Button>
+    </span>
   );
 }
 

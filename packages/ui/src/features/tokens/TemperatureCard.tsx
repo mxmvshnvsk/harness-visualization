@@ -35,7 +35,7 @@ export function TemperatureCard({ view }: { view: TokenLabView }): ReactElement 
         ))}
       </div>
       {view.reasoningEffort !== 'off' && (
-        <p className={styles.note}>
+        <p className={styles.note} data-teaching>
           С рассуждениями DeepSeek temperature не применяет: «не вызывает ошибки, но и не действует»
           (документация). Сравните первый токен в трёх столбцах — распределения должны совпадать.
         </p>
@@ -119,7 +119,7 @@ function Resampler({ tokens }: { tokens: readonly TokenView[] }): ReactElement {
         chosen={token?.text ?? null}
         onDraw={() => setDraws(Array.from({ length: 20 }, () => drawToken(options, Math.random())))}
       />
-      <p className={styles.note}>
+      <p className={styles.note} data-teaching>
         Честно о пересчёте: API отдаёт 20 самых вероятных токенов на позицию — хвост из остальных мы
         не видим и пересчитываем только эти 20. Для формы распределения этого хватает: на хвост
         обычно приходятся доли процента.

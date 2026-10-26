@@ -50,7 +50,7 @@ export function TokenLab({ backLabel, onBack, onOpenTrace }: TokenLabProps): Rea
       </header>
       <div>
         <h1 className={labStyles.title}>Как модель выбирает токен</h1>
-        <p className={labStyles.lead}>
+        <p className={labStyles.lead} data-teaching>
           Модель не пишет ответ целиком. На каждом шаге она считает вероятность каждого возможного
           следующего кусочка текста — токена — и выбирает один. Здесь видно, где модель была
           уверена, где колебалась и как выбор меняет температура. <HelpButton topic="token-lab" />

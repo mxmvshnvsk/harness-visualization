@@ -38,3 +38,8 @@ h3 {
     transition: none !important;
   }
 }
+
+/* Режим «Исследование» (app/mode.ts): учебный слой прячется, термины — обычный текст. */
+:root[data-mode='research'] [data-teaching] {
+  display: none !important;
+}

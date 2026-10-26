@@ -55,7 +55,9 @@ import type { TimelineClock } from '../timeline/TimelineClock';
 import { useTimeline } from '../timeline/useTimeline';
 import styles from './App.module.css';
 import { Sidebar } from './Sidebar';
-import { useTheme } from './theme';
+import { useTheme, type ThemeChoice } from './theme';
+import { setMode, useMode, type UiMode } from './mode';
+import { ModeToggle } from '../components/ModeToggle';
 import { useSelection, type LabName, type OpenedSelection, type Selection } from './useSelection';
 import { ViewLinksContext, type SearchLink, type ViewLinks } from './viewLinks';
 
@@ -275,7 +277,8 @@ function Topbar({ onOpenSources, onOpenLab, ...header }: TopbarProps): ReactElem
     openDialog === null
       ? []
       : [{ label: 'Диалог', hint: 'развернуть колонку', onSelect: openDialog }];
-  const labs = LAB_ENTRIES.map((entry) => ({
+  const mode = useMode();
+  const labs = labEntries(mode).map((entry) => ({
     label: entry.title,
     hint: entry.short,
     onSelect: () => {
@@ -286,6 +289,9 @@ function Topbar({ onOpenSources, onOpenLab, ...header }: TopbarProps): ReactElem
     <header className={styles.topbar}>
       <StreamHeader {...header} />
       <div className={styles.toolbar}>
+        <span className={styles.wideOnly}>
+          <ModeToggle />
+        </span>
         <span className={styles.wideOnly}>
           <ThemeToggleButton choice={theme} onChange={setTheme} />
         </span>
@@ -309,15 +315,7 @@ function Topbar({ onOpenSources, onOpenLab, ...header }: TopbarProps): ReactElem
               { items: [...dialog, { label: 'Сессии и трейсы', onSelect: onOpenSources }] },
               { title: 'лаборатории', items: labs },
               {
-                items: [
-                  {
-                    label: THEME_TEXT[theme],
-                    hint: 'нажмите, чтобы сменить',
-                    onSelect: () => {
-                      setTheme(nextTheme(theme));
-                    },
-                  },
-                ],
+                items: settingsItems(mode, theme, setTheme),
               },
             ]}
           />
@@ -340,15 +338,24 @@ function MoreIcon(): ReactElement {
   );
 }
 
-const LAB_ENTRIES: readonly { lab: LabName; title: string; short: string; text: string }[] = [
+// teaching — учебная лаборатория: в режиме «Исследование» её нет, остаются инструменты.
+const LAB_ENTRIES: readonly {
+  lab: LabName;
+  title: string;
+  short: string;
+  text: string;
+  teaching?: boolean;
+}[] = [
   {
     lab: 'rag',
+    teaching: true,
     title: 'Лаборатория RAG',
     short: 'поиск, векторы, проверка ответа',
     text: 'Как агент ищет в базе знаний, что такое векторы и почему найденное не гарантирует верный ответ.',
   },
   {
     lab: 'mcp',
+    teaching: true,
     title: 'Лаборатория MCP',
     short: 'тулы, протокол, цена, доверие',
     text: 'Что такое тул для модели, как харнесс говорит с MCP-сервером, сколько стоят тулы и можно ли верить серверу.',
@@ -373,26 +380,60 @@ const LAB_ENTRIES: readonly { lab: LabName; title: string; short: string; text: 
   },
 ];
 
+// Режим и тема — в меню «⋯» на узком экране, где переключателей в шапке нет.
+function settingsItems(
+  mode: UiMode,
+  theme: ThemeChoice,
+  setTheme: (choice: ThemeChoice) => void,
+): { label: string; hint: string; onSelect: () => void }[] {
+  return [
+    {
+      label: mode === 'research' ? 'режим: исследование' : 'режим: обучение',
+      hint: 'нажмите, чтобы сменить',
+      onSelect: () => {
+        setMode(mode === 'research' ? 'learn' : 'research');
+      },
+    },
+    {
+      label: THEME_TEXT[theme],
+      hint: 'нажмите, чтобы сменить',
+      onSelect: () => {
+        setTheme(nextTheme(theme));
+      },
+    },
+  ];
+}
+
+function labEntries(mode: UiMode): typeof LAB_ENTRIES {
+  return mode === 'research' ? LAB_ENTRIES.filter((entry) => entry.teaching !== true) : LAB_ENTRIES;
+}
+
 // Пока ничего не открыто — вопрос агенту и списки прямо на экране, без панели.
 function StartScreen(props: {
   children: ReactNode;
   onOpenLab: (lab: LabName) => void;
 }): ReactElement {
+  const mode = useMode();
   return (
     <div className={styles.start}>
       <div className={styles.startIntro}>
         <div className={styles.startTop}>
           <span className={styles.eyebrow}>Harness Visualization</span>
-          <ThemeToggle />
+          <span className={styles.startControls}>
+            <ModeToggle />
+            <ThemeToggle />
+          </span>
         </div>
-        <h1 className={styles.startTitle}>Как вопрос проходит через харнесс</h1>
-        <p className={styles.startText}>
+        <h1 className={styles.startTitle}>
+          {mode === 'research' ? 'Сессии и записи' : 'Как вопрос проходит через харнесс'}
+        </h1>
+        <p className={styles.startText} data-teaching>
           Задайте вопрос агенту или откройте записанный трейс — и посмотрите по шагам: prompt,
           модель, политика, тулы, ответ.
         </p>
       </div>
       <div className={styles.labs}>
-        {LAB_ENTRIES.map((entry) => (
+        {labEntries(mode).map((entry) => (
           <button
             key={entry.lab}
             type="button"
@@ -402,7 +443,7 @@ function StartScreen(props: {
             }}
           >
             <b>{entry.title} →</b>
-            <span>{entry.text}</span>
+            <span>{mode === 'research' ? entry.short : entry.text}</span>
           </button>
         ))}
       </div>

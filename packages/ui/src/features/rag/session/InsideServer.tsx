@@ -42,10 +42,18 @@ function InsideContent({ action }: { action: SearchAction }): ReactElement {
   const search = useSearch(action.query);
   const failure = [base, search].find((loaded) => loaded.status === 'error');
   if (failure?.status === 'error') {
-    return <p className={styles.note}>{failure.message}</p>;
+    return (
+      <p className={styles.note} data-teaching>
+        {failure.message}
+      </p>
+    );
   }
   if (base.status !== 'ready' || search.status !== 'ready') {
-    return <p className={styles.note}>Считаем вектор запроса той же моделью…</p>;
+    return (
+      <p className={styles.note} data-teaching>
+        Считаем вектор запроса той же моделью…
+      </p>
+    );
   }
   return <Pipeline action={action} base={base.value} search={search.value} />;
 }
@@ -121,7 +129,7 @@ function Comparison({ search, base, top, far }: ComparisonProps): ReactElement {
   return (
     <div className={styles.compare}>
       <h4 className={styles.compareTitle}>Как выглядят векторы</h4>
-      <p className={styles.note}>
+      <p className={styles.note} data-teaching>
         Каждая полоска — одно из 384 чисел: цвет — знак, насыщенность — величина. Похожесть глазом
         почти не видна — она складывается из всех чисел сразу.
       </p>
@@ -175,7 +183,7 @@ function Check({
     return null;
   }
   return (
-    <p className={styles.note}>
+    <p className={styles.note} data-teaching>
       <b>Сверка:</b> в браузере косинус запроса и лучшего фрагмента — {formatSimilarity(computed)},
       сервер написал модели «сходство {written.toFixed(3)}», разница{' '}
       {formatSimilarity(Math.abs(computed - written))}. Вектор запроса здесь посчитан заново, а
