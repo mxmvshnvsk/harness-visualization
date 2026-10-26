@@ -14,6 +14,7 @@ import labStyles from '../rag/RagLab.module.css';
 import styles from './Evals.module.css';
 import { EvalCompare } from './EvalCompare';
 import { SuiteTag } from './EvalTasks';
+import { PassAtHint, PassHatHint, PassRateHint } from './PassHints';
 import { resultOf, RESULT_MARKS, TrialDetail, type CellRef } from './TrialDetail';
 import { useEvalReport } from './useEvals';
 
@@ -192,15 +193,21 @@ function ConfigTotals({ report }: { report: EvalReport }): ReactElement {
             <div className={styles.big}>
               <div>
                 <b>{percent(summary.trialPassRate)}</b>
-                <small>попыток прошло</small>
+                <small>
+                  <PassRateHint />
+                </small>
               </div>
               <div>
                 <b>{percent(summary.passAtK)}</b>
-                <small>pass@{report.trials}</small>
+                <small>
+                  <PassAtHint trials={report.trials} />
+                </small>
               </div>
               <div>
                 <b>{percent(summary.passHatK)}</b>
-                <small>pass^{report.trials}</small>
+                <small>
+                  <PassHatHint trials={report.trials} />
+                </small>
               </div>
             </div>
             <SuiteLines report={report} config={config.name} />
@@ -239,7 +246,6 @@ function Matrix(props: {
   onCell: (cell: CellRef) => void;
 }): ReactElement {
   const { report } = props;
-  const trials = String(report.trials);
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
@@ -248,7 +254,8 @@ function Matrix(props: {
             <th>задача</th>
             {report.configs.map((config) => (
               <th key={config.name} colSpan={2}>
-                {config.name}: попытки · pass@{trials} / pass^{trials}
+                {config.name}: попытки · <PassAtHint trials={report.trials} /> /{' '}
+                <PassHatHint trials={report.trials} />
               </th>
             ))}
           </tr>

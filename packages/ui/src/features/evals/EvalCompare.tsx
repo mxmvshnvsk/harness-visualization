@@ -12,6 +12,7 @@ import { useState, type ReactElement } from 'react';
 import { Segmented } from '../../components/Segmented';
 import labStyles from '../rag/RagLab.module.css';
 import { SuiteTag } from './EvalTasks';
+import { PassHatHint, PassRateHint } from './PassHints';
 import styles from './Evals.module.css';
 import { resultOf, RESULT_MARKS } from './TrialDetail';
 import { useEvalReport } from './useEvals';
@@ -143,8 +144,9 @@ function ConfigShift(props: {
           <div key={config} className={styles.total}>
             <span className={styles.mono}>{config}</span>
             <span className={styles.small}>
-              pass^k {percent(was.passHatK)} → <b>{percent(now.passHatK)}</b> · попыток прошло{' '}
-              {percent(was.trialPassRate)} → <b>{percent(now.trialPassRate)}</b>
+              <PassHatHint trials={props.after.trials} /> {percent(was.passHatK)} →{' '}
+              <b>{percent(now.passHatK)}</b> · <PassRateHint /> {percent(was.trialPassRate)} →{' '}
+              <b>{percent(now.trialPassRate)}</b>
             </span>
             <span className={`${styles.small} ${styles.muted}`}>
               {cost(was.costUsd)} → {cost(now.costUsd)} USD всего · медиана{' '}
