@@ -56,6 +56,7 @@ import { runHybridTurn, type HybridOptions } from '../orchestration/runHybridTur
 import { startSessionRecording, type SessionRecording } from './sessionRecording.js';
 import { arenaRoot, describeArenaRun, type ArenaSessionInput } from '../arena/arenaSession.js';
 import { checkAcceptance } from '../arena/checkAcceptance.js';
+import { sandboxInfo } from '../arena/nodeSandbox.js';
 import { createRunTestsTool } from '../arena/runTestsTool.js';
 import { createRunNodeTool } from '../arena/runNodeTool.js';
 
@@ -209,6 +210,9 @@ async function prepareSession(
   const { settings } = input.loadedSettings;
   const { workspaceSetting, preparedWorkspace } = await prepareSessionWorkspace(input);
   const searchProvider = await prepareSearchProvider(input, hooks, fetchImpl);
+  // Песочница арены: у Docker версию Node узнаём у образа — до начала, чтобы ошибка «Docker
+  // не запущен» пришла сразу, а не на первом run_tests.
+  const sandbox = input.arena ? await sandboxInfo(settings.arena) : null;
   announceSession(events, {
     settings,
     reasoningEffort: input.reasoningEffort,
@@ -219,7 +223,10 @@ async function prepareSession(
     subagents: subagentsOf(input),
     orchestration: orchestrationOf(input),
     demoProject: input.demoProject,
-    arena: input.arena ? describeArenaRun(input.arena, input.projectRoot) : null,
+    arena:
+      input.arena && sandbox !== null
+        ? describeArenaRun(input.arena, input.projectRoot, sandbox)
+        : null,
   });
   const workspace = new Workspace(resolve(input.projectRoot, workspaceSetting));
   const skills = await prepareSkills(input, events);

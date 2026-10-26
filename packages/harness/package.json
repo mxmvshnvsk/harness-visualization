@@ -29,6 +29,10 @@
     "./arena": {
       "types": "./dist/arena/browserSafe.d.ts",
       "default": "./dist/arena/browserSafe.js"
+    },
+    "./arena/docker": {
+      "types": "./dist/arena/dockerSandbox.d.ts",
+      "default": "./dist/arena/dockerSandbox.js"
     }
   },
   "scripts": {

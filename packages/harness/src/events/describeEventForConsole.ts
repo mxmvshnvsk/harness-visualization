@@ -651,7 +651,11 @@ function describeSessionMode(event: EventOfType<'session_started'>): string {
   if (arena !== null) {
     const tests = `${arena.runTests ? 'файлы и run_tests' : 'файлы без run_tests — «вслепую»'}${arena.runNode === true ? ', run_node с подтверждением' : ''}`;
     const network = arena.network === 'closed' ? 'сеть закрыта' : 'сеть открыта';
-    return `Код-арена: задача ${arena.taskId ?? 'своя'}, ${tests}; контекст ${arena.contextPreset}, до ${String(arena.maxIterations)} шагов; тесты в Node ${arena.nodeVersion} с --permission, ${network}`;
+    const place =
+      arena.sandbox === 'docker'
+        ? `в Docker ${arena.image ?? ''}, Node ${arena.nodeVersion}`
+        : `в Node ${arena.nodeVersion} с --permission`;
+    return `Код-арена: задача ${arena.taskId ?? 'своя'}, ${tests}; контекст ${arena.contextPreset}, до ${String(arena.maxIterations)} шагов; тесты ${place}, ${network}`;
   }
   return event.demoProject === false
     ? 'Без демо-проекта: ни «Кедр Софт», ни MCP, ни базы знаний — пустая песочница, файлы и веб'

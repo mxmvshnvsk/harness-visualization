@@ -23,6 +23,7 @@ export function createRunTestsTool(settings: ArenaSettings): Tool {
         patterns: [],
         timeoutMs: settings.testTimeoutSeconds * 1000,
         outputMaxCharacters: settings.outputMaxCharacters,
+        sandbox: settings,
       });
       return { content: summarizeTests(result), details: testDetails(result) };
     },

@@ -15,7 +15,8 @@ export function describeArena(arena: ArenaRun): string {
     (arena.contextPreset as string | undefined) === undefined
       ? ''
       : ` · контекст ${arena.contextPreset}, до ${String(arena.maxIterations)} шагов`;
-  return `Код-арена · ${task} · ${tests}${limits} · Node ${arena.nodeVersion}, ${network}`;
+  const place = arena.sandbox === 'docker' ? `Docker ${arena.image ?? ''}, Node` : 'Node';
+  return `Код-арена · ${task} · ${tests}${limits} · ${place} ${arena.nodeVersion}, ${network}`;
 }
 
 export const STATUS_LABELS: Record<CodeFile['status'], string> = {

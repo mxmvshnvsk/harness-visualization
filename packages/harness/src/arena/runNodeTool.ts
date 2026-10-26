@@ -10,7 +10,7 @@ import { ToolError } from '../tools/ToolError.js';
 import { defineTool } from '../tools/defineTool.js';
 import type { Tool } from '../tools/toolTypes.js';
 import type { ArenaSettings } from '../settings/settingsSchema.js';
-import { networkClosedByPermissions, runSandboxedNode, truncate } from './nodeSandbox.js';
+import { runSandboxedNode, sandboxInfo, truncate } from './nodeSandbox.js';
 
 const SCRIPT_EXTENSIONS = ['.js', '.mjs', '.cjs'];
 
@@ -39,7 +39,9 @@ export function createRunNodeTool(settings: ArenaSettings): Tool {
         // «--» — дальше аргументы программы, а не флаги Node: модель не включит себе --allow-*.
         args: ['--', toolArguments.file, ...toolArguments.args],
         timeoutMs: settings.testTimeoutSeconds * 1000,
+        sandbox: settings,
       });
+      const info = await sandboxInfo(settings);
       const output = truncate(run.output, settings.outputMaxCharacters);
       const head = run.timedOut
         ? 'Программа не уложилась в отведённое время и остановлена.'
@@ -52,7 +54,7 @@ export function createRunNodeTool(settings: ArenaSettings): Tool {
           exitCode: run.exitCode,
           timedOut: run.timedOut,
           durationMs: run.durationMs,
-          network: networkClosedByPermissions() ? 'closed' : 'open',
+          network: info.network,
           output,
         },
       };

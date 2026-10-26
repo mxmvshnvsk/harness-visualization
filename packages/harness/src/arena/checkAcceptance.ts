@@ -78,6 +78,7 @@ function runPatterns(
     patterns: [pattern],
     timeoutMs: run.settings.testTimeoutSeconds * 1000,
     outputMaxCharacters: run.settings.outputMaxCharacters,
+    sandbox: run.settings,
   });
 }
 

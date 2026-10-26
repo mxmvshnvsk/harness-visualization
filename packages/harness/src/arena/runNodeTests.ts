@@ -1,11 +1,6 @@
 // Тесты Код-арены (этап 10): node --test в папке проекта, в песочнице nodeSandbox.ts.
 
-import {
-  nodeMajor,
-  networkClosedByPermissions,
-  runSandboxedNode,
-  truncate,
-} from './nodeSandbox.js';
+import { runSandboxedNode, sandboxInfo, truncate, type SandboxConfig } from './nodeSandbox.js';
 import { parseTap, type NodeTestResult } from './testResults.js';
 
 export { networkClosedByPermissions } from './nodeSandbox.js';
@@ -16,20 +11,27 @@ export interface NodeTestRequest {
   patterns: string[];
   timeoutMs: number;
   outputMaxCharacters: number;
+  sandbox: SandboxConfig;
 }
 
-export function nodeTestArguments(patterns: readonly string[]): string[] {
+// Флаги зависят от версии Node песочницы — у Docker она своя, из образа.
+export function nodeTestArguments(patterns: readonly string[], nodeVersion: string): string[] {
   // Один процесс на все файлы: отдельный процесс на файл модель разрешений запретила бы.
-  const isolation =
-    nodeMajor() >= 24 ? '--test-isolation=none' : '--experimental-test-isolation=none';
+  const major = Number(nodeVersion.split('.')[0]);
+  if (major < 22) {
+    throw new Error(`Для Код-арены нужен Node 22 или новее, в песочнице ${nodeVersion}`);
+  }
+  const isolation = major >= 24 ? '--test-isolation=none' : '--experimental-test-isolation=none';
   return ['--test', isolation, '--test-reporter=tap', ...patterns];
 }
 
 export async function runNodeTests(request: NodeTestRequest): Promise<NodeTestResult> {
+  const info = await sandboxInfo(request.sandbox);
   const run = await runSandboxedNode({
     directory: request.directory,
-    args: nodeTestArguments(request.patterns),
+    args: nodeTestArguments(request.patterns, info.nodeVersion),
     timeoutMs: request.timeoutMs,
+    sandbox: request.sandbox,
   });
   const tests = parseTap(run.output);
   return {
@@ -39,7 +41,7 @@ export async function runNodeTests(request: NodeTestRequest): Promise<NodeTestRe
     output: truncate(run.output, request.outputMaxCharacters),
     durationMs: run.durationMs,
     timedOut: run.timedOut,
-    network: networkClosedByPermissions() ? 'closed' : 'open',
-    nodeVersion: process.versions.node,
+    network: info.network,
+    nodeVersion: info.nodeVersion,
   };
 }

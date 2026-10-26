@@ -83,9 +83,15 @@ export interface ArenaRun {
   // Пресет контекста и лимит шагов прогона: у арены свои (по умолчанию real и 25).
   contextPreset: 'demo' | 'stress' | 'real';
   maxIterations: number;
-  // Закрыта ли сеть для запускаемого кода: модель разрешений Node закрывает её с Node 25.
+  // Закрыта ли сеть для запускаемого кода: модель разрешений Node закрывает её с Node 25,
+  // Docker — всегда.
   network: 'closed' | 'open';
+  // Версия Node песочницы: у Docker — из образа.
   nodeVersion: string;
+  // Где запускался код агента; нет поля — трейсы до Docker-песочницы, это node.
+  sandbox?: 'node' | 'docker';
+  // Образ Docker.
+  image?: string;
 }
 
 export interface ImportedFrom {

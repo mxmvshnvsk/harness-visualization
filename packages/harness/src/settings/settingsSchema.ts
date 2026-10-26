@@ -136,6 +136,17 @@ const arenaSettingsSchema = z.object({
   // demo и 10 шагов остаются переключателем — как экспонат «харнесс зажат».
   contextPreset: contextPresetSchema.default('real'),
   maxIterations: z.number().int().positive().default(25),
+  // Где запускается код агента: node — отдельный процесс Node с --permission (по умолчанию,
+  // ничего ставить не нужно); docker — контейнер без сети и с лимитами (нужен Docker).
+  sandbox: z.enum(['node', 'docker']).default('node'),
+  docker: z
+    .object({
+      image: z.string().min(1).default('node:24-alpine'),
+      memory: z.string().min(1).default('512m'),
+      cpus: z.number().positive().default(1),
+      pidsLimit: z.number().int().positive().default(256),
+    })
+    .default({ image: 'node:24-alpine', memory: '512m', cpus: 1, pidsLimit: 256 }),
 });
 
 const webFetchSettingsSchema = z.object({
@@ -450,6 +461,8 @@ export const harnessSettingsSchema = z.object({
     outputMaxCharacters: 4000,
     contextPreset: 'real',
     maxIterations: 25,
+    sandbox: 'node',
+    docker: { image: 'node:24-alpine', memory: '512m', cpus: 1, pidsLimit: 256 },
   }),
 });
 

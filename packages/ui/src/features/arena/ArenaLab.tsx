@@ -164,7 +164,7 @@ function LaunchForm(props: {
   response: ArenaTasksResponse;
   onStarted: (sessionId: string) => void;
 }): ReactElement {
-  const { defaults, nodeVersion, network } = props.response;
+  const { defaults } = props.response;
   const [tests, setTests] = useState<'tests' | 'blind'>('tests');
   const [effort, setEffort] = useState<Effort>(defaults.reasoningEffort);
   const [squeezed, setSqueezed] = useState(false);
@@ -200,7 +200,7 @@ function LaunchForm(props: {
           onChange={setSqueezed}
         />
       </div>
-      <SandboxNote nodeVersion={nodeVersion} network={network} />
+      <SandboxNote response={props.response} />
       <div className={styles.launch}>
         <Button
           variant="accent"
@@ -217,12 +217,26 @@ function LaunchForm(props: {
   );
 }
 
-function SandboxNote(props: { nodeVersion: string; network: 'closed' | 'open' }): ReactElement {
+// Где пойдёт код агента — песочница из arena.sandbox (node или docker).
+function SandboxNote({ response }: { response: ArenaTasksResponse }): ReactElement {
+  if (response.sandboxError !== null) {
+    return <p className={styles.error}>{response.sandboxError}</p>;
+  }
+  if (response.sandbox === 'docker') {
+    return (
+      <p className={styles.muted}>
+        Тесты пойдут в контейнере Docker ({response.image}, Node {response.nodeVersion}): видна
+        только копия проекта, сети нет, память и процессы ограничены. Каждый запуск — примерно на
+        секунду дольше.
+      </p>
+    );
+  }
   return (
     <p className={styles.muted}>
-      Тесты пойдут в Node {props.nodeVersion} с --permission: файлы — только в копии проекта, ключей
-      в окружении нет; сеть{' '}
-      {props.network === 'closed' ? 'закрыта' : 'открыта — её закрывает только Node 25'}.
+      Тесты пойдут в Node {response.nodeVersion} с --permission: файлы — только в копии проекта,
+      ключей в окружении нет; сеть{' '}
+      {response.network === 'closed' ? 'закрыта' : 'открыта — её закрывает только Node 25'}. Крепче
+      — Docker: arena.sandbox в harness.config.json.
     </p>
   );
 }

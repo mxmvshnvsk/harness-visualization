@@ -7,7 +7,7 @@ import type { ArenaRun } from '../events/harnessEvents.js';
 import type { ArenaSettings, ContextPreset } from '../settings/settingsSchema.js';
 import { readArenaTask, type ArenaTaskDetails } from './arenaTasks.js';
 import { listCopyFiles, prepareArenaCopy, readTestFiles } from './prepareArenaCopy.js';
-import { networkClosedByPermissions } from './nodeSandbox.js';
+import type { SandboxInfo } from './nodeSandbox.js';
 
 export interface ArenaSessionInput {
   // null — свободный режим (этап 10.4).
@@ -76,7 +76,11 @@ export async function prepareArenaRun(request: ArenaRunRequest): Promise<ArenaSe
   };
 }
 
-export function describeArenaRun(arena: ArenaSessionInput, projectRoot: string): ArenaRun {
+export function describeArenaRun(
+  arena: ArenaSessionInput,
+  projectRoot: string,
+  sandbox: SandboxInfo,
+): ArenaRun {
   return {
     taskId: arena.task?.id ?? null,
     project: arena.project,
@@ -85,8 +89,10 @@ export function describeArenaRun(arena: ArenaSessionInput, projectRoot: string):
     runNode: arena.runNode,
     contextPreset: arena.contextPreset,
     maxIterations: arena.maxIterations,
-    network: networkClosedByPermissions() ? 'closed' : 'open',
-    nodeVersion: process.versions.node,
+    network: sandbox.network,
+    nodeVersion: sandbox.nodeVersion,
+    sandbox: sandbox.kind,
+    ...(sandbox.image === null ? {} : { image: sandbox.image }),
   };
 }
 

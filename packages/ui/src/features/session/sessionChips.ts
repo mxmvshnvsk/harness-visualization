@@ -97,7 +97,10 @@ function arenaChips(started: Started): SessionChip[] {
     {
       label: arena.network === 'closed' ? 'сеть закрыта' : 'сеть открыта',
       on: false,
-      hint: `Тесты идут в Node ${arena.nodeVersion} с --permission. Сеть модель разрешений Node закрывает только с версии 25.`,
+      hint:
+        arena.sandbox === 'docker'
+          ? `Тесты идут в контейнере Docker ${arena.image ?? ''}, Node ${arena.nodeVersion}: сети в контейнере нет.`
+          : `Тесты идут в Node ${arena.nodeVersion} с --permission. Сеть модель разрешений Node закрывает только с версии 25.`,
     },
     { label: `effort ${started.reasoningEffort}`, on: false },
   ];

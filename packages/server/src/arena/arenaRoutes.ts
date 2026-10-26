@@ -15,7 +15,7 @@ import {
   listFreeProjects,
   prepareFreeRun,
   type FreeProject,
-  networkClosedByPermissions,
+  sandboxInfo,
   prepareArenaRun,
   readArenaTask,
   type ArenaTaskDetails,
@@ -38,8 +38,13 @@ export interface ArenaTasksResponse {
     reasoningEffort: 'off' | 'low' | 'high' | 'max';
   };
   nodeVersion: string;
-  // Закрыта ли сеть для тестов: модель разрешений Node закрывает её с версии 25.
+  // Закрыта ли сеть для тестов: модель разрешений Node закрывает её с версии 25, Docker — всегда.
   network: 'closed' | 'open';
+  // Песочница из arena.sandbox; image — образ Docker, null у node.
+  sandbox: 'node' | 'docker';
+  image: string | null;
+  // Docker выбран, но не отвечает: прогон не запустится, интерфейс скажет почему.
+  sandboxError: string | null;
 }
 
 export const arenaRunRequestSchema = z.object({
@@ -89,8 +94,7 @@ export function registerArenaRoutes(app: FastifyInstance, options: SessionRoutes
         maxIterations: settings.arena.maxIterations,
         reasoningEffort: settings.model.defaultReasoningEffort,
       },
-      nodeVersion: process.versions.node,
-      network: networkClosedByPermissions() ? 'closed' : 'open',
+      ...(await describeSandbox(settings.arena)),
     };
   });
 
@@ -171,4 +175,23 @@ function registerFreeRoutes(app: FastifyInstance, options: SessionRoutesOptions)
         .send({ error: error instanceof Error ? error.message : String(error) });
     }
   });
+}
+
+async function describeSandbox(
+  arena: Parameters<typeof sandboxInfo>[0],
+): Promise<
+  Pick<ArenaTasksResponse, 'nodeVersion' | 'network' | 'sandbox' | 'image' | 'sandboxError'>
+> {
+  try {
+    const info = await sandboxInfo(arena);
+    return { ...info, sandbox: info.kind, sandboxError: null };
+  } catch (error) {
+    return {
+      nodeVersion: '?',
+      network: 'closed',
+      sandbox: arena.sandbox,
+      image: arena.docker.image,
+      sandboxError: error instanceof Error ? error.message : String(error),
+    };
+  }
 }

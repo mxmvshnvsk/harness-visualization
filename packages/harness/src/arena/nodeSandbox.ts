@@ -9,6 +9,37 @@
 
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
+import type { ArenaSettings } from '../settings/settingsSchema.js';
+import { dockerNodeVersion, runInDocker } from './dockerSandbox.js';
+
+// Какую песочницу взять — из настроек арены (arena.sandbox и arena.docker).
+export type SandboxConfig = Pick<ArenaSettings, 'sandbox' | 'docker'>;
+
+// Что известно о песочнице до запуска: это пишется в трейс и показывается в интерфейсе.
+export interface SandboxInfo {
+  kind: 'node' | 'docker';
+  network: 'closed' | 'open';
+  nodeVersion: string;
+  // Образ Docker; null — песочница node.
+  image: string | null;
+}
+
+export async function sandboxInfo(config: SandboxConfig): Promise<SandboxInfo> {
+  if (config.sandbox === 'docker') {
+    return {
+      kind: 'docker',
+      network: 'closed',
+      nodeVersion: await dockerNodeVersion(config.docker),
+      image: config.docker.image,
+    };
+  }
+  return {
+    kind: 'node',
+    network: networkClosedByPermissions() ? 'closed' : 'open',
+    nodeVersion: process.versions.node,
+    image: null,
+  };
+}
 
 export interface SandboxRun {
   // Вывод stdout и stderr вперемешку, пути — от корня проекта.
@@ -23,14 +54,6 @@ export function networkClosedByPermissions(): boolean {
   return process.allowedNodeEnvironmentFlags.has('--allow-net');
 }
 
-export function nodeMajor(): number {
-  const major = Number(process.versions.node.split('.')[0]);
-  if (major < 22) {
-    throw new Error(`Для Код-арены нужен Node 22 или новее, сейчас ${process.versions.node}`);
-  }
-  return major;
-}
-
 export function permissionArguments(directory: string): string[] {
   const root = resolve(directory);
   return ['--permission', `--allow-fs-read=${root}`, `--allow-fs-write=${root}`];
@@ -40,7 +63,11 @@ export function runSandboxedNode(request: {
   directory: string;
   args: readonly string[];
   timeoutMs: number;
+  sandbox: SandboxConfig;
 }): Promise<SandboxRun> {
+  if (request.sandbox.sandbox === 'docker') {
+    return runInDocker(request.sandbox.docker, request);
+  }
   const started = Date.now();
   return new Promise((done, fail) => {
     const child = spawn(
