@@ -36,6 +36,7 @@ import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
 import { CodeView } from '../features/code/CodeView';
+import { ArenaLab } from '../features/arena/ArenaLab';
 import { AgentsView } from '../features/agents/AgentsView';
 import { AgentLabelsContext, useAgentLabelsOf } from '../features/agents/agentLabels';
 import { McpLab } from '../features/mcp/McpLab';
@@ -195,6 +196,16 @@ function LabScreen(props: {
       return <McpLab backLabel={backLabel} onBack={props.onBack} />;
     case 'evals':
       return <EvalLab backLabel={backLabel} onBack={props.onBack} onOpenTrace={openTrace} />;
+    case 'arena':
+      return (
+        <ArenaLab
+          backLabel={backLabel}
+          onBack={props.onBack}
+          onStarted={(sessionId) => {
+            props.onSelect({ kind: 'session', sessionId });
+          }}
+        />
+      );
   }
 }
 
@@ -344,6 +355,12 @@ const LAB_ENTRIES: readonly { lab: LabName; title: string; short: string; text: 
     title: 'Лаборатория Evals',
     short: 'задачи, попытки, pass@k',
     text: 'Как понять, что агент стал лучше, а не «вроде лучше»: набор задач, несколько попыток, проверки по трейсу и итог по конфигурациям.',
+  },
+  {
+    lab: 'arena',
+    title: 'Код-арена',
+    short: 'агент пишет код, харнесс принимает',
+    text: 'Агент правит маленький проект и сам гоняет тесты, а харнесс принимает работу тестами, которых агент не видел: когда агент говорит «готово» — это правда?',
   },
 ];
 

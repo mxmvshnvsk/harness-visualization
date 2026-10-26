@@ -15,6 +15,8 @@ import type {
   EvalsResponse,
   BranchRequest,
   ImportTraceResponse,
+  ArenaRunRequest,
+  ArenaTasksResponse,
   SessionOptionsResponse,
 } from '@harness-visualization/server';
 
@@ -42,6 +44,15 @@ export async function getSessionOptions(): Promise<SessionOptionsResponse> {
 
 export async function startSession(request: StartSessionRequest): Promise<StartSessionResponse> {
   return postJson<StartSessionResponse>('/api/sessions', request);
+}
+
+// Код-арена (этап 10): задачи и запуск прогона — ответ как у новой сессии.
+export async function getArenaTasks(): Promise<ArenaTasksResponse> {
+  return getJson<ArenaTasksResponse>('/api/arena/tasks');
+}
+
+export async function startArenaRun(request: ArenaRunRequest): Promise<StartSessionResponse> {
+  return postJson<StartSessionResponse>('/api/arena/runs', request);
 }
 
 // Запись чужого харнесса (этап 9.4): сервер переводит её в наш трейс и сохраняет в traces/.

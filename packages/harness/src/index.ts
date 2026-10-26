@@ -47,6 +47,12 @@ export { evalSetSchema } from './evals/evalSet.js';
 export { branchSessionInput } from './branch/branchInput.js';
 export { convertClaudeCode } from './adapters/claudeCode.js';
 export { writeImportedTrace } from './adapters/writeImportedTrace.js';
+export { arenaRoot, prepareArenaRun } from './arena/arenaSession.js';
+export { networkClosedByPermissions } from './arena/runNodeTests.js';
+export type { ArenaSessionInput } from './arena/arenaSession.js';
+export { arenaSessionInput } from './arena/arenaSessionInput.js';
+export { countTaskTests, listArenaTasks, readArenaTask } from './arena/arenaTasks.js';
+export type { ArenaTask, ArenaTaskDetails } from './arena/arenaTasks.js';
 export { collectSeenTexts } from './grounding/collectSeenTexts.js';
 export { measureClaimSimilarity } from './grounding/measureClaimSimilarity.js';
 export {

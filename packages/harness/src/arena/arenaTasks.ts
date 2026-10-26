@@ -38,6 +38,34 @@ export async function listArenaTasks(arenaRoot: string): Promise<ArenaTask[]> {
   return tasks.sort((left, right) => left.id.localeCompare(right.id));
 }
 
+// Сколько тестов у задачи: видимых она добавляет в test/, скрытых — в acceptance/.
+// Считаем вызовы test( — для подписи «4 скрытых теста» хватает.
+export async function countTaskTests(
+  arenaRoot: string,
+  taskId: string,
+): Promise<{ visible: number; hidden: number }> {
+  const directory = join(tasksDirectory(arenaRoot), taskId);
+  return {
+    visible: await countTests(join(directory, 'files', 'test')),
+    hidden: await countTests(join(directory, 'acceptance')),
+  };
+}
+
+async function countTests(directory: string): Promise<number> {
+  let entries;
+  try {
+    entries = await readdir(directory, { recursive: true, withFileTypes: true });
+  } catch {
+    return 0;
+  }
+  let count = 0;
+  for (const entry of entries.filter((item) => item.isFile() && item.name.endsWith('.test.js'))) {
+    const text = await readFile(join(entry.parentPath, entry.name), 'utf8');
+    count += (text.match(/^\s*test\(/gm) ?? []).length;
+  }
+  return count;
+}
+
 export async function readArenaTask(arenaRoot: string, taskId: string): Promise<ArenaTaskDetails> {
   const task = await readTask(arenaRoot, taskId);
   const text = await readFile(join(tasksDirectory(arenaRoot), taskId, 'TASK.md'), 'utf8');
