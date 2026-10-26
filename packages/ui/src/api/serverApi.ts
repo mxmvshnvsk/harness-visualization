@@ -14,6 +14,7 @@ import type {
   McpCourseResponse,
   EvalsResponse,
   BranchRequest,
+  ImportTraceResponse,
   SessionOptionsResponse,
 } from '@harness-visualization/server';
 
@@ -41,6 +42,11 @@ export async function getSessionOptions(): Promise<SessionOptionsResponse> {
 
 export async function startSession(request: StartSessionRequest): Promise<StartSessionResponse> {
   return postJson<StartSessionResponse>('/api/sessions', request);
+}
+
+// Запись чужого харнесса (этап 9.4): сервер переводит её в наш трейс и сохраняет в traces/.
+export async function importTrace(text: string): Promise<ImportTraceResponse> {
+  return postJson<ImportTraceResponse>('/api/traces/import', { format: 'claude-code', text });
 }
 
 // Ветка от шага записанного трейса (этап 9): ответ — как у новой сессии.

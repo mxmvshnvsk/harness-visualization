@@ -22,7 +22,18 @@ export interface BranchStep {
   toolResults: { toolCallId: string; toolName: string; content: string }[];
 }
 
+// Запись чужого харнесса (этап 9.4) без тел запросов: историю шага взять неоткуда.
+function isImported(events: readonly HarnessEvent[]): boolean {
+  return events.some(
+    (event) => event.type === 'session_started' && (event.importedFrom ?? null) !== null,
+  );
+}
+
 export function listBranchSteps(events: readonly HarnessEvent[]): BranchStep[] {
+  return isImported(events) ? [] : collectSteps(events);
+}
+
+function collectSteps(events: readonly HarnessEvent[]): BranchStep[] {
   const steps: BranchStep[] = [];
   let question = '';
   const toolNames = new Map<string, string>();

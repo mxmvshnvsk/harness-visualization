@@ -61,6 +61,17 @@ export interface SessionStartedPayload {
   // false — сессия без демо-проекта: без «Кедр Софт» в system prompt, MCP, поиска в базе,
   // скиллов и памяти, с пустой песочницей. Нет поля — демо-проект (трейсы до этого режима).
   demoProject?: boolean;
+  // Трейс переведён адаптером из записи чужого харнесса (этап 9.4): что это за харнесс
+  // и чего в его записи нет; нет поля — запись нашего харнесса.
+  importedFrom?: ImportedFrom | null;
+}
+
+export interface ImportedFrom {
+  // Например, «Claude Code».
+  harness: string;
+  version: string | null;
+  // Чего в чужой записи нет или что адаптер пропустил: интерфейс показывает это, а не пустоту.
+  missing: string[];
 }
 
 export interface WorkspacePreparedPayload {

@@ -8,15 +8,19 @@ import { Button } from '../components/Button';
 import { plural } from '../text/plural';
 import styles from './SourceList.module.css';
 import { nestBranches } from '../projections/branchTree';
+import { ImportTrace } from './ImportTrace';
 
 interface SourceSectionProps {
   title: string;
   error: string | null;
   onReload: () => void;
   children: ReactNode;
+  // Под списком, вне прокрутки.
+  footer?: ReactNode;
 }
 
-function SourceSection({ title, error, onReload, children }: SourceSectionProps): ReactElement {
+function SourceSection(props: SourceSectionProps): ReactElement {
+  const { title, error, onReload, children } = props;
   return (
     <section className={styles.section}>
       <div className={styles.header}>
@@ -25,6 +29,7 @@ function SourceSection({ title, error, onReload, children }: SourceSectionProps)
       </div>
       {error !== null && <div className={styles.error}>Не загрузилось: {error}</div>}
       <ul className={styles.list}>{children}</ul>
+      {props.footer}
     </section>
   );
 }
@@ -79,7 +84,19 @@ interface TraceListProps {
 export function TraceList(props: TraceListProps): ReactElement {
   const { traces, selection, onSelect } = props;
   return (
-    <SourceSection title="Трейсы" error={props.error} onReload={props.onReload}>
+    <SourceSection
+      title="Трейсы"
+      error={props.error}
+      onReload={props.onReload}
+      footer={
+        <ImportTrace
+          onImported={(file) => {
+            props.onReload();
+            onSelect({ kind: 'trace', file });
+          }}
+        />
+      }
+    >
       {nestBranches(traces).map(({ trace, depth }) => (
         // Ветки (этап 9) — под исходной сессией, с отступом.
         <li
@@ -99,6 +116,7 @@ export function TraceList(props: TraceListProps): ReactElement {
               {trace.kind !== 'session' && <Badge tone="judge">{trace.kind}</Badge>}
               {trace.branch !== null && <Badge>⑂ шаг {trace.branch.step}</Badge>}
               {trace.example && <Badge>пример</Badge>}
+              {trace.importedFrom !== null && <Badge tone="judge">{trace.importedFrom}</Badge>}
               {trace.title ?? trace.file}
             </span>
             <span className={styles.meta}>

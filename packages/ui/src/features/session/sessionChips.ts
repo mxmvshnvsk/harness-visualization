@@ -8,6 +8,8 @@ export interface SessionChip {
   label: string;
   // Опция, которую включают отдельно (субагенты, Clean Workspace), — выделена.
   on: boolean;
+  // Подсказка при наведении.
+  hint?: string;
 }
 
 const ORCHESTRATION: Record<string, string> = {
@@ -26,6 +28,9 @@ export function sessionChips(events: readonly HarnessEvent[]): SessionChip[] {
   const started = events.find((event) => event.type === 'session_started');
   if (started?.type !== 'session_started') {
     return [];
+  }
+  if ((started.importedFrom ?? null) !== null) {
+    return importedChips(started);
   }
   const workspace = events.find((event) => event.type === 'workspace_prepared');
   const cleaned = workspace?.type === 'workspace_prepared' && workspace.wasReset;
@@ -50,6 +55,24 @@ function switchedOn(started: Started, cleaned: boolean, delegation: Delegation):
       : [{ label: ORCHESTRATION[orchestration] ?? `оркестрация: ${orchestration}`, on: true }]),
     ...(subagents === null ? [] : [subagentsChip(subagents.agents, delegation)]),
     ...(cleaned ? [{ label: 'clean workspace', on: true }] : []),
+  ];
+}
+
+// Запись чужого харнесса (этап 9.4): наших опций у неё нет — effort, поиск, демо-проект
+// адаптер не знает, и чипы с ними были бы выдумкой. Вместо них — чей трейс и чего в нём нет.
+function importedChips(started: Started): SessionChip[] {
+  const imported = started.importedFrom;
+  if (imported === undefined || imported === null) {
+    return [];
+  }
+  const version = imported.version === null ? '' : ` ${imported.version}`;
+  return [
+    { label: `запись ${imported.harness}${version}`, on: true },
+    {
+      label: `нет в записи: ${String(imported.missing.length)}`,
+      on: false,
+      hint: imported.missing.map((item) => `— ${item}`).join('\n'),
+    },
   ];
 }
 

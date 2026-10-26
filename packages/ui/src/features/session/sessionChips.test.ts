@@ -30,6 +30,19 @@ describe('sessionChips', () => {
     ]);
   });
 
+  it('у записи другого харнесса — только чей трейс и чего в нём нет', () => {
+    const started = sessionStarted('tool');
+    const importedFrom = { harness: 'Claude Code', version: '2.1.0', missing: ['цена', 'сеть'] };
+    const log = new EventLog().add(
+      started.type === 'session_started' ? { ...started, importedFrom } : started,
+    );
+
+    expect(sessionChips(log.events)).toEqual([
+      { label: 'запись Claude Code 2.1.0', on: true },
+      { label: 'нет в записи: 2', on: false, hint: '— цена\n— сеть' },
+    ]);
+  });
+
   it('без демо-проекта — чип режима, без поиска', () => {
     const started = sessionStarted('tool');
     const log = new EventLog().add(

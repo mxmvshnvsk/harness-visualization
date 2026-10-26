@@ -45,6 +45,8 @@ export { extractReferences } from './grounding/extractReferences.js';
 export { readTrace } from './grounding/readTrace.js';
 export { evalSetSchema } from './evals/evalSet.js';
 export { branchSessionInput } from './branch/branchInput.js';
+export { convertClaudeCode } from './adapters/claudeCode.js';
+export { writeImportedTrace } from './adapters/writeImportedTrace.js';
 export { collectSeenTexts } from './grounding/collectSeenTexts.js';
 export { measureClaimSimilarity } from './grounding/measureClaimSimilarity.js';
 export {

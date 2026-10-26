@@ -24,6 +24,7 @@ export const HELP_TOPICS = [
   'model-vs-harness',
   'evals',
   'branches',
+  'imported-traces',
 ] as const;
 
 export type HelpTopic = (typeof HELP_TOPICS)[number];

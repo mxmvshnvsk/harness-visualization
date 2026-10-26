@@ -19,6 +19,7 @@ function trace(file: string, startedAt: string, sourceFile: string | null = null
     skippedLines: 0,
     sizeBytes: 100,
     branch: sourceFile === null ? null : { sourceFile, step: 4, change: 'toolResult' },
+    importedFrom: null,
   };
 }
 

@@ -16,6 +16,7 @@ export type { GroundingClaim, GroundingReportResponse } from './rag/groundingRep
 export type { McpCourseResponse } from './labs/mcpCourseRoutes.js';
 export type { EvalReportSummary, EvalsResponse } from './evals/evalRoutes.js';
 export type { BranchRequest } from './sessions/branchRoutes.js';
+export type { ImportTraceResponse } from './traces/importRoutes.js';
 
 // GET /api/sessions/:sessionId
 export interface SessionDetails extends SessionSummary {

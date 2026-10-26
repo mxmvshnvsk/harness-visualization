@@ -21,6 +21,10 @@
     "./branch": {
       "types": "./dist/branch/browserSafe.d.ts",
       "default": "./dist/branch/browserSafe.js"
+    },
+    "./adapters": {
+      "types": "./dist/adapters/browserSafe.d.ts",
+      "default": "./dist/adapters/browserSafe.js"
     }
   },
   "scripts": {

@@ -46,7 +46,7 @@ function Chips({ events }: { events: EventStream<StreamEnd>['events'] }): ReactE
   return (
     <ul className={styles.chips} aria-label="Опции сессии">
       {chips.map((chip) => (
-        <li key={chip.label} className={styles.chip} data-on={chip.on}>
+        <li key={chip.label} className={styles.chip} data-on={chip.on} title={chip.hint}>
           {chip.label}
         </li>
       ))}

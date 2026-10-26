@@ -40,6 +40,8 @@ export interface TraceSummary {
   sizeBytes: number;
   // Ветка (этап 9): от какого трейса и с какого шага; null — не ветка.
   branch: TraceBranch | null;
+  // Запись чужого харнесса, переведённая адаптером (этап 9.4): его название; null — наша.
+  importedFrom: string | null;
 }
 
 export interface TraceBranch {
@@ -142,16 +144,12 @@ function buildSummary(
   sizeBytes: number,
 ): Omit<TraceSummary, 'example'> {
   const { events, skippedLines } = contents;
-  const first = events.at(0);
   return {
     file,
-    kind: traceKind(first),
+    kind: traceKind(events.at(0)),
     synthetic: file.startsWith(SYNTHETIC_PREFIX),
-    sessionId: first?.sessionId ?? null,
+    ...sessionFacts(events),
     title: traceTitle(events),
-    model: first?.type === 'session_started' ? first.model : null,
-    startedAt: first?.timestamp ?? null,
-    finishedAt: events.at(-1)?.timestamp ?? null,
     eventCount: events.length,
     finished: events.some((event) => event.type === 'session_finished'),
     hasError: events.some((event) => event.type === 'error'),
@@ -159,6 +157,30 @@ function buildSummary(
     sizeBytes,
     branch: branchOf(events),
   };
+}
+
+type SessionFacts = Pick<
+  TraceSummary,
+  'sessionId' | 'model' | 'startedAt' | 'finishedAt' | 'importedFrom'
+>;
+
+function sessionFacts(events: HarnessEvent[]): SessionFacts {
+  const first = events.at(0);
+  return {
+    sessionId: first?.sessionId ?? null,
+    startedAt: first?.timestamp ?? null,
+    finishedAt: events.at(-1)?.timestamp ?? null,
+    ...startedFacts(first),
+  };
+}
+
+function startedFacts(
+  first: HarnessEvent | undefined,
+): Pick<TraceSummary, 'model' | 'importedFrom'> {
+  if (first?.type !== 'session_started') {
+    return { model: null, importedFrom: null };
+  }
+  return { model: first.model, importedFrom: first.importedFrom?.harness ?? null };
 }
 
 function branchOf(events: HarnessEvent[]): TraceBranch | null {
@@ -193,5 +215,7 @@ function traceTitle(events: HarnessEvent[]): string | null {
       return event.sourceTracePath;
     }
   }
-  return null;
+  // Запись Claude Code после компакции начинается со сводки, а не с вопроса.
+  const compacted = events.find((event) => event.type === 'history_compacted');
+  return compacted?.type === 'history_compacted' ? 'Продолжение после компакции' : null;
 }

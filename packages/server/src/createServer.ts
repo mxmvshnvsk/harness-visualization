@@ -14,6 +14,7 @@ import { registerSessionRoutes } from './sessions/sessionRoutes.js';
 import { registerBranchRoutes } from './sessions/branchRoutes.js';
 import { TraceCatalog } from './traces/TraceCatalog.js';
 import { registerTraceRoutes } from './traces/traceRoutes.js';
+import { registerImportRoutes } from './traces/importRoutes.js';
 import { registerMcpCourseRoutes } from './labs/mcpCourseRoutes.js';
 import { registerEvalRoutes } from './evals/evalRoutes.js';
 
@@ -52,6 +53,7 @@ export function createServer(options: ServerOptions): FastifyInstance {
     tracesDirectory: traces.directory,
   });
   registerTraceRoutes(app, catalog);
+  registerImportRoutes(app, join(options.projectRoot, traces.directory));
   // Трейсы учебных курсов лежат в репозитории: курсы работают и без своих трейсов.
   const courseCatalog = new TraceCatalog(join(options.projectRoot, 'examples', 'traces'));
   registerRagRoutes(app, {
