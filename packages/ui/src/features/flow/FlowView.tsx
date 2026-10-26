@@ -19,6 +19,8 @@ import {
   VIEW_WIDTH,
   type FlowNode,
   type FlowNodeId,
+  nodeAbout,
+  nodeRole,
 } from './flowGraph';
 import styles from './FlowView.module.css';
 
@@ -57,7 +59,7 @@ export function FlowView({ clock, schedule, liveStartedAt }: FlowViewProps): Rea
         <div className={styles.toolbar}>
           <HelpButton topic="flow" />
           <Term topic="inference">что происходит внутри модели</Term>
-          {focus !== null && <NodeTip node={FLOW_NODES[focus]} />}
+          {focus !== null && <NodeTip node={FLOW_NODES[focus]} idle={!used.has(focus)} />}
         </div>
         <svg
           className={styles.diagram}
@@ -187,7 +189,7 @@ function NodeBox({ node, idle, onFocus }: NodeBoxProps): ReactElement {
       data-node={node.id}
       data-idle={idle}
       tabIndex={0}
-      aria-label={`${node.title}: ${node.about}`}
+      aria-label={`${node.title}: ${nodeAbout(node, idle)}`}
       onPointerEnter={enter}
       onPointerLeave={leave}
       onFocus={enter}
@@ -198,7 +200,7 @@ function NodeBox({ node, idle, onFocus }: NodeBoxProps): ReactElement {
         {node.title}
       </text>
       <text className={styles.sub} x={node.x} y={node.y + 12} textAnchor="middle">
-        {idle ? 'в этой сессии не работал' : node.role}
+        {nodeRole(node, idle)}
       </text>
       <HeatBar node={node} left={left} top={top} />
     </g>
@@ -253,11 +255,11 @@ function HeatBar({ node, left, top }: PlacedNode): ReactElement {
   );
 }
 
-function NodeTip({ node }: { node: FlowNode }): ReactElement {
+function NodeTip({ node, idle }: { node: FlowNode; idle: boolean }): ReactElement {
   return (
     <div className={styles.tip} role="tooltip">
       <b>{node.title}</b>
-      {node.about}
+      {nodeAbout(node, idle)}
     </div>
   );
 }

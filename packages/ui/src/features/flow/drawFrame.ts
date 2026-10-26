@@ -11,6 +11,7 @@ import {
   type FlowNode,
   type FlowNodeId,
   type Point,
+  nodeRole,
 } from './flowGraph';
 
 export const DOT_POOL = 4;
@@ -88,7 +89,7 @@ function drawNode(group: SVGGElement, node: FlowNode, frame: Frame): void {
   const sub = group.querySelector<SVGTextElement>('text:nth-of-type(2)');
   if (sub !== null) {
     sub.textContent =
-      group.dataset.idle === 'true' ? 'в этой сессии не работал' : subtitleOf(node, waiting, share);
+      group.dataset.idle === 'true' ? nodeRole(node, true) : subtitleOf(node, waiting, share);
   }
   const heat = group.querySelector<SVGRectElement>('rect:last-of-type');
   heat?.setAttribute('width', ((node.width - 32) * share).toFixed(1));

@@ -26,6 +26,9 @@ export interface FlowNode {
   about: string;
   // Часть харнесса — рисуется внутри его контейнера.
   part: boolean;
+  // Подпись и подсказка, когда участник в сессии не работал; нет — общая «в этой сессии не работал».
+  idleRole?: string;
+  idleAbout?: string;
   x: number;
   y: number;
   width: number;
@@ -118,6 +121,9 @@ const SPECS: Record<FlowNodeId, NodeSpec> = {
     about:
       'Отдельный процесс Node: запускает тесты в копии проекта с моделью разрешений — файлы только в копии, без других программ и ключей. Код в нём написала модель.',
     part: false,
+    idleRole: 'только в Код-арене',
+    idleAbout:
+      'Работает только в Код-арене — это режим в «Лаборатории → Код-арена»: агент правит маленький проект, а тесты идут здесь, в отдельном процессе Node с моделью разрешений. В обычной сессии харнесс код не запускает.',
     ...place(115, 475, 170, 72),
   },
   network: {
@@ -265,4 +271,13 @@ export function routePoint(route: Route, lane: 'out' | 'back', progress: number)
   const index = Math.min(hops.length - 1, Math.floor(scaled));
   const point = LANES[hops[index] ?? '']?.at(scaled - index);
   return point ?? { x: 0, y: 0 };
+}
+
+// Подпись под названием и подсказка с учётом того, работал ли участник в этой сессии.
+export function nodeRole(node: FlowNode, idle: boolean): string {
+  return idle ? (node.idleRole ?? 'в этой сессии не работал') : node.role;
+}
+
+export function nodeAbout(node: FlowNode, idle: boolean): string {
+  return idle ? (node.idleAbout ?? node.about) : node.about;
 }
