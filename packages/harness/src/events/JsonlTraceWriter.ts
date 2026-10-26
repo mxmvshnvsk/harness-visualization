@@ -9,17 +9,21 @@ import type { HarnessEvent } from './harnessEvents.js';
 
 export class JsonlTraceWriter {
   readonly filePath: string;
+  // Имя трейса без расширения: 2026-10-24T13-05-00_5930b821. Так же называется папка
+  // сессии без демо-проекта — по трейсу легко найти, что агент оставил на диске.
+  readonly name: string;
   private readonly fileStream: WriteStream;
 
-  private constructor(filePath: string) {
+  private constructor(filePath: string, name: string) {
     this.filePath = filePath;
+    this.name = name;
     this.fileStream = createWriteStream(filePath, { flags: 'a', encoding: 'utf8' });
   }
 
   static async open(directory: string, sessionId: string): Promise<JsonlTraceWriter> {
     await mkdir(directory, { recursive: true });
-    const fileName = `${formatTimestampForFileName(new Date())}_${sessionId}.jsonl`;
-    return new JsonlTraceWriter(join(directory, fileName));
+    const name = `${formatTimestampForFileName(new Date())}_${sessionId}`;
+    return new JsonlTraceWriter(join(directory, `${name}.jsonl`), name);
   }
 
   write(event: HarnessEvent): void {

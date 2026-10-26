@@ -41,6 +41,7 @@ export function branchSessionInput(request: BranchRequest): SessionInput {
     orchestration: null,
     demoProject: started.demoProject ?? true,
     workspaceDirectory: request.workspaceDirectory,
+    workspaceSeedDirectory: blankSourceDirectory(sourceEvents, request.loadedSettings),
     branch: {
       sourceTracePath: request.sourceTracePath,
       sourceSessionId: sourceEvents[0]?.sessionId ?? null,
@@ -51,4 +52,20 @@ export function branchSessionInput(request: BranchRequest): SessionInput {
       change: point.change,
     },
   };
+}
+
+// Ветка сессии без демо-проекта начинает с копии папки исходной сессии — с тем, что агент там
+// уже написал, — а сама папка исходной сессии не меняется. Это состояние на конец исходной
+// сессии, а не на шаг ветвления: снимков песочницы по шагам харнесс не делает.
+// Старые трейсы писались в общую workspace-blank/ — их папку не берём, ветка начнёт с пустой.
+export function blankSourceDirectory(
+  sourceEvents: HarnessEvent[],
+  loadedSettings: LoadedSettings,
+): string | null {
+  const prepared = sourceEvents.find((event) => event.type === 'workspace_prepared');
+  const { blankDirectory } = loadedSettings.settings.workspace;
+  if (prepared?.type !== 'workspace_prepared') {
+    return null;
+  }
+  return prepared.directory.startsWith(`${blankDirectory}/`) ? prepared.directory : null;
 }

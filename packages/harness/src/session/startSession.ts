@@ -83,7 +83,11 @@ export interface SessionInput {
   demoProject: boolean;
   // null — рабочая папка из harness.config.json; иначе своя папка сессии
   // (у pnpm compare-runs — временная, чтобы заметки одного прогона не влияли на другие).
+  // Сессия без демо-проекта получает свою подпапку сама — см. withOwnBlankWorkspace.
   workspaceDirectory: string | null;
+  // Откуда скопировать файлы в новую папку сессии без демо-проекта; null — начать с пустой.
+  // У ветки — папка исходной сессии: агент продолжает с тем, что уже написал.
+  workspaceSeedDirectory?: string | null;
   // Ветка (этап 9): первый ход — не новый вопрос, а продолжение чужой записи с шага N.
   branch?: BranchStart | null;
   // Прогон Код-арены (этап 10): рабочая папка — копия проекта, после хода — приёмка.
@@ -153,7 +157,12 @@ async function runRecordedSession(
   let mcpServers: ConnectedMcpServers | null = null;
   let failed = false;
   try {
-    const prepared = await prepareSession(input, hooks, events, network.fetch);
+    const prepared = await prepareSession(
+      withOwnBlankWorkspace(input, recording.name),
+      hooks,
+      events,
+      network.fetch,
+    );
     mcpServers = prepared.mcpServers;
     await runDialog(input, hooks, prepared.dependencies);
   } catch (error) {
@@ -251,7 +260,18 @@ async function prepareSession(
   return { dependencies, mcpServers };
 }
 
-// Песочница: у демо-проекта — из примеров «Кедр Софт», без него — своя, в начале пустая.
+// Сессия без демо-проекта работает в своей подпапке workspaces/blank/<имя трейса>: код,
+// который написал агент, не перезапишет следующая сессия. Демо-песочница и арена — как были.
+export function withOwnBlankWorkspace(input: SessionInput, sessionName: string): SessionInput {
+  if (input.demoProject || input.arena || input.workspaceDirectory !== null) {
+    return input;
+  }
+  const { blankDirectory } = input.loadedSettings.settings.workspace;
+  return { ...input, workspaceDirectory: `${blankDirectory}/${sessionName}` };
+}
+
+// Песочница: у демо-проекта — из примеров «Кедр Софт», без него — своя: пустая или, у ветки,
+// копия папки исходной сессии.
 async function prepareSessionWorkspace(input: SessionInput) {
   const { workspace } = input.loadedSettings.settings;
   const arenaDirectory = input.arena ? relative(input.projectRoot, input.arena.directory) : null;
@@ -262,10 +282,18 @@ async function prepareSessionWorkspace(input: SessionInput) {
   const preparedWorkspace = await prepareWorkspace({
     projectRoot: input.projectRoot,
     workspaceDirectory: resolve(input.projectRoot, workspaceSetting),
-    seedDirectory: input.demoProject ? join(input.projectRoot, workspace.seedDirectory) : null,
+    seedDirectory: seedDirectoryOf(input),
     reset: input.freshWorkspace,
   });
   return { workspaceSetting, preparedWorkspace };
+}
+
+function seedDirectoryOf(input: SessionInput): string | null {
+  if (input.demoProject) {
+    return join(input.projectRoot, input.loadedSettings.settings.workspace.seedDirectory);
+  }
+  const seed = input.workspaceSeedDirectory ?? null;
+  return seed === null ? null : resolve(input.projectRoot, seed);
 }
 
 // Каталог скиллов — событием skill_catalog; скиллы always загружаются сразу: их инструкции

@@ -18,6 +18,8 @@ export interface SessionRecordingOptions {
 
 export interface SessionRecording {
   events: EventStream;
+  // Имя трейса без расширения — им же называется папка сессии без демо-проекта.
+  name: string;
   // Пишет итог сессии, закрывает трейс и возвращает путь к нему от корня проекта.
   finish(): Promise<string>;
 }
@@ -46,6 +48,7 @@ export async function startSessionRecording(
   const startedAt = performance.now();
   return {
     events,
+    name: traceWriter.name,
     async finish() {
       events.emit({
         type: 'session_finished',
