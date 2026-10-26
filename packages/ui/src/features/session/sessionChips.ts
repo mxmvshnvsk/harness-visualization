@@ -30,7 +30,7 @@ export function sessionChips(events: readonly HarnessEvent[]): SessionChip[] {
   const workspace = events.find((event) => event.type === 'workspace_prepared');
   const cleaned = workspace?.type === 'workspace_prepared' && workspace.wasReset;
   return [
-    ...switchedOn(started, cleaned),
+    ...switchedOn(started, cleaned, describeDelegation(events)),
     ...searchChip(started),
     { label: `effort ${started.reasoningEffort}`, on: false },
   ];
@@ -39,7 +39,7 @@ export function sessionChips(events: readonly HarnessEvent[]): SessionChip[] {
 type Started = Extract<HarnessEvent, { type: 'session_started' }>;
 
 // Что включали отдельно: без демо-проекта, оркестрация, субагенты, Clean Workspace.
-function switchedOn(started: Started, cleaned: boolean): SessionChip[] {
+function switchedOn(started: Started, cleaned: boolean, delegation: Delegation): SessionChip[] {
   const subagents = started.subagents ?? null;
   const orchestration = started.orchestration ?? null;
   return [
@@ -47,11 +47,38 @@ function switchedOn(started: Started, cleaned: boolean): SessionChip[] {
     ...(orchestration === null
       ? []
       : [{ label: ORCHESTRATION[orchestration] ?? `оркестрация: ${orchestration}`, on: true }]),
-    ...(subagents === null
-      ? []
-      : [{ label: `субагенты: ${subagents.agents.join(', ')}`, on: true }]),
+    ...(subagents === null ? [] : [subagentsChip(subagents.agents, delegation)]),
     ...(cleaned ? [{ label: 'clean workspace', on: true }] : []),
   ];
+}
+
+// Поручали ли субагентам: «Субагенты» — не обещание поручений, а тул в меню модели,
+// и решает она сама (по вопросу автора, 26.10.2026: в сессии 61a6fdd0 субагенты были
+// включены, а модель справилась сама — и вкладки «Агенты» не было).
+interface Delegation {
+  tasks: number;
+  // Агент ответил: если поручений не было, их уже и не будет в этом ходе.
+  answered: boolean;
+}
+
+function describeDelegation(events: readonly HarnessEvent[]): Delegation {
+  return {
+    tasks: events.filter((event) => event.type === 'subagent_started').length,
+    answered: events.some(
+      (event) => event.type === 'assistant_message' || event.type === 'awaiting_question',
+    ),
+  };
+}
+
+function subagentsChip(agents: readonly string[], delegation: Delegation): SessionChip {
+  const label = `субагенты: ${agents.join(', ')}`;
+  if (delegation.tasks > 0) {
+    return { label: `${label} · поручений ${String(delegation.tasks)}`, on: true };
+  }
+  if (delegation.answered) {
+    return { label: `${label} · не понадобились`, on: false };
+  }
+  return { label, on: true };
 }
 
 // Без демо-проекта базы знаний нет — и чипа поиска нет. В оркестрации режим поиска не действует:

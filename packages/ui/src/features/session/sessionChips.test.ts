@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EventLog, sessionStarted } from '../../projections/testEvents';
+import { EventLog, sessionStarted, subagentStarted } from '../../projections/testEvents';
 import { sessionChips } from './sessionChips';
 
 describe('sessionChips', () => {
@@ -19,6 +19,25 @@ describe('sessionChips', () => {
       { label: 'поиск: харнесс по запросу модели', on: false },
       { label: 'effort high', on: false },
     ]);
+  });
+
+  it('субагенты включены, а модель справилась сама — «не понадобились»', () => {
+    const log = new EventLog()
+      .add(sessionStarted('tool', { agents: ['researcher'], parallel: true }))
+      .add({ type: 'assistant_message', text: 'VPN нужен для внутренних систем.' });
+
+    expect(sessionChips(log.events)[0]).toEqual({
+      label: 'субагенты: researcher · не понадобились',
+      on: false,
+    });
+  });
+
+  it('поручения были — их число в чипе', () => {
+    const log = new EventLog()
+      .add(sessionStarted('tool', { agents: ['researcher'], parallel: true }))
+      .add(subagentStarted('researcher-1', 'call-1'));
+
+    expect(sessionChips(log.events)[0]?.label).toBe('субагенты: researcher · поручений 1');
   });
 
   it('у трейса до этапа 6c — только поиск и effort', () => {
