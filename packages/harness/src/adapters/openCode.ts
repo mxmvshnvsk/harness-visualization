@@ -81,7 +81,15 @@ export function isOpenCodeExport(value: unknown): value is Export {
 
 // Ключи и домашняя папка маскируются во всём тексте экспорта до разбора, как у Claude Code.
 export function convertOpenCode(text: string): HarnessEvent[] {
-  const parsed: unknown = JSON.parse(maskHomePaths(maskSecretText(text)));
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(maskHomePaths(maskSecretText(text)));
+  } catch (error) {
+    throw new Error(
+      `Это не JSON: ${error instanceof Error ? error.message : String(error)}. Экспорт OpenCode — один JSON из opencode session export.`,
+      { cause: error },
+    );
+  }
   if (!isOpenCodeExport(parsed)) {
     throw new Error('Это не экспорт сессии OpenCode: нет info.id вида ses_… и messages');
   }

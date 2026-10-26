@@ -19,6 +19,13 @@ export function detectImportFormat(text: string): ImportFormat {
 }
 
 export function convertImported(text: string, format: ImportFormat | 'auto'): HarnessEvent[] {
+  // Пустой файл — частая история: `opencode session export … > файл` при ненайденной команде
+  // создаёт файл до ошибки. Без проверки разбор падает «Unexpected end of JSON input».
+  if (text.trim() === '') {
+    throw new Error(
+      'Файл пустой: запись не сохранилась. Если файл делали командой с «>», проверьте, что сама команда сработала (например, opencode есть в PATH).',
+    );
+  }
   const resolved = format === 'auto' ? detectImportFormat(text) : format;
   return resolved === 'opencode' ? convertOpenCode(text) : convertClaudeCode(text);
 }

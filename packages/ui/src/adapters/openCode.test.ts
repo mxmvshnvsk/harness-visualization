@@ -108,3 +108,10 @@ describe('OpenCode', () => {
     expect(ofType(events, 'session_started')[0]?.importedFrom?.harness).toBe('OpenCode');
   });
 });
+
+describe('импорт: пустой и битый файл', () => {
+  it('пустой файл — понятная ошибка, а не «Unexpected end of JSON input»', () => {
+    expect(() => convertImported('', 'opencode')).toThrow(/Файл пустой/);
+    expect(() => convertImported('{"info":', 'opencode')).toThrow(/Это не JSON/);
+  });
+});
