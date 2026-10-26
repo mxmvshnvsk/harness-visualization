@@ -347,3 +347,13 @@
   background: var(--text);
   pointer-events: none;
 }
+
+/* Ожидание субагента — сама тонкая полоска его цвета, без полоски под ней: длинная полоска
+   под ожиданием при зуме выглядела как полоса прокрутки (замечание автора, 26.10.2026). */
+.waiting[data-agent] {
+  background: var(--agent);
+}
+
+.waiting[data-agent]::after {
+  display: none;
+}
