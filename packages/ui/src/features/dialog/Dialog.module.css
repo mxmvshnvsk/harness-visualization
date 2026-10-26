@@ -423,3 +423,26 @@
 .status[data-phase='answer'] .pulse {
   background: var(--phase-answer);
 }
+
+/* Приёмка Код-арены под ответом (этап 10). */
+.acceptance {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, var(--error) 40%, transparent);
+  border-radius: var(--radius-inner);
+  background: color-mix(in srgb, var(--error) 9%, transparent);
+  font-size: 13px;
+}
+
+.acceptance[data-ok='true'] {
+  border-color: color-mix(in srgb, var(--status-good) 40%, transparent);
+  background: color-mix(in srgb, var(--status-good) 10%, transparent);
+}
+
+.acceptanceHint {
+  color: var(--muted);
+  font-size: 12px;
+}

@@ -1,7 +1,7 @@
 // Ход диалога: вопрос пузырём, пока ответа нет — строка «что харнесс делает сейчас» со
 // временем, потом ответ, итог хода и перемотка к нему на схеме.
 
-import type { HarnessEvent } from '@harness-visualization/harness';
+import type { AcceptanceCheckedPayload, HarnessEvent } from '@harness-visualization/harness';
 import { useEffect, useState, type ReactElement } from 'react';
 import { MarkdownView } from '../../help/MarkdownView';
 import { turnStatus, type DialogTurn } from '../../projections/projectDialog';
@@ -47,6 +47,9 @@ export function TurnView({
           <button type="button" className={styles.jump} onClick={onJump}>
             смотреть ход {turn.turn} на схеме
           </button>
+          {turn.acceptance !== null &&
+            turn.acceptanceIndex !== null &&
+            turn.acceptanceIndex < shown && <AcceptanceNote acceptance={turn.acceptance} />}
         </div>
       ) : (
         <Pending
@@ -59,6 +62,26 @@ export function TurnView({
         />
       )}
     </article>
+  );
+}
+
+// Приёмка Код-арены (этап 10) под ответом: «готово» агента рядом с тем, что показали тесты
+// харнесса. Подробно — во вкладке «Код».
+function AcceptanceNote({ acceptance }: { acceptance: AcceptanceCheckedPayload }): ReactElement {
+  const { visible, hidden } = acceptance;
+  const failed = hidden.tests.filter((test) => !test.ok);
+  return (
+    <div className={styles.acceptance} data-ok={acceptance.passed}>
+      <b>Приёмка харнессом: {acceptance.passed ? '✓ пройдена' : '✗ не пройдена'}</b>
+      <span>
+        видимые {visible.passed} из {visible.passed + visible.failed} · скрытые {hidden.passed} из{' '}
+        {hidden.passed + hidden.failed}
+      </span>
+      {failed.map((test) => (
+        <span key={test.name}>✗ {test.name}</span>
+      ))}
+      <span className={styles.acceptanceHint}>подробно — во вкладке «Код»</span>
+    </div>
   );
 }
 

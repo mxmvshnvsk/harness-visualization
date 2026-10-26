@@ -2,7 +2,7 @@
 // событий сразу; повтор показывает только то, до чего дошёл (номера событий askedIndex и
 // answeredIndex сравниваются с числом показанных).
 
-import type { HarnessEvent } from '@harness-visualization/harness';
+import type { HarnessEvent, AcceptanceCheckedPayload } from '@harness-visualization/harness';
 
 export interface DialogTurn {
   turn: number;
@@ -20,6 +20,9 @@ export interface DialogTurn {
   delegations: number;
   // Сумма input tokens всех запросов к модели в этом ходе.
   inputTokens: number;
+  // Приёмка Код-арены после ответа (этап 10); null — не арена или ещё не проверено.
+  acceptance: AcceptanceCheckedPayload | null;
+  acceptanceIndex: number | null;
 }
 
 export function projectDialog(events: readonly HarnessEvent[]): DialogTurn[] {
@@ -31,6 +34,10 @@ export function projectDialog(events: readonly HarnessEvent[]): DialogTurn[] {
     const current = turns.at(-1);
     if (event.type === 'user_message') {
       turns.push(newTurn(turns.length + 1, event.text, index, at));
+      return;
+    }
+    if (event.type === 'acceptance_checked' && current !== undefined) {
+      Object.assign(current, { acceptance: event, acceptanceIndex: index });
       return;
     }
     if (current === undefined || current.answer !== null) {
@@ -57,6 +64,8 @@ function newTurn(turn: number, question: string, askedIndex: number, askedAt: nu
     tools: 0,
     delegations: 0,
     inputTokens: 0,
+    acceptance: null,
+    acceptanceIndex: null,
   };
 }
 

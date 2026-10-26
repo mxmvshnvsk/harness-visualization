@@ -32,6 +32,9 @@ export function sessionChips(events: readonly HarnessEvent[]): SessionChip[] {
   if ((started.importedFrom ?? null) !== null) {
     return importedChips(started);
   }
+  if ((started.arena ?? null) !== null) {
+    return arenaChips(started);
+  }
   const workspace = events.find((event) => event.type === 'workspace_prepared');
   const cleaned = workspace?.type === 'workspace_prepared' && workspace.wasReset;
   return [
@@ -73,6 +76,27 @@ function importedChips(started: Started): SessionChip[] {
       on: false,
       hint: imported.missing.map((item) => `— ${item}`).join('\n'),
     },
+  ];
+}
+
+// Прогон Код-арены (этап 10): задача и режим; поиска в базе, демо-проекта и субагентов у арены
+// нет — их чипы были бы шумом.
+function arenaChips(started: Started): SessionChip[] {
+  const arena = started.arena;
+  if (arena === undefined || arena === null) {
+    return [];
+  }
+  return [
+    {
+      label: `арена · ${arena.taskId ?? 'своя задача'} · ${arena.runTests ? 'с run_tests' : 'вслепую'}`,
+      on: true,
+    },
+    {
+      label: arena.network === 'closed' ? 'сеть закрыта' : 'сеть открыта',
+      on: false,
+      hint: `Тесты идут в Node ${arena.nodeVersion} с --permission. Сеть модель разрешений Node закрывает только с версии 25.`,
+    },
+    { label: `effort ${started.reasoningEffort}`, on: false },
   ];
 }
 

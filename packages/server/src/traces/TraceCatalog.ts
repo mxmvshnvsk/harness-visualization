@@ -206,10 +206,17 @@ function traceKind(first: HarnessEvent | undefined): TraceKind {
   }
 }
 
+// Вопрос-документ (задача арены — TASK.md с заголовком «# …») — заголовком, а не целиком.
+// То же правило у интерфейса в шапке сессии (App.tsx).
+function questionTitle(text: string): string {
+  const firstLine = text.trimStart().split('\n', 1)[0] ?? '';
+  return firstLine.startsWith('# ') && text.includes('\n') ? firstLine.slice(2).trim() : text;
+}
+
 function traceTitle(events: HarnessEvent[]): string | null {
   for (const event of events) {
     if (event.type === 'user_message') {
-      return event.text;
+      return questionTitle(event.text);
     }
     if (event.type === 'grounding_check_started') {
       return event.sourceTracePath;

@@ -25,8 +25,8 @@ not ok 1 - две недели отпуска — 14 дней
   actual: 13
   operator: 'strictEqual'
   ...
-# Subtest: конец раньше начала — ошибка
-ok 2 - конец раньше начала — ошибка
+# Subtest: строки через \\\\r\\\\n
+ok 2 - строки через \\\\r\\\\n
   ---
   duration_ms: 0.3
   type: 'test'
@@ -60,7 +60,7 @@ describe('parseTap', () => {
   it('считает листья, без suite', () => {
     expect(tests.map((test) => [test.name, test.ok])).toEqual([
       ['две недели отпуска — 14 дней', false],
-      ['конец раньше начала — ошибка', true],
+      ['строки через \\r\\n', true],
       ['вложенный', true],
       ['читает чужой файл', false],
     ]);

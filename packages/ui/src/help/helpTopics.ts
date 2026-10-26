@@ -25,6 +25,7 @@ export const HELP_TOPICS = [
   'evals',
   'branches',
   'imported-traces',
+  'code-arena',
 ] as const;
 
 export type HelpTopic = (typeof HELP_TOPICS)[number];

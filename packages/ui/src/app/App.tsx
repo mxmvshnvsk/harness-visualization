@@ -35,6 +35,7 @@ import { DialogRail } from '../features/dialog/DialogRail';
 import { PermissionCard } from '../features/PermissionCard';
 import { StreamHeader, type StreamEnd } from '../features/StreamHeader';
 import { usePendingPermission } from '../features/usePendingPermission';
+import { CodeView } from '../features/code/CodeView';
 import { AgentsView } from '../features/agents/AgentsView';
 import { AgentLabelsContext, useAgentLabelsOf } from '../features/agents/agentLabels';
 import { McpLab } from '../features/mcp/McpLab';
@@ -387,6 +388,7 @@ function StartScreen(props: {
 const VIEWS = [
   { value: 'flow', label: 'Поток' },
   { value: 'inspector', label: 'Инспектор' },
+  { value: 'code', label: 'Код' },
   { value: 'context', label: 'Контекст' },
   { value: 'rag', label: 'RAG' },
   { value: 'mcp', label: 'MCP' },
@@ -484,61 +486,77 @@ interface ViewSwitchProps {
 
 // Переключатель видов и сам выбранный вид.
 function ViewSwitch(props: ViewSwitchProps): ReactElement {
-  const { events, replay, liveStartedAt, traceFile, sessionId } = props;
   const [viewName, setViewName] = useState<ViewName>('flow');
-  const { clock, cursor, schedule, shown, view } = replay;
   const { links, link } = useLinkedViews(setViewName);
   return (
     <ViewLinksContext.Provider value={links}>
       <div className={styles.views}>
         <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
-        {viewName === 'flow' && (
-          <FlowView clock={clock} schedule={schedule} liveStartedAt={liveStartedAt} />
-        )}
-        {viewName === 'inspector' && (
-          <InspectorView
-            key={`inspector-${String(link.nonce)}`}
-            focus={link.focusFor('inspector')}
-            view={view}
-            events={events}
-            shown={cursor}
-            clock={clock}
-            schedule={schedule}
-            traceFile={traceFile}
-          />
-        )}
-        {viewName === 'context' && (
-          <ContextView events={events} shown={cursor} clock={clock} schedule={schedule} />
-        )}
-        {viewName === 'rag' && (
-          <RetrievalView
-            key={`rag-${String(link.nonce)}`}
-            events={events}
-            shown={cursor}
-            traceFile={traceFile}
-            focus={link.focusFor('rag')}
-          />
-        )}
-        {viewName === 'mcp' && (
-          <McpSessionView
-            key={`mcp-${String(link.nonce)}`}
-            events={events}
-            shown={cursor}
-            focus={link.focusFor('mcp')}
-          />
-        )}
-        {viewName === 'agents' && <AgentsView events={events} shown={cursor} />}
-        {viewName === 'branches' && (
-          <BranchesView events={events} traceFile={traceFile} sessionId={sessionId} />
-        )}
-        {viewName === 'skills' && (
-          <SkillsMemoryView events={events} shown={cursor} clock={clock} schedule={schedule} />
-        )}
-        {viewName === 'events' && <EventList events={shown} />}
+        {VIEW_RENDERERS[viewName]({ ...props, link })}
       </div>
     </ViewLinksContext.Provider>
   );
 }
+
+type ViewContext = ViewSwitchProps & { link: ReturnType<typeof useLinkedViews>['link'] };
+
+// Каждый вид — по событиям до курсора повтора.
+const VIEW_RENDERERS: Record<ViewName, (context: ViewContext) => ReactNode> = {
+  flow: ({ replay, liveStartedAt }) => (
+    <FlowView clock={replay.clock} schedule={replay.schedule} liveStartedAt={liveStartedAt} />
+  ),
+  inspector: ({ replay, events, traceFile, link }) => (
+    <InspectorView
+      key={`inspector-${String(link.nonce)}`}
+      focus={link.focusFor('inspector')}
+      view={replay.view}
+      events={events}
+      shown={replay.cursor}
+      clock={replay.clock}
+      schedule={replay.schedule}
+      traceFile={traceFile}
+    />
+  ),
+  code: ({ events, replay }) => <CodeView events={events} shown={replay.cursor} />,
+  context: ({ events, replay }) => (
+    <ContextView
+      events={events}
+      shown={replay.cursor}
+      clock={replay.clock}
+      schedule={replay.schedule}
+    />
+  ),
+  rag: ({ events, replay, traceFile, link }) => (
+    <RetrievalView
+      key={`rag-${String(link.nonce)}`}
+      events={events}
+      shown={replay.cursor}
+      traceFile={traceFile}
+      focus={link.focusFor('rag')}
+    />
+  ),
+  mcp: ({ events, replay, link }) => (
+    <McpSessionView
+      key={`mcp-${String(link.nonce)}`}
+      events={events}
+      shown={replay.cursor}
+      focus={link.focusFor('mcp')}
+    />
+  ),
+  agents: ({ events, replay }) => <AgentsView events={events} shown={replay.cursor} />,
+  branches: ({ events, traceFile, sessionId }) => (
+    <BranchesView events={events} traceFile={traceFile} sessionId={sessionId} />
+  ),
+  skills: ({ events, replay }) => (
+    <SkillsMemoryView
+      events={events}
+      shown={replay.cursor}
+      clock={replay.clock}
+      schedule={replay.schedule}
+    />
+  ),
+  events: ({ replay }) => <EventList events={replay.shown} />,
+};
 
 type LinkedView = 'rag' | 'mcp' | 'inspector';
 
@@ -651,7 +669,7 @@ function describeSelection(
   traces: TraceSummary[],
 ): { title: string; source: string; synthetic: boolean } {
   const question = events.find((event) => event.type === 'user_message');
-  const title = question?.type === 'user_message' ? question.text : null;
+  const title = question?.type === 'user_message' ? questionTitle(question.text) : null;
   if (selection.kind === 'session') {
     return { title: title ?? 'Сессия', source: selection.sessionId, synthetic: false };
   }
@@ -661,6 +679,13 @@ function describeSelection(
     source: selection.file,
     synthetic: trace?.synthetic ?? false,
   };
+}
+
+// Вопрос-документ (задача арены — TASK.md с заголовком «# …») — заголовком, а не целиком.
+// То же правило у сервера в списке трейсов (TraceCatalog).
+export function questionTitle(text: string): string {
+  const firstLine = text.trimStart().split('\n', 1)[0] ?? '';
+  return firstLine.startsWith('# ') && text.includes('\n') ? firstLine.slice(2).trim() : text;
 }
 
 function findAskedAt(events: readonly HarnessEvent[], toolCallId: string): string {

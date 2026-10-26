@@ -110,3 +110,27 @@ describe('sessionChips: субагенты и ветка', () => {
     });
   });
 });
+
+describe('sessionChips: Код-арена', () => {
+  it('у прогона арены — задача, режим и сеть, без чипов поиска и демо-проекта', () => {
+    const started = sessionStarted('tool');
+    const arena = {
+      taskId: 'refactor',
+      directory: 'workspace-arena/x',
+      runTests: false,
+      contextPreset: 'real' as const,
+      maxIterations: 25,
+      network: 'open' as const,
+      nodeVersion: '24.6.0',
+    };
+    const log = new EventLog().add(
+      started.type === 'session_started' ? { ...started, demoProject: false, arena } : started,
+    );
+
+    expect(sessionChips(log.events).map((chip) => chip.label)).toEqual([
+      'арена · refactor · вслепую',
+      'сеть открыта',
+      'effort high',
+    ]);
+  });
+});

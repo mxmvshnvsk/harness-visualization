@@ -37,7 +37,8 @@ export function parseTap(output: string): NodeTestCase[] {
       return;
     }
     cases.push({
-      name: (match[3] ?? '').replace(/ # .*$/, ''),
+      // TAP экранирует «\\» и «#» в именах тестов обратной косой чертой.
+      name: (match[3] ?? '').replace(/ # .*$/, '').replace(/\\(.)/g, '$1'),
       file: fileOf(details.location),
       ok: match[2] === 'ok',
       error: match[2] === 'ok' ? null : describeFailure(details),
