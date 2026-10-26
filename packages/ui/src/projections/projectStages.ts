@@ -60,6 +60,40 @@ function describeRestored(restored: EventOfType<'history_compacted'>['restored']
   return parts.length === 0 ? '' : `; к сводке дописаны как есть: ${parts.join(', ')}`;
 }
 
+const STEP_STATUS = { done: 'готово', warning: 'с замечанием', failed: 'сбой' } as const;
+
+// Оркестрация (этап 6d): режим, план, шаги каркаса, приёмка и доработка — строками этапов.
+const ORCHESTRATION_ROWS: Describers = {
+  orchestration_started: (event) => ({
+    code: event.mode,
+    text:
+      event.steps.length === 0
+        ? 'оркестрация: шагов заранее нет — план составит модель'
+        : `оркестрация: шаги задал код — ${event.steps.map((step) => step.title).join(' → ')}`,
+  }),
+  plan_created: (event) => ({
+    code: 'plan_created',
+    text: `план (${event.author === 'code' ? 'составил код' : 'составила модель'}): ${event.tasks.map((task) => `${task.taskId} ${task.title}`).join('; ')}`,
+  }),
+  pipeline_step_started: (event) => ({ code: event.stepId, text: `шаг каркаса: ${event.title}` }),
+  pipeline_step_finished: (event) => ({
+    code: event.stepId,
+    text: `шаг каркаса ${STEP_STATUS[event.status]}, ${seconds(event.durationMs)}: ${event.summary}`,
+  }),
+  task_reviewed: (event) => ({
+    code: event.subagentId,
+    text: `приёмка${event.taskId === null ? '' : ` ${event.taskId}`}: ${event.verdict === 'accepted' ? 'принято' : 'вернуть на доработку'} — «${shorten(event.comment, 160)}»`,
+  }),
+  subagent_resumed: (event) => ({
+    code: event.subagentId,
+    text: `доработка по замечанию, отчёт ${String(event.round)}: «${shorten(event.feedback, 160)}»`,
+  }),
+  orchestration_finished: (event) => ({
+    code: event.mode,
+    text: `оркестрация закончена: поручений ${String(event.tasks)}, доработок ${String(event.reworks)}, ${seconds(event.durationMs)}`,
+  }),
+};
+
 const DESCRIBE: Describers = {
   mcp_server_starting: (event) => ({
     code: event.serverName,
@@ -160,6 +194,7 @@ const DESCRIBE: Describers = {
         ? `отчёт главному агенту — ${plural(event.modelRequests, REQUESTS)} к модели, input ${format(event.usage.inputTokens)}, ${seconds(event.durationMs)}`
         : `без отчёта: ${event.errorMessage ?? 'ошибка'}`,
   }),
+  ...ORCHESTRATION_ROWS,
   error: (event) => ({ code: null, text: `ошибка: ${event.message}` }),
 };
 
@@ -173,14 +208,22 @@ export function projectStages(
   const startedAt = first === undefined ? 0 : Date.parse(first.timestamp);
   const names = new Map<string, string>();
   const stages: Stage[] = [scope === null ? prepStage() : assignmentStage(events, scope)];
+  // Шаг каркаса оркестрации, внутри которого идут шаги агента (этап 6d).
+  let frame: string | null = null;
   events.forEach((event, index) => {
     if (!inScope(event, scope)) {
       return;
     }
+    if (event.type === 'pipeline_step_started') {
+      frame = event.stepId;
+    }
+    if (event.type === 'orchestration_started') {
+      frame = null;
+    }
     if (event.type === 'tool_call') {
       names.set(event.toolCallId, event.toolName);
     }
-    openStageFor(stages, event, index, scope);
+    openStageFor(stages, event, index, { scope, frame });
     const stage = stages.at(-1);
     if (stage !== undefined) {
       addRow(stage, event, { index, at: Date.parse(event.timestamp) - startedAt, names });
@@ -220,7 +263,11 @@ function inScope(event: HarnessEvent, scope: string | null): boolean {
   if (scope === null) {
     return event.agentId === undefined;
   }
-  if (event.type === 'subagent_started' || event.type === 'subagent_finished') {
+  if (
+    event.type === 'subagent_started' ||
+    event.type === 'subagent_finished' ||
+    event.type === 'subagent_resumed'
+  ) {
     return event.subagentId === scope;
   }
   return event.agentId === scope;
@@ -276,10 +323,10 @@ function openStageFor(
   stages: Stage[],
   event: HarnessEvent,
   index: number,
-  scope: string | null,
+  { scope, frame }: { scope: string | null; frame: string | null },
 ): void {
   const turn = stages.filter((stage) => stage.kind === 'question').length + 1;
-  const head = stageHeadFor(event, { stages, turn, scope });
+  const head = stageHeadFor(event, { stages, turn, scope, frame });
   if (head !== null) {
     stages.push(newStage(head, index));
   }
@@ -289,7 +336,21 @@ interface StagePlace {
   stages: Stage[];
   turn: number;
   scope: string | null;
+  // Шаг каркаса оркестрации; null — его нет.
+  frame: string | null;
 }
+
+// Шаги каркаса коротко — для заголовка этапа: «Проверка · шаг 1».
+const FRAMES: Record<string, string> = {
+  find: 'Поиск',
+  research: 'Исследователи',
+  collect: 'Сбор',
+  answer: 'Ответ',
+  verify: 'Проверка ссылок',
+  plan: 'План',
+  execute: 'Выполнение',
+  review: 'Проверка',
+};
 
 function stageHeadFor(event: HarnessEvent, place: StagePlace): StageHead | null {
   const { turn, scope } = place;
@@ -328,14 +389,16 @@ function questionHead(turn: number): StageHead {
 }
 
 function stepHead(event: EventOfType<'model_request'>, place: StagePlace): StageHead {
-  const { turn, scope } = place;
+  const { turn, scope, frame } = place;
   const step = String(event.iteration ?? place.stages.length);
-  const prefix = turn > 1 ? `Вопрос ${String(turn)} · ` : '';
+  const question = turn > 1 ? `Вопрос ${String(turn)} · ` : '';
+  const framed = frame === null ? '' : `${FRAMES[frame] ?? frame} · `;
   const idPrefix = scope === null ? '' : `${scope}-`;
+  const idFrame = frame === null ? '' : `${frame}-`;
   return {
-    id: `${idPrefix}turn-${String(turn)}-step-${step}`,
+    id: `${idPrefix}turn-${String(turn)}-${idFrame}step-${step}`,
     kind: 'agent',
-    title: `${prefix}Шаг ${step} · agentStep`,
+    title: `${question}${framed}Шаг ${step} · agentStep`,
     badge: 'модель думает…',
     requestId: event.requestId,
   };
