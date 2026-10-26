@@ -63,3 +63,12 @@ export async function readTestFiles(directory: string): Promise<Record<string, s
   }
   return contents;
 }
+
+// Все файлы копии, пути от её корня: до работы агента и после — так видно, что он добавил.
+export async function listCopyFiles(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { recursive: true, withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => relative(directory, join(entry.parentPath, entry.name)).split(sep).join('/'))
+    .sort();
+}

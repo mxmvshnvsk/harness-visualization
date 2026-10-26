@@ -529,6 +529,7 @@ async function acceptArenaTurn(
       task,
       directory: input.arena.directory,
       originalTests: input.arena.originalTests,
+      originalFiles: input.arena.originalFiles,
       settings: arena,
     }),
   );

@@ -6,7 +6,7 @@ import { join, relative, resolve } from 'node:path';
 import type { ArenaRun } from '../events/harnessEvents.js';
 import type { ArenaSettings, ContextPreset } from '../settings/settingsSchema.js';
 import { readArenaTask, type ArenaTaskDetails } from './arenaTasks.js';
-import { prepareArenaCopy, readTestFiles } from './prepareArenaCopy.js';
+import { listCopyFiles, prepareArenaCopy, readTestFiles } from './prepareArenaCopy.js';
 import { networkClosedByPermissions } from './runNodeTests.js';
 
 export interface ArenaSessionInput {
@@ -18,6 +18,8 @@ export interface ArenaSessionInput {
   runTests: boolean;
   // Видимые тесты до работы агента: путь → текст. Их и запускает приёмка.
   originalTests: Record<string, string>;
+  // Все файлы копии до работы агента — приёмка покажет, что он добавил.
+  originalFiles: string[];
   // Пресет контекста и лимит шагов прогона: по умолчанию — из раздела arena настроек.
   contextPreset: ContextPreset;
   maxIterations: number;
@@ -59,6 +61,7 @@ export async function prepareArenaRun(request: ArenaRunRequest): Promise<ArenaSe
     directory,
     runTests: request.runTests,
     originalTests: await readTestFiles(directory),
+    originalFiles: await listCopyFiles(directory),
     contextPreset: request.contextPreset ?? request.settings.contextPreset,
     maxIterations: request.maxIterations ?? request.settings.maxIterations,
   };

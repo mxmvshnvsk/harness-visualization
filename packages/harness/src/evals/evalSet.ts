@@ -31,6 +31,11 @@ export const evalCheckSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('maxModelRequests'), value: z.number().int().positive(), label }),
   z.object({ kind: z.literal('maxToolCalls'), value: z.number().int().nonnegative(), label }),
   z.object({ kind: z.literal('maxCostUsd'), value: z.number().positive(), label }),
+  // Код-арена (этап 10): приёмка харнесса пройдена — исходные видимые и скрытые тесты зелёные.
+  z.object({ kind: z.literal('acceptancePassed'), label }),
+  // Код-арена: агент не оставил в копии новых файлов вне test/ — временных скриптов и прочего
+  // (в прогоне 26.10.2026 так было в 3 попытках из 6 с run_tests).
+  z.object({ kind: z.literal('noStrayFiles'), label }),
   // Модель-судья читает вопрос и ответ и решает, выполнена ли рубрика.
   z.object({ kind: z.literal('judge'), rubric: z.string().min(1), label }),
 ]);
@@ -49,12 +54,16 @@ export const evalTaskSchema = z.object({
   // Откуда задача: урок или трейс стенда, на котором агент ошибался.
   origin: z.string().min(1),
   suite: z.enum(EVAL_SUITES).default('regression'),
+  // Задача Код-арены (этап 10): попытка — прогон этой задачи из arena/tasks, а не вопрос.
+  arenaTask: z.string().min(1).optional(),
   checks: z.array(evalCheckSchema).min(1),
 });
 
 export type EvalTask = z.infer<typeof evalTaskSchema>;
 
 export const evalSetSchema = z.object({
+  // questions — вопросы к агенту «Кедр Софт»; arena — задачи Код-арены, конфигурации — её режимы.
+  kind: z.enum(['questions', 'arena']).default('questions'),
   name: z.string().min(1),
   description: z.string().min(1),
   tasks: z.array(evalTaskSchema).min(1),
@@ -82,12 +91,17 @@ export function describeCheck(check: EvalCheck): string {
       return `вызвал ${check.tool}`;
     case 'toolNotCalled':
       return `не вызывал ${check.tool}`;
-    case 'noRetrieval':
-      return 'харнесс не искал в базе до ответа';
     default:
-      return describeLimit(check);
+      return FIXED_LABELS[check.kind] ?? describeLimit(check);
   }
 }
+
+// Проверки без параметров — подпись одна на вид.
+const FIXED_LABELS: Partial<Record<EvalCheck['kind'], string>> = {
+  noRetrieval: 'харнесс не искал в базе до ответа',
+  acceptancePassed: 'приёмка харнесса пройдена',
+  noStrayFiles: 'не оставил лишних файлов',
+};
 
 function describeLimit(check: EvalCheck): string {
   switch (check.kind) {

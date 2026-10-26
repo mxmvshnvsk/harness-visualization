@@ -14,7 +14,7 @@ import { dirname, join } from 'node:path';
 import type { AcceptanceCheckedPayload } from '../events/harnessEvents.js';
 import type { ArenaSettings } from '../settings/settingsSchema.js';
 import { tasksDirectory, type ArenaTask } from './arenaTasks.js';
-import { readTestFiles } from './prepareArenaCopy.js';
+import { listCopyFiles, readTestFiles } from './prepareArenaCopy.js';
 import { runNodeTests } from './runNodeTests.js';
 import type { NodeTestCase, NodeTestResult } from './testResults.js';
 
@@ -25,6 +25,8 @@ export interface AcceptanceRequest {
   directory: string;
   // Видимые тесты до работы агента: путь → текст.
   originalTests: Record<string, string>;
+  // Файлы копии до работы агента; null — не знаем (pnpm arena --verify).
+  originalFiles: string[] | null;
   settings: ArenaSettings;
 }
 
@@ -36,6 +38,7 @@ export async function checkAcceptance(
   await mkdir(checkDirectory, { recursive: true });
   await cp(request.directory, checkDirectory, { recursive: true });
   const changedTests = await restoreOriginalTests(request, checkDirectory);
+  const addedFiles = await addedFilesOf(request);
   await cp(
     join(tasksDirectory(request.arenaRoot), request.task.id, 'acceptance'),
     join(checkDirectory, 'acceptance'),
@@ -59,6 +62,7 @@ export async function checkAcceptance(
     visible: { passed: count(visible, true), failed: count(visible, false) },
     hidden: { passed: count(hidden, true), failed: count(hidden, false), tests: hidden },
     changedTests,
+    addedFiles,
     timedOut,
     durationMs: visibleRun.durationMs + hiddenRun.durationMs,
     output: hiddenRun.output,
@@ -79,6 +83,14 @@ function runPatterns(
 
 function count(tests: readonly NodeTestCase[], ok: boolean): number {
   return tests.filter((test) => test.ok === ok).length;
+}
+
+async function addedFilesOf(request: AcceptanceRequest): Promise<string[]> {
+  if (request.originalFiles === null) {
+    return [];
+  }
+  const before = new Set(request.originalFiles);
+  return (await listCopyFiles(request.directory)).filter((path) => !before.has(path));
 }
 
 // Кладёт исходные видимые тесты поверх правок агента (кроме editableTests) и отвечает, какие

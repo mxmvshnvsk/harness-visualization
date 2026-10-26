@@ -76,7 +76,17 @@ export function ArenaLab({ backLabel, onBack, onStarted }: ArenaLabProps): React
           </p>
         </div>
       ) : (
-        <TasksPanel tasks={tasks} onStarted={onStarted} />
+        <>
+          <TasksPanel tasks={tasks} onStarted={onStarted} />
+          <div className={labStyles.card}>
+            <p className={styles.muted}>
+              Один прогон ничего не доказывает. Сравнить режимы на k попытках — в терминале:{' '}
+              <code className={styles.mono}>pnpm eval --set evals/arena.json</code> (по умолчанию
+              «вслепую» и «с run_tests», ещё есть tests-max и squeezed — через --configs). Итоги и
+              трейсы попыток — в «Лаборатории Evals», вкладка «Прогон».
+            </p>
+          </div>
+        </>
       )}
     </div>
   );

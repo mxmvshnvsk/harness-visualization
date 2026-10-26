@@ -62,12 +62,8 @@ export function runCodeCheck(check: EvalCheck, events: HarnessEvent[]): CheckRes
     case 'toolCalled':
     case 'toolNotCalled':
       return result(...checkTool(check, facts.toolCalls));
-    case 'judge':
-      return result(null, 'судью не звали');
-    case 'noRetrieval':
-      return result(...checkRetrieval(events));
     default:
-      return result(...checkLimit(check, facts));
+      return result(...checkOther(check, events, facts));
   }
 }
 
@@ -130,6 +126,36 @@ function checkRetrieval(events: HarnessEvent[]): Outcome {
   }
   const query = retrieved.arguments['query'];
   return [false, typeof query === 'string' ? `искал «${query}»` : 'искал'];
+}
+
+function checkOther(check: EvalCheck, events: HarnessEvent[], facts: TrialFacts): Outcome {
+  switch (check.kind) {
+    case 'judge':
+      return [null, 'судью не звали'];
+    case 'noRetrieval':
+      return checkRetrieval(events);
+    case 'acceptancePassed':
+    case 'noStrayFiles':
+      return checkArena(check, events);
+    default:
+      return checkLimit(check, facts);
+  }
+}
+
+function checkArena(check: EvalCheck, events: HarnessEvent[]): Outcome {
+  const acceptance = events.find((event) => event.type === 'acceptance_checked');
+  if (acceptance?.type !== 'acceptance_checked') {
+    return [false, 'приёмки не было'];
+  }
+  if (check.kind === 'noStrayFiles') {
+    const stray = (acceptance.addedFiles ?? []).filter((path) => !path.startsWith('test/'));
+    return stray.length === 0 ? [true, 'нет'] : [false, stray.join(', ')];
+  }
+  const { visible, hidden } = acceptance;
+  return [
+    acceptance.passed,
+    `видимые ${String(visible.passed)} из ${String(visible.passed + visible.failed)}, скрытые ${String(hidden.passed)} из ${String(hidden.passed + hidden.failed)}`,
+  ];
 }
 
 function checkLimit(check: EvalCheck, facts: TrialFacts): Outcome {

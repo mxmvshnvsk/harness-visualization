@@ -155,6 +155,7 @@ async function acceptanceOf(
     task,
     directory: run.directory,
     originalTests: blank.originalTests,
+    originalFiles: null,
     settings,
   });
   await rm(run.directory, { recursive: true, force: true });
