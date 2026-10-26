@@ -18,6 +18,7 @@
     "branch": "pnpm run build && node packages/harness/dist/cli/mainBranch.js",
     "import-trace": "pnpm run build && node packages/harness/dist/cli/mainImportTrace.js",
     "arena": "pnpm run build && node packages/harness/dist/cli/mainArena.js",
+    "logprobs-probe": "pnpm --filter @harness-visualization/harness... run build && node packages/harness/dist/cli/mainLogprobsProbe.js",
     "compare-search": "pnpm --filter @harness-visualization/mcp-server... run build && node packages/mcp-server/dist/mainCompareSearch.js",
     "serve": "pnpm run build && node packages/server/dist/main.js",
     "dev": "pnpm --filter @harness-visualization/server... run build && node scripts/dev.mjs",

@@ -22,10 +22,23 @@ const wireMessageSchema = z.object({
   tool_calls: z.array(wireToolCallSchema).nullish(),
 });
 
+const wireTopLogprobSchema = z.object({ token: z.string(), logprob: z.number() });
+
+const wireTokenLogprobSchema = wireTopLogprobSchema.extend({
+  top_logprobs: z.array(wireTopLogprobSchema).nullish(),
+});
+
+// Вероятности токенов (этап 11): по ответу и, у DeepSeek, по рассуждению.
+const wireLogprobsSchema = z.object({
+  content: z.array(wireTokenLogprobSchema).nullish(),
+  reasoning_content: z.array(wireTokenLogprobSchema).nullish(),
+});
+
 const wireChoiceSchema = z.object({
   index: z.number(),
   finish_reason: z.string().nullable(),
   message: wireMessageSchema,
+  logprobs: wireLogprobsSchema.nullish(),
 });
 
 const wireUsageSchema = z.object({
@@ -55,3 +68,4 @@ export const wireErrorSchema = z.object({
 export type WireChatCompletion = z.infer<typeof wireChatCompletionSchema>;
 export type WireUsage = z.infer<typeof wireUsageSchema>;
 export type WireToolCall = z.infer<typeof wireToolCallSchema>;
+export type WireLogprobs = z.infer<typeof wireLogprobsSchema>;

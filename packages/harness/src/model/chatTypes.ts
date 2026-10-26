@@ -59,6 +59,25 @@ export interface ModelRequest {
   reasoningEffort: ReasoningEffort;
   // none — тулы описаны (prompt тот же, кэш совпадает), но звать их нельзя: только ответ текстом.
   toolChoice?: 'auto' | 'none';
+  // Этап 11: вероятности токенов — сколько альтернатив вернуть на каждую позицию (0–20);
+  // нет поля — не просим. Temperature — нет поля — по умолчанию провайдера.
+  topLogprobs?: number;
+  temperature?: number;
+}
+
+// Вероятность одного токена ответа (этап 11): что модель выбрала и что ещё рассматривала.
+// logprob — натуральный логарифм вероятности: e^logprob = вероятность.
+export interface TokenLogprob {
+  token: string;
+  logprob: number;
+  top: { token: string; logprob: number }[];
+}
+
+export interface ReplyLogprobs {
+  // Токены ответа по порядку.
+  content: TokenLogprob[];
+  // Токены рассуждения — если провайдер их отдаёт (DeepSeek описывает поле reasoning_content).
+  reasoning: TokenLogprob[];
 }
 
 export interface TokenUsage {
@@ -83,6 +102,8 @@ export interface ModelReply {
   // Пустой список, если модель не просит вызвать тулы.
   toolCalls: ToolCall[];
   usage: TokenUsage;
+  // Вероятности токенов (этап 11); нет поля — не просили или провайдер не отдал.
+  logprobs?: ReplyLogprobs;
 }
 
 // Моменты потокового ответа (этап 8d.2), в миллисекундах от отправки запроса.

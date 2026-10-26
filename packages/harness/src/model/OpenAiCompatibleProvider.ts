@@ -8,6 +8,7 @@ import type { ModelSettings } from '../settings/settingsSchema.js';
 import type {
   ModelReply,
   ModelRequest,
+  ReplyLogprobs,
   TokenUsage,
   ToolCall,
   ToolDefinition,
@@ -23,6 +24,7 @@ import { ModelProviderError } from './ModelProviderError.js';
 import {
   wireChatCompletionSchema,
   wireErrorSchema,
+  type WireLogprobs,
   type WireToolCall,
   type WireUsage,
 } from './openAiWireSchema.js';
@@ -63,6 +65,10 @@ export class OpenAiCompatibleProvider implements ModelProvider {
         messages: toWireMessages(request.messages, this.settings.reasoningStyle),
         ...buildToolsParameter(request.tools, request.toolChoice ?? 'auto'),
         max_tokens: this.settings.maxOutputTokens,
+        ...(request.topLogprobs === undefined
+          ? {}
+          : { logprobs: true, top_logprobs: request.topLogprobs }),
+        ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
         stream: this.settings.stream,
         // Без этого в потоке нет usage — не узнаем ни токены, ни стоимость.
         ...(this.settings.stream ? { stream_options: { include_usage: true } } : {}),
@@ -129,6 +135,7 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       reasoningText: firstChoice.message.reasoning_content ?? null,
       toolCalls: (firstChoice.message.tool_calls ?? []).map(fromWireToolCall),
       usage: normalizeUsage(completion.usage),
+      ...(firstChoice.logprobs ? { logprobs: fromWireLogprobs(firstChoice.logprobs) } : {}),
     };
   }
 
@@ -167,6 +174,16 @@ function fromWireToolCall(wireToolCall: WireToolCall): ToolCall {
     name: wireToolCall.function.name,
     argumentsText: wireToolCall.function.arguments,
   };
+}
+
+function fromWireLogprobs(wire: WireLogprobs): ReplyLogprobs {
+  const tokens = (items: WireLogprobs['content']) =>
+    (items ?? []).map((item) => ({
+      token: item.token,
+      logprob: item.logprob,
+      top: (item.top_logprobs ?? []).map((top) => ({ token: top.token, logprob: top.logprob })),
+    }));
+  return { content: tokens(wire.content), reasoning: tokens(wire.reasoning_content) };
 }
 
 function isEventStream(response: Response): boolean {

@@ -34,6 +34,8 @@ interface Draft {
   toolCalls: ToolCallDraft[];
   finishReason: string | null;
   usage: unknown;
+  // Вероятности токенов (этап 11) приходят в каждом куске — собираем по порядку.
+  logprobs: { content: unknown[]; reasoning_content: unknown[] } | null;
 }
 
 interface ChunkDelta {
@@ -50,7 +52,11 @@ interface ChunkDelta {
 interface Chunk {
   id?: string;
   model?: string;
-  choices?: { delta?: ChunkDelta; finish_reason?: string | null }[];
+  choices?: {
+    delta?: ChunkDelta;
+    finish_reason?: string | null;
+    logprobs?: { content?: unknown[] | null; reasoning_content?: unknown[] | null } | null;
+  }[];
   usage?: unknown;
 }
 
@@ -67,6 +73,7 @@ export async function readCompletionStream(
     toolCalls: [],
     finishReason: null,
     usage: null,
+    logprobs: null,
   };
   const timing: ResponseTiming = {
     firstTokenMs: null,
@@ -140,6 +147,7 @@ function applyChunk(
   const choice = chunk.choices?.[0];
   if (choice !== undefined) {
     draft.finishReason = choice.finish_reason ?? draft.finishReason;
+    applyLogprobs(draft, choice.logprobs);
     applyDelta(draft, choice.delta ?? {}, marker, onDelta);
   }
 }
@@ -166,6 +174,18 @@ function applyDelta(
     applyToolCalls(draft, delta.tool_calls);
     marker('answer');
   }
+}
+
+function applyLogprobs(
+  draft: Draft,
+  logprobs: NonNullable<Chunk['choices']>[number]['logprobs'],
+): void {
+  if (logprobs === undefined || logprobs === null) {
+    return;
+  }
+  draft.logprobs ??= { content: [], reasoning_content: [] };
+  draft.logprobs.content.push(...(logprobs.content ?? []));
+  draft.logprobs.reasoning_content.push(...(logprobs.reasoning_content ?? []));
 }
 
 function nonEmpty(text: string | null | undefined): string | null {
@@ -208,6 +228,7 @@ function toCompletion(draft: Draft): Record<string, unknown> {
                 })),
               }),
         },
+        ...(draft.logprobs === null ? {} : { logprobs: draft.logprobs }),
       },
     ],
     ...(draft.usage === null ? {} : { usage: draft.usage }),
