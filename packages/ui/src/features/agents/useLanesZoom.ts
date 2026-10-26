@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, type PointerEvent, type RefObject } fro
 import {
   DRAG_THRESHOLD_PX,
   followHead,
+  isZoomed,
   needsZoom,
   panBy,
   zoomActive,
@@ -87,7 +88,8 @@ function useLayers(lanesRef: RefObject<HTMLDivElement | null>, zoom: StripView):
         layer.style.left = `${String((-win.from / span) * 100)}%`;
         layer.style.width = `${String((total / span) * 100)}%`;
       }
-      lanesRef.current?.setAttribute('data-zoom', String(zoomActive(state)));
+      // Курсор «рука» — только когда дорожки приближены и их есть куда тянуть.
+      lanesRef.current?.setAttribute('data-zoom', String(isZoomed(state)));
     };
     draw();
     return zoom.subscribe(draw);
@@ -104,7 +106,7 @@ function useDragPan(zoom: StripView, measure: () => HTMLElement | null): LanesPo
   const drag = useRef<Drag | null>(null);
   return {
     onPointerDown: (event) => {
-      if (zoomActive(zoom.get()) && event.button === 0) {
+      if (isZoomed(zoom.get()) && event.button === 0) {
         drag.current = { x: event.clientX, win: zoom.get().win };
       }
     },

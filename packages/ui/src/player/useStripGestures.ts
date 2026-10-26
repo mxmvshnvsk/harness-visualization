@@ -16,7 +16,6 @@ import {
   isZoomed,
   panBy,
   wheelZoomFactor,
-  zoomActive,
   zoomAround,
   type StripView,
   type StripWindow,
@@ -184,7 +183,10 @@ export function useStripPointer(
       event.currentTarget.setPointerCapture(event.pointerId);
       measure(event.currentTarget);
       const { win } = view.get();
-      if (zoomActive(view.get())) {
+      // Тянуть ладонью — только когда ленту приблизили: иначе сдвигать некуда, и нажатие
+      // с протяжкой — обычная перемотка. Раньше хватало того, что зум доступен, и у длинной
+      // сессии перетаскивание не делало ничего.
+      if (isZoomed(view.get())) {
         drag.current = { x: event.clientX, win, moved: false };
       } else {
         clock.seek(timeAt(event.currentTarget, event.clientX));

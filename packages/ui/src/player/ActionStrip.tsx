@@ -11,7 +11,7 @@ import type { Schedule } from '../timeline/schedule';
 import type { TimelineClock } from '../timeline/TimelineClock';
 import styles from './PlayerBar.module.css';
 import { questionMarks, segmentsOf, type Segment } from './stripSegments';
-import { followHead, needsZoom, zoomActive, type StripView } from './stripWindow';
+import { followHead, isZoomed, needsZoom, zoomActive, type StripView } from './stripWindow';
 import { useStripPointer, useStripWheel } from './useStripGestures';
 
 interface ActionStripProps {
@@ -129,7 +129,8 @@ function useTrackWindow(
         trackRef.current.style.left = `${String((-win.from / span) * 100)}%`;
         trackRef.current.style.width = `${String((total / span) * 100)}%`;
       }
-      stripRef.current?.setAttribute('data-zoom', String(zoomActive(state)));
+      // data-zoom — курсор «рука»: только когда лента приближена и её есть куда тянуть.
+      stripRef.current?.setAttribute('data-zoom', String(isZoomed(state)));
     };
     draw();
     return view.subscribe(draw);
