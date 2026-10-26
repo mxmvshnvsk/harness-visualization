@@ -1,34 +1,37 @@
 // Лента действий под плеером: каждое действие — отрезок цвета своей группы, ожидание — тонкая
 // полоска, пройденное ярче. По ленте перематывают мышью или стрелками; под курсором видно,
 // в какой момент сессии попадёшь и что там происходит. Бегунок движется по кадрам часов.
+//
+// Длинную сессию можно приблизить: отрезки лежат на дорожке шире ленты, окно (stripWindow.ts)
+// сдвигает и растягивает дорожку — прямо в DOM, без перерисовки React.
 
-import { useEffect, useRef, type KeyboardEvent, type PointerEvent, type ReactElement } from 'react';
-import { useAgentLabels, type AgentLabels } from '../features/agents/agentLabels';
-import { realAt, type Schedule } from '../timeline/schedule';
+import { useEffect, useMemo, useRef, type ReactElement, type RefObject } from 'react';
+import { useAgentLabels } from '../features/agents/agentLabels';
+import type { Schedule } from '../timeline/schedule';
 import type { TimelineClock } from '../timeline/TimelineClock';
 import styles from './PlayerBar.module.css';
+import { questionMarks, segmentsOf, type Segment } from './stripSegments';
+import { followHead, needsZoom, type StripView } from './stripWindow';
+import { useStripPointer, useStripWheel } from './useStripGestures';
 
-interface Segment {
-  key: string;
-  from: number;
-  to: number;
-  group: string;
-  waiting: boolean;
-  title: string;
-  // Цвет субагента, чьё это действие (этап 6c); null — главный агент или обычная сессия.
-  agent: string | null;
-}
-
-export function ActionStrip({
-  clock,
-  schedule,
-}: {
+interface ActionStripProps {
   clock: TimelineClock;
   schedule: Schedule;
-}): ReactElement {
+  view: StripView;
+}
+
+export function ActionStrip({ clock, schedule, view }: ActionStripProps): ReactElement {
   const total = Math.max(1, schedule.total);
-  const { stripRef, headRef, handlers } = useStripControls(clock, schedule, total);
   const labels = useAgentLabels();
+  const segments = useMemo(() => segmentsOf(schedule, labels), [schedule, labels]);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const headRef = useRef<HTMLDivElement>(null);
+  useZoomThreshold(stripRef, view, total, segments);
+  useTrackWindow(stripRef, trackRef, view);
+  useHead(clock, view, total, { trackRef, headRef, stripRef });
+  useStripWheel(stripRef, view);
+  const handlers = useStripPointer(clock, schedule, view);
   return (
     <div
       ref={stripRef}
@@ -40,157 +43,120 @@ export function ActionStrip({
       aria-valuemax={100}
       {...handlers}
     >
-      {segmentsOf(schedule, labels).map((segment) => (
-        <div
-          key={segment.key}
-          className={segment.waiting ? `${styles.segment} ${styles.waiting}` : styles.segment}
-          data-group={segment.group}
-          data-agent={segment.agent ?? undefined}
-          data-from={segment.from}
-          title={segment.title}
-          style={{
-            left: `${String((segment.from / total) * 100)}%`,
-            width: `${String(((segment.to - segment.from) / total) * 100)}%`,
-          }}
-        />
-      ))}
-      {questionMarks(schedule).map((at, index, marks) =>
-        marks.length > 1 ? (
-          <span key={at} className={styles.mark} style={{ left: `${String((at / total) * 100)}%` }}>
-            вопрос {index + 1}
-          </span>
-        ) : null,
-      )}
-      <div ref={headRef} className={styles.head} />
+      <div className={styles.viewport}>
+        <div ref={trackRef} className={styles.track}>
+          {segments.map((segment) => (
+            <SegmentBar key={segment.key} segment={segment} total={total} />
+          ))}
+          {questionMarks(schedule).map((at, index, marks) =>
+            marks.length > 1 ? (
+              <span key={at} className={styles.mark} style={{ left: percent(at, total) }}>
+                вопрос {index + 1}
+              </span>
+            ) : null,
+          )}
+          <div ref={headRef} className={styles.head} />
+        </div>
+      </div>
       <div className={styles.ghost} data-ghost="line" />
       <div className={styles.ghostLabel} data-ghost="label" />
     </div>
   );
 }
 
-// Бегунок и пройденные отрезки — по кадрам часов, без перерисовки React.
-function useStripControls(clock: TimelineClock, schedule: Schedule, total: number) {
-  const stripRef = useRef<HTMLDivElement>(null);
-  const headRef = useRef<HTMLDivElement>(null);
+function SegmentBar({ segment, total }: { segment: Segment; total: number }): ReactElement {
+  return (
+    <div
+      className={segment.waiting ? `${styles.segment} ${styles.waiting}` : styles.segment}
+      data-group={segment.group}
+      data-agent={segment.agent ?? undefined}
+      data-from={segment.from}
+      title={segment.title}
+      style={{
+        left: percent(segment.from, total),
+        width: percent(segment.to - segment.from, total),
+      }}
+    />
+  );
+}
+
+function percent(value: number, total: number): string {
+  return `${String((value / total) * 100)}%`;
+}
+
+// Нужен ли зум — по ширине ленты и самому короткому отрезку; лента меняет ширину — проверяем снова.
+function useZoomThreshold(
+  stripRef: RefObject<HTMLDivElement | null>,
+  view: StripView,
+  total: number,
+  segments: readonly Segment[],
+): void {
   useEffect(() => {
-    const segments = [...(stripRef.current?.querySelectorAll<HTMLElement>('[data-from]') ?? [])];
+    view.setTotal(total);
+    const strip = stripRef.current;
+    if (strip === null) {
+      return undefined;
+    }
+    const durations = segments.filter((item) => !item.waiting).map((item) => item.to - item.from);
+    const check = (): void => {
+      view.setEnabled(needsZoom(durations, total, strip.clientWidth));
+    };
+    check();
+    const observer = new ResizeObserver(check);
+    observer.observe(strip);
+    return () => {
+      observer.disconnect();
+    };
+  }, [stripRef, view, total, segments]);
+}
+
+// Окно → положение и ширина дорожки.
+function useTrackWindow(
+  stripRef: RefObject<HTMLDivElement | null>,
+  trackRef: RefObject<HTMLDivElement | null>,
+  view: StripView,
+): void {
+  useEffect(() => {
     const draw = (): void => {
-      const { time } = clock.getState();
+      const { win, total, enabled } = view.get();
+      const span = Math.max(1, win.to - win.from);
+      if (trackRef.current !== null) {
+        trackRef.current.style.left = `${String((-win.from / span) * 100)}%`;
+        trackRef.current.style.width = `${String((total / span) * 100)}%`;
+      }
+      stripRef.current?.setAttribute('data-zoom', String(enabled));
+    };
+    draw();
+    return view.subscribe(draw);
+  }, [stripRef, trackRef, view]);
+}
+
+interface HeadRefs {
+  stripRef: RefObject<HTMLDivElement | null>;
+  trackRef: RefObject<HTMLDivElement | null>;
+  headRef: RefObject<HTMLDivElement | null>;
+}
+
+// Бегунок и пройденные отрезки — по кадрам часов; при воспроизведении окно едет за бегунком.
+function useHead(clock: TimelineClock, view: StripView, total: number, refs: HeadRefs): void {
+  const { stripRef, trackRef, headRef } = refs;
+  useEffect(() => {
+    const segments = [...(trackRef.current?.querySelectorAll<HTMLElement>('[data-from]') ?? [])];
+    const draw = (): void => {
+      const { time, playing, following } = clock.getState();
       if (headRef.current !== null) {
-        headRef.current.style.left = `${String((time / total) * 100)}%`;
+        headRef.current.style.left = percent(time, total);
       }
       stripRef.current?.setAttribute('aria-valuenow', String(Math.round((time / total) * 100)));
       for (const segment of segments) {
         segment.dataset.past = String(time >= Number(segment.dataset.from));
       }
+      const state = view.get();
+      if (state.enabled && state.follow && (playing || following)) {
+        view.setWindow(followHead(state.win, time, state.total));
+      }
     };
     draw();
     return clock.subscribe(draw);
-  }, [clock, total]);
-  return { stripRef, headRef, handlers: stripHandlers(clock, schedule, total) };
-}
-
-function stripHandlers(clock: TimelineClock, schedule: Schedule, total: number) {
-  const timeOf = (event: PointerEvent<HTMLDivElement>): number => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    return Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)) * total;
-  };
-  return {
-    onKeyDown: (event: KeyboardEvent<HTMLDivElement>): void => {
-      const delta = { ArrowRight: total / 50, ArrowLeft: -total / 50 }[event.key];
-      if (delta !== undefined) {
-        clock.seek(clock.getState().time + delta);
-        event.preventDefault();
-      }
-    },
-    onPointerDown: (event: PointerEvent<HTMLDivElement>): void => {
-      event.currentTarget.setPointerCapture(event.pointerId);
-      clock.seek(timeOf(event));
-    },
-    onPointerMove: (event: PointerEvent<HTMLDivElement>): void => {
-      const time = timeOf(event);
-      showGhost(event.currentTarget, schedule, time / total);
-      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-        clock.seek(time);
-      }
-    },
-  };
-}
-
-function showGhost(strip: HTMLElement, schedule: Schedule, share: number): void {
-  const line = strip.querySelector<HTMLElement>('[data-ghost="line"]');
-  const label = strip.querySelector<HTMLElement>('[data-ghost="label"]');
-  if (line === null || label === null) {
-    return;
-  }
-  const time = share * schedule.total;
-  line.style.left = `${String(share * 100)}%`;
-  label.style.left = `${String(Math.min(90, Math.max(10, share * 100)))}%`;
-  const seconds = (realAt(schedule, time) / 1000).toLocaleString('ru-RU', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  label.textContent = `${seconds} с · ${actionAt(schedule, time) ?? 'начало сессии'}`;
-}
-
-// Что происходит в этот момент повтора: последнее начавшееся действие.
-function actionAt(schedule: Schedule, time: number): string | null {
-  let found: string | null = null;
-  for (const item of schedule.actions) {
-    if (item.outFrom > time) {
-      break;
-    }
-    const back = item.backFrom !== null && time >= item.backFrom;
-    found = back ? (item.action.whatBack ?? item.action.what) : item.action.what;
-  }
-  return found;
-}
-
-// Где начинается каждый вопрос диалога: первый — сообщение пользователя, следующие — обратный
-// полёт после «читает ответ…».
-function questionMarks(schedule: Schedule): number[] {
-  const marks: number[] = [];
-  for (const item of schedule.actions) {
-    if (item.action.kind === 'message' && item.action.from === 'user') {
-      marks.push(item.outFrom);
-    }
-    if (item.action.id.startsWith('reading:') && item.backFrom !== null) {
-      marks.push(item.backFrom);
-    }
-  }
-  return marks.sort((left, right) => left - right);
-}
-
-function segmentsOf(schedule: Schedule, labels: AgentLabels): Segment[] {
-  const segments: Segment[] = [];
-  for (const item of schedule.actions) {
-    const { action } = item;
-    const agent = labels.enabled && action.agentId !== null ? labels.colorOf(action.agentId) : null;
-    const base = { group: action.group, waiting: false, agent };
-    segments.push({
-      ...base,
-      key: `${action.id}:out`,
-      from: item.outFrom,
-      to: item.outTo,
-      title: action.what,
-    });
-    if (item.backFrom !== null && item.backTo !== null) {
-      segments.push({
-        ...base,
-        key: `${action.id}:wait`,
-        from: item.outTo,
-        to: item.backFrom,
-        waiting: true,
-        title: `${action.what} — ожидание`,
-      });
-      segments.push({
-        ...base,
-        key: `${action.id}:back`,
-        from: item.backFrom,
-        to: item.backTo,
-        title: action.whatBack ?? action.what,
-      });
-    }
-  }
-  return segments;
+  }, [clock, view, total, stripRef, trackRef, headRef]);
 }

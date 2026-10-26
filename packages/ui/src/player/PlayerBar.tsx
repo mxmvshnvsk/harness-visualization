@@ -1,14 +1,18 @@
 // Панель плеера: к началу, шаг назад, воспроизведение, шаг вперёд, «вживую» / «к концу»,
-// скорость и лента действий, по которой можно перематывать. Позиция и лента обновляются
+// скорость, зум ленты и лента действий, по которой можно перематывать. Позиция и лента обновляются
 // прямо в DOM по кадрам часов — React их не перерисовывает.
 
-import { useEffect, useRef, type ReactElement } from 'react';
+import { useEffect, useRef, useState, type ReactElement } from 'react';
 import { Segmented } from '../components/Segmented';
 import { realAt, stepTime, type Schedule } from '../timeline/schedule';
 import type { TimelineClock } from '../timeline/TimelineClock';
 import { useClockValue } from '../timeline/useTimeline';
 import { ActionStrip } from './ActionStrip';
+import { IconButton } from './IconButton';
 import styles from './PlayerBar.module.css';
+import { StripMinimap } from './StripMinimap';
+import { createStripView } from './stripWindow';
+import { ZoomControls } from './ZoomControls';
 
 // Скорости — группой кнопок: все видны сразу и переключаются одним нажатием.
 const SPEED_OPTIONS = [0.5, 1, 2, 4].map((value) => ({
@@ -28,12 +32,14 @@ interface PlayerBarProps {
 
 export function PlayerBar(props: PlayerBarProps): ReactElement {
   const { clock, schedule, live, collapsed, onToggle } = props;
+  // Окно ленты переживает сворачивание плеера.
+  const [view] = useState(createStripView);
   if (collapsed) {
     return (
       <div className={styles.collapsed}>
         <PlayButton clock={clock} />
         <div className={styles.stripCell}>
-          <ActionStrip clock={clock} schedule={schedule} />
+          <ActionStrip clock={clock} schedule={schedule} view={view} />
         </div>
         <Position clock={clock} schedule={schedule} />
         <ToggleButton collapsed onToggle={onToggle} />
@@ -45,10 +51,12 @@ export function PlayerBar(props: PlayerBarProps): ReactElement {
       <div className={styles.buttons}>
         <Transport clock={clock} schedule={schedule} />
         <FollowAndSpeed clock={clock} live={live} />
+        <ZoomControls clock={clock} schedule={schedule} view={view} />
         <Position clock={clock} schedule={schedule} />
         <ToggleButton collapsed={false} onToggle={onToggle} />
       </div>
-      <ActionStrip clock={clock} schedule={schedule} />
+      <ActionStrip clock={clock} schedule={schedule} view={view} />
+      <StripMinimap clock={clock} schedule={schedule} view={view} />
     </div>
   );
 }
@@ -173,37 +181,4 @@ function Position({ clock, schedule }: { clock: TimelineClock; schedule: Schedul
 
 function formatSeconds(ms: number): string {
   return `${(ms / 1000).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} с`;
-}
-
-interface IconButtonProps {
-  label: string;
-  path: string;
-  onClick: () => void;
-  primary?: boolean;
-}
-
-function IconButton({ label, path, onClick, primary = false }: IconButtonProps): ReactElement {
-  return (
-    <button
-      type="button"
-      className={primary ? `${styles.icon} ${styles.primary}` : styles.icon}
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-    >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d={path} />
-      </svg>
-    </button>
-  );
 }
