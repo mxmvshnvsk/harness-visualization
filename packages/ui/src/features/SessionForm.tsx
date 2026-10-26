@@ -12,6 +12,7 @@ import {
   useSessionChoices,
   type ChoicesState,
   type EffortChoice,
+  type OrchestrationChoice,
   type RetrievalChoice,
 } from './session/sessionChoices';
 import styles from './SessionForm.module.css';
@@ -26,6 +27,24 @@ const RETRIEVAL: Record<RetrievalChoice, { label: string; hint: string }> = {
 };
 
 const RETRIEVAL_ORDER: readonly RetrievalChoice[] = ['tool', 'auto', 'rewrite'];
+
+// Режимы оркестрации (этап 6d) — кто решает порядок шагов.
+const ORCHESTRATION: Record<OrchestrationChoice, { label: string; hint: string }> = {
+  pipeline: {
+    label: 'пайплайн',
+    hint: 'шаги задаёт код: найти документы → исследователи → ответ → проверка ссылок',
+  },
+  superagent: {
+    label: 'суперагент',
+    hint: 'план, поручения и приёмку решает модель — дороже и с разбросом',
+  },
+  hybrid: {
+    label: 'гибрид',
+    hint: 'каркас «план → выполнение → проверка → ответ» задаёт код, внутри шага решает модель',
+  },
+};
+
+const ORCHESTRATION_ORDER: readonly OrchestrationChoice[] = ['pipeline', 'superagent', 'hybrid'];
 
 const EFFORTS: readonly { value: EffortChoice; label: string }[] = [
   { value: 'off', label: 'off' },
@@ -103,13 +122,9 @@ function Toggles({ state }: { state: ChoicesState }): ReactElement {
       {hasSubagents && (
         <TogglePill
           label="Субагенты"
-          hint={
-            choices.demoProject
-              ? 'Агент сможет поручить чтение субагенту-исследователю: у того своя история, вернётся короткий отчёт.'
-              : 'Без демо-проекта субагентов нет: им нечего исследовать.'
-          }
-          pressed={choices.subagents}
-          disabled={!choices.demoProject}
+          hint={subagentsHint(choices)}
+          pressed={choices.subagents && !choices.orchestration}
+          disabled={!choices.demoProject || choices.orchestration}
           onChange={(subagents) => {
             change({ subagents });
           }}
@@ -123,12 +138,21 @@ function Toggles({ state }: { state: ChoicesState }): ReactElement {
           change({ cleanWorkspace });
         }}
       />
-      <TogglePill
-        label="Оркестрация"
-        hint="Пайплайн, суперагент или гибрид на одной задаче — появится на этапе 6d."
-        pressed={false}
-        soon="6d"
-      />
+      {hasSubagents && (
+        <TogglePill
+          label="Оркестрация"
+          hint={
+            choices.demoProject
+              ? 'Работу делят исполнители-субагенты, а кто решает порядок шагов — код, модель или оба — выбирается рядом с поиском.'
+              : 'Без демо-проекта оркестрации нет: исполнителям нечего читать.'
+          }
+          pressed={choices.orchestration && choices.demoProject}
+          disabled={!choices.demoProject}
+          onChange={(orchestration) => {
+            change({ orchestration });
+          }}
+        />
+      )}
       <TogglePill
         label="Injection"
         hint="Атака в документах: кто защитит — промпт или харнесс. Этап 4b."
@@ -143,6 +167,56 @@ function Choices({ state }: { state: ChoicesState }): ReactElement {
   const { choices, change } = state;
   return (
     <div className={styles.row}>
+      {choices.orchestration && choices.demoProject ? (
+        <OrchestrationMenu state={state} />
+      ) : (
+        <SearchMenu state={state} />
+      )}
+      <span className={styles.key}>Effort</span>
+      <Segmented
+        label="Reasoning effort"
+        size="small"
+        options={EFFORTS}
+        value={choices.reasoningEffort}
+        onChange={(reasoningEffort) => {
+          change({ reasoningEffort });
+        }}
+      />
+    </div>
+  );
+}
+
+// В оркестрации вместо выбора поиска — выбор режима: искать будут исполнители или код.
+function OrchestrationMenu({ state }: { state: ChoicesState }): ReactElement {
+  const { choices, change } = state;
+  return (
+    <>
+      <span className={styles.key}>Режим</span>
+      <Menu
+        label="Режим оркестрации"
+        shape="small"
+        align="left"
+        trigger={<>{ORCHESTRATION[choices.orchestrationMode].label} ▾</>}
+        sections={[
+          {
+            items: ORCHESTRATION_ORDER.map((mode) => ({
+              ...ORCHESTRATION[mode],
+              checked: mode === choices.orchestrationMode,
+              onSelect: () => {
+                change({ orchestrationMode: mode });
+              },
+            })),
+          },
+        ]}
+      />
+    </>
+  );
+}
+
+function SearchMenu({ state }: { state: ChoicesState }): ReactElement {
+  const { choices, change } = state;
+  return (
+    <>
       <span className={styles.key}>Поиск</span>
       <Menu
         label="Кто ищет в базе знаний"
@@ -168,24 +242,27 @@ function Choices({ state }: { state: ChoicesState }): ReactElement {
           },
         ]}
       />
-      <span className={styles.key}>Effort</span>
-      <Segmented
-        label="Reasoning effort"
-        size="small"
-        options={EFFORTS}
-        value={choices.reasoningEffort}
-        onChange={(reasoningEffort) => {
-          change({ reasoningEffort });
-        }}
-      />
-    </div>
+    </>
   );
+}
+
+function subagentsHint(choices: ChoicesState['choices']): string {
+  if (!choices.demoProject) {
+    return 'Без демо-проекта субагентов нет: им нечего исследовать.';
+  }
+  if (choices.orchestration) {
+    return 'В оркестрации поручения даёт код или оркестратор, а не агент тулом delegate_task.';
+  }
+  return 'Агент сможет поручить чтение субагенту-исследователю: у того своя история, вернётся короткий отчёт.';
 }
 
 // Цена опции до запуска: delegate_task уходит модели в каждом запросе.
 function describeCost({ choices, options }: ChoicesState): string {
   if (!choices.demoProject) {
     return 'без «Кедр Софт»: своя пустая песочница, тулы файлов и веба';
+  }
+  if (choices.orchestration) {
+    return ORCHESTRATION[choices.orchestrationMode].hint;
   }
   const tokens = options?.subagents.delegateToolTokens ?? null;
   if (choices.subagents && tokens !== null) {

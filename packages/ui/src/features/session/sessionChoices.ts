@@ -8,25 +8,29 @@ import { getSessionOptions } from '../../api/serverApi';
 
 export type RetrievalChoice = NonNullable<StartSessionRequest['retrievalMode']>;
 export type EffortChoice = NonNullable<StartSessionRequest['reasoningEffort']>;
+export type OrchestrationChoice = NonNullable<StartSessionRequest['orchestration']>;
 
 export interface SessionChoices {
   // false — агент без демо-проекта «Кедр Софт».
   demoProject: boolean;
   subagents: boolean;
+  // Оркестрация (этап 6d): включена ли и какой режим — режим помним, даже когда выключена.
+  orchestration: boolean;
+  orchestrationMode: OrchestrationChoice;
   cleanWorkspace: boolean;
   retrievalMode: RetrievalChoice;
   reasoningEffort: EffortChoice;
 }
 
-type Saved = Partial<
-  Pick<SessionChoices, 'demoProject' | 'subagents' | 'retrievalMode' | 'reasoningEffort'>
->;
+type Saved = Partial<Omit<SessionChoices, 'cleanWorkspace'>>;
 
 const STORAGE_KEY = 'hv-session-choices';
 
 const FALLBACK: SessionChoices = {
   demoProject: true,
   subagents: false,
+  orchestration: false,
+  orchestrationMode: 'superagent',
   cleanWorkspace: false,
   retrievalMode: 'tool',
   reasoningEffort: 'high',
@@ -74,6 +78,16 @@ export function toStartRequest(question: string, choices: SessionChoices): Start
   if (!choices.demoProject) {
     return { question, reasoningEffort: choices.reasoningEffort, demoProject: false, ...clean };
   }
+  // В оркестрации поручения даёт код или оркестратор, а ищут исполнители — режим поиска
+  // и субагенты модели не нужны.
+  if (choices.orchestration) {
+    return {
+      question,
+      reasoningEffort: choices.reasoningEffort,
+      orchestration: choices.orchestrationMode,
+      ...clean,
+    };
+  }
   return {
     question,
     retrievalMode: choices.retrievalMode,
@@ -101,12 +115,18 @@ function readSaved(): Saved {
   }
 }
 
-function save({ demoProject, subagents, retrievalMode, reasoningEffort }: SessionChoices): void {
+function save(choices: SessionChoices): void {
+  // Clean Workspace не запоминаем: он стирает рабочую папку.
+  const saved: Saved = {
+    demoProject: choices.demoProject,
+    subagents: choices.subagents,
+    orchestration: choices.orchestration,
+    orchestrationMode: choices.orchestrationMode,
+    retrievalMode: choices.retrievalMode,
+    reasoningEffort: choices.reasoningEffort,
+  };
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ demoProject, subagents, retrievalMode, reasoningEffort }),
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
   } catch {
     // Не запомнили — в следующий раз начнём со значений из настроек.
   }
