@@ -345,7 +345,14 @@ const superagentSettingsSchema = z.object({
   orchestratorTools: z.array(z.string().min(1)).default(['kedr__list_documents']),
 });
 
+// Гибрид (этап 6d.3): каркас «план → выполнение → проверка → ответ» задаёт код, внутри шагов
+// решает модель; код ограничивает число задач и поручений и не пропускает приёмку.
+const hybridSettingsSchema = z.object({
+  maxTasks: z.number().int().min(1).max(10).default(4),
+});
+
 const orchestrationSettingsSchema = z.object({
+  hybrid: hybridSettingsSchema.default({ maxTasks: 4 }),
   superagent: superagentSettingsSchema.default({
     maxReworks: 1,
     maxIterations: 16,
@@ -390,6 +397,7 @@ export const harnessSettingsSchema = z.object({
   skills: skillsSettingsSchema.default({ directory: 'skills', always: [], manual: [] }),
   subagents: subagentsSettingsSchema.default({ enabled: false, parallel: true, agents: {} }),
   orchestration: orchestrationSettingsSchema.default({
+    hybrid: { maxTasks: 4 },
     superagent: { maxReworks: 1, maxIterations: 16, orchestratorTools: ['kedr__list_documents'] },
     pipeline: {
       searchTool: null,
@@ -411,6 +419,7 @@ export type HarnessSettings = z.infer<typeof harnessSettingsSchema>;
 export type ModelSettings = z.infer<typeof modelSettingsSchema>;
 export type PipelineSettings = z.infer<typeof pipelineSettingsSchema>;
 export type SuperagentSettings = z.infer<typeof superagentSettingsSchema>;
+export type HybridSettings = z.infer<typeof hybridSettingsSchema>;
 export type ContextSettings = z.infer<typeof contextSettingsSchema>;
 export type ReasoningStyle = ModelSettings['reasoningStyle'];
 export type ModelPrices = z.infer<typeof modelPricesSchema>;

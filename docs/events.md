@@ -140,6 +140,19 @@ orchestration_finished (tasks 2, reworks 1)
 
 Доработка — продолжение той же истории субагента: он видит своё поручение, прочитанное и прошлый отчёт. Вернуть один отчёт можно не больше `orchestration.superagent.maxReworks` раз (по умолчанию 1).
 
+Гибрид — каркас задаёт код, внутри шагов решает модель-оркестратор. Шаги известны заранее и приходят в `orchestration_started`: `plan` → `execute` → `review` → `answer`. На каждом шаге харнесс дописывает оркестратору указание («[Харнесс] Шаг «план»…») и даёт только тулы этого шага; код ограничивает число задач и поручений (`orchestration.hybrid.maxTasks`, по умолчанию 4), не пропускает приёмку (не принятые отчёты называет снова) и сам передаёт отчёты в шаг ответа:
+
+```text
+user_message
+orchestration_started (mode hybrid, steps plan → execute → review → answer)
+pipeline_step_started (plan) → model_request … tool_call plan_tasks → plan_created (author model, stepId plan) → pipeline_step_finished
+pipeline_step_started (execute) → tool_call delegate_task ×N → subagent_started … subagent_finished → pipeline_step_finished
+pipeline_step_started (review) → tool_call review_report → task_reviewed … (снова, если кто-то не принят) → pipeline_step_finished
+pipeline_step_started (answer) → prompt_assembled → model_request → model_response → pipeline_step_finished
+assistant_message
+orchestration_finished
+```
+
 Поручения в пайплайне даёт код, а не модель: у `subagent_started` пустой `parentToolCallId` и поле `stepId` — шаг, на котором дано поручение. `delegate_task` модели в режиме оркестрации не даётся.
 
 ## Два слоя ответа модели

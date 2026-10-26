@@ -48,6 +48,7 @@ import { announceSession } from './announceSession.js';
 import type { OrchestrationMode } from '../events/harnessEvents.js';
 import { runPipelineTurn, type PipelineOptions } from '../orchestration/runPipelineTurn.js';
 import { runSuperagentTurn, type SuperagentOptions } from '../orchestration/runSuperagentTurn.js';
+import { runHybridTurn, type HybridOptions } from '../orchestration/runHybridTurn.js';
 import { startSessionRecording, type SessionRecording } from './sessionRecording.js';
 
 export interface SessionInput {
@@ -404,12 +405,29 @@ function turnRunner(
   if (pipeline !== null) {
     return (question, dependencies) => runPipelineTurn(question, dependencies, pipeline);
   }
+  const hybrid = hybridOf(input);
+  if (hybrid !== null) {
+    return (question, dependencies) => runHybridTurn(question, dependencies, hybrid);
+  }
   const superagent = superagentOf(input);
   if (superagent !== null) {
     return (question, dependencies) =>
       runSuperagentTurn(question, dependencies, superagent, conversation);
   }
   return (question, dependencies) => runAgentTurn(question, dependencies, options, conversation);
+}
+
+function hybridOf(input: SessionInput): HybridOptions | null {
+  if (orchestrationOf(input) !== 'hybrid') {
+    return null;
+  }
+  const { orchestration, subagents } = input.loadedSettings.settings;
+  return {
+    settings: orchestration.hybrid,
+    superagent: orchestration.superagent,
+    subagents,
+    reasoningEffort: input.reasoningEffort,
+  };
 }
 
 function superagentOf(input: SessionInput): SuperagentOptions | null {

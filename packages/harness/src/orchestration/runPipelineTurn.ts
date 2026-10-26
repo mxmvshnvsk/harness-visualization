@@ -13,15 +13,11 @@
 import type { AgentDependencies } from '../agent/agentDependencies.js';
 import { requestModel } from '../agent/requestModel.js';
 import { retrieveContext } from '../agent/retrieveContext.js';
-import type {
-  HarnessEvent,
-  OrchestrationStep,
-  PipelineStepStatus,
-  PlannedTask,
-} from '../events/harnessEvents.js';
+import type { HarnessEvent, OrchestrationStep, PlannedTask } from '../events/harnessEvents.js';
 import type { ChatMessage, ReasoningEffort } from '../model/chatTypes.js';
 import type { PipelineSettings, SubagentSettings } from '../settings/settingsSchema.js';
 import { runSubagent } from '../subagents/runSubagent.js';
+import { runStep, type StepOutcome } from './orchestrationStep.js';
 import {
   answerSystemPrompt,
   answerUserPrompt,
@@ -97,48 +93,18 @@ export async function runPipelineTurn(
   }
 }
 
-interface StepOutcome<Value> {
-  value: Value;
-  status: PipelineStepStatus;
-  summary: string;
-}
-
-// Шаг пайплайна: событие начала, работа, событие конца с итогом и длительностью.
-async function step<Value>(
+// Шаг пайплайна — из списка PIPELINE_STEPS: его порядок и состав задал код.
+function step<Value>(
   dependencies: AgentDependencies,
   stepId: string,
   run: () => Promise<StepOutcome<Value>>,
 ): Promise<Value> {
-  const known = PIPELINE_STEPS.find((item) => item.stepId === stepId);
-  const { events } = dependencies;
-  events.emit({
-    type: 'pipeline_step_started',
+  const known = PIPELINE_STEPS.find((item) => item.stepId === stepId) ?? {
     stepId,
-    title: known?.title ?? stepId,
-    kind: known?.kind ?? 'code',
-  });
-  const startedAt = performance.now();
-  const durationMs = (): number => Math.round(performance.now() - startedAt);
-  try {
-    const outcome = await run();
-    events.emit({
-      type: 'pipeline_step_finished',
-      stepId,
-      status: outcome.status,
-      summary: outcome.summary,
-      durationMs: durationMs(),
-    });
-    return outcome.value;
-  } catch (error) {
-    events.emit({
-      type: 'pipeline_step_finished',
-      stepId,
-      status: 'failed',
-      summary: error instanceof Error ? error.message : String(error),
-      durationMs: durationMs(),
-    });
-    throw error;
-  }
+    title: stepId,
+    kind: 'code' as const,
+  };
+  return runStep(dependencies, known, run);
 }
 
 // Шаг 1. Поиск по словам пользователя — слабое место пайплайна: что поиск не нашёл, того
