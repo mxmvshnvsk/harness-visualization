@@ -1,6 +1,11 @@
 // «Набор задач»: задачи из evals/*.json — вопрос, откуда задача и чем её проверяют.
 
-import { describeCheck, type EvalCheck, type EvalSet } from '@harness-visualization/harness/evals';
+import {
+  describeCheck,
+  type EvalCheck,
+  type EvalSet,
+  type EvalSuite,
+} from '@harness-visualization/harness/evals';
 import type { ReactElement } from 'react';
 import labStyles from '../rag/RagLab.module.css';
 import styles from './Evals.module.css';
@@ -22,6 +27,10 @@ export function EvalTasks({ sets }: { sets: { file: string; set: EvalSet }[] }):
           </span>
           <h2 className={styles.heading}>{set.description}</h2>
           <div className={styles.legend}>
+            <SuiteTag suite="regression" /> агент уже умеет — «не сломали ли»
+            <SuiteTag suite="capability" /> трудное — «чему ещё не научился»
+          </div>
+          <div className={styles.legend}>
             <CheckTag kind="code" /> проверка кодом — по трейсу попытки
             <CheckTag kind="judge" /> модель-судья — по рубрике
           </div>
@@ -29,7 +38,9 @@ export function EvalTasks({ sets }: { sets: { file: string; set: EvalSet }[] }):
             {set.tasks.map((task) => (
               <article key={task.id} className={styles.task}>
                 <q>{task.question}</q>
-                <span className={`${styles.mono} ${styles.muted}`}>{task.id}</span>
+                <span className={`${styles.mono} ${styles.muted}`}>
+                  <SuiteTag suite={task.suite} /> {task.id}
+                </span>
                 <ul className={styles.checks}>
                   {task.checks.map((check) => (
                     <li key={describeCheck(check)}>
@@ -50,6 +61,16 @@ export function EvalTasks({ sets }: { sets: { file: string; set: EvalSet }[] }):
 
 export function graderOf(check: { kind: EvalCheck['kind'] }): 'code' | 'judge' {
   return check.kind === 'judge' ? 'judge' : 'code';
+}
+
+// В старых отчётах вида задачи нет — тогда это regression.
+export function SuiteTag({ suite }: { suite: EvalSuite | undefined }): ReactElement {
+  const value = suite ?? 'regression';
+  return (
+    <span className={styles.suite} data-suite={value}>
+      {value}
+    </span>
+  );
 }
 
 export function CheckTag({ kind }: { kind: 'code' | 'judge' }): ReactElement {

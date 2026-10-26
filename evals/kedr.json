@@ -1,24 +1,41 @@
 {
   "name": "kedr",
-  "description": "Вопросы сотрудников «Кедр Софт» к базе знаний — из уроков стенда, на которых агент ошибался или вёл себя по-разному",
+  "description": "Вопросы сотрудников «Кедр Софт» к базе знаний: regression — из уроков стенда, которые агент уже решает; capability — трудное: бюджет шагов, ссылки на источники, два документа, данных нет",
   "tasks": [
     {
       "id": "vacation-days",
+      "suite": "regression",
       "question": "сколько дней можно отдыхать в году",
       "origin": "урок 1: перефразирование — в вопросе нет слова «отпуск»",
       "checks": [
-        { "kind": "answerIncludes", "anyOf": ["28"] },
-        { "kind": "documentSeen", "document": "regulations/vacation" },
-        { "kind": "maxModelRequests", "value": 6 }
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["28"]
+        },
+        {
+          "kind": "documentSeen",
+          "document": "regulations/vacation"
+        },
+        {
+          "kind": "maxModelRequests",
+          "value": 6
+        }
       ]
     },
     {
       "id": "remote-days",
+      "suite": "regression",
       "question": "удалённая работа количество дней в неделю",
       "origin": "урок 7: свежий регламент против старого FAQ",
       "checks": [
-        { "kind": "answerIncludes", "anyOf": ["трёх", "три дня", "3 дня", "3 дн"] },
-        { "kind": "documentSeen", "document": "regulations/remoteWork" },
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["трёх", "три дня", "3 дня", "3 дн"]
+        },
+        {
+          "kind": "documentSeen",
+          "document": "regulations/remoteWork"
+        },
         {
           "kind": "judge",
           "rubric": "Ответ называет до трёх дней удалённой работы в неделю как действующее правило. Если ответ упоминает два дня, он говорит, что это устаревшие сведения (например, из FAQ), а не действующее правило."
@@ -27,10 +44,14 @@
     },
     {
       "id": "remote-short",
+      "suite": "regression",
       "question": "удалёнка",
       "origin": "урок 3: короткий вопрос, подмешанное якорит поиск модели",
       "checks": [
-        { "kind": "documentSeen", "document": "regulations/remoteWork" },
+        {
+          "kind": "documentSeen",
+          "document": "regulations/remoteWork"
+        },
         {
           "kind": "judge",
           "rubric": "Ответ сообщает, что удалённо можно работать до трёх дней в неделю, и предупреждает о расхождении с более старыми сведениями о двух днях."
@@ -39,71 +60,126 @@
     },
     {
       "id": "sick-pay",
+      "suite": "regression",
       "question": "сколько платят, если сидишь дома с температурой",
       "origin": "урок 5: трудный вопрос, ни один способ поиска не берёт его словами пользователя",
       "checks": [
-        { "kind": "documentSeen", "document": "regulations/sickLeave" },
-        { "kind": "answerIncludes", "anyOf": ["10 дней", "10 первых", "первых 10", "десяти"] },
-        { "kind": "answerIncludes", "anyOf": ["три дня", "3 дня", "трёх дней", "первые три"] }
+        {
+          "kind": "documentSeen",
+          "document": "regulations/sickLeave"
+        },
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["10 дней", "10 первых", "первых 10", "десяти"]
+        },
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["три дня", "3 дня", "трёх дней", "первые три"]
+        }
       ]
     },
     {
       "id": "probation",
+      "suite": "regression",
       "question": "испытательный срок",
       "origin": "набор сравнения поиска (этап 5.2)",
       "checks": [
-        { "kind": "answerIncludes", "anyOf": ["три месяца", "3 месяца", "трёх месяцев"] },
-        { "kind": "documentSeen", "document": "regulations/onboarding" }
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["три месяца", "3 месяца", "трёх месяцев"]
+        },
+        {
+          "kind": "documentSeen",
+          "document": "regulations/onboarding"
+        }
       ]
     },
     {
       "id": "ios-owner",
+      "suite": "regression",
       "question": "кто отвечает за мобилку под айфон",
       "origin": "урок 1: жаргон — «мобилка», «айфон» вместо iOS",
       "checks": [
-        { "kind": "answerIncludes", "anyOf": ["Волков"] },
-        { "kind": "documentSeen", "document": "team/contacts" }
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["Волков"]
+        },
+        {
+          "kind": "documentSeen",
+          "document": "team/contacts"
+        }
       ]
     },
     {
       "id": "per-diem-abroad",
+      "suite": "regression",
       "question": "какие суточные в командировке за рубежом",
       "origin": "регламент о командировках: короткая копия в рабочей папке против полной в базе",
-      "checks": [{ "kind": "answerIncludes", "anyOf": ["50 евро", "50 €", "€50", "50 EUR"] }]
+      "checks": [
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["50 евро", "50 €", "€50", "50 EUR"]
+        }
+      ]
     },
     {
       "id": "vacation-carryover",
+      "suite": "regression",
       "question": "сколько неиспользованных дней отпуска переносится на следующий год",
       "origin": "регламент об отпусках, п. 3.2 — есть в базе, нет в FAQ",
       "checks": [
-        { "kind": "answerIncludes", "anyOf": ["14"] },
-        { "kind": "documentSeen", "document": "regulations/vacation" }
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["14"]
+        },
+        {
+          "kind": "documentSeen",
+          "document": "regulations/vacation"
+        }
       ]
     },
     {
       "id": "health-day",
+      "suite": "regression",
       "question": "можно ли не выйти на работу без больничного, если плохо себя чувствую",
       "origin": "регламент о больничном, п. 4 — «день здоровья»",
       "checks": [
-        { "kind": "answerIncludes", "anyOf": ["день здоровья", "дня здоровья", "дни здоровья"] },
-        { "kind": "answerIncludes", "anyOf": ["трёх", "три", "3"] }
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["день здоровья", "дня здоровья", "дни здоровья"]
+        },
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["трёх", "три", "3"]
+        }
       ]
     },
     {
       "id": "purchase-approval",
+      "suite": "regression",
       "question": "кто согласует покупку монитора за 100 000 рублей",
       "origin": "регламент о расходах, п. 5 — порог между руководителем и финансовым отделом",
       "checks": [
-        { "kind": "answerIncludes", "anyOf": ["финансов"] },
-        { "kind": "documentSeen", "document": "regulations/expenses" }
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["финансов"]
+        },
+        {
+          "kind": "documentSeen",
+          "document": "regulations/expenses"
+        }
       ]
     },
     {
       "id": "colleagues-vacations",
+      "suite": "regression",
       "question": "найди информацию об отпусках моих коллег",
       "origin": "трейс 19b7e04d: данных о людях в базе нет — нельзя выдумывать",
       "checks": [
-        { "kind": "toolNotCalled", "tool": "write_file" },
+        {
+          "kind": "toolNotCalled",
+          "tool": "write_file"
+        },
         {
           "kind": "judge",
           "rubric": "Ответ прямо говорит, что сведений о том, кто из коллег когда в отпуске, нет, и не приводит выдуманных дат или графиков отпусков конкретных людей. Может рассказать общие правила отпусков или куда обратиться."
@@ -112,13 +188,154 @@
     },
     {
       "id": "off-topic-math",
+      "suite": "regression",
       "question": "сколько будет 17 умножить на 23",
       "origin": "вопрос не про базу: искать не нужно",
       "checks": [
-        { "kind": "answerIncludes", "anyOf": ["391"] },
-        { "kind": "maxToolCalls", "value": 0, "label": "модель не звала тулы" },
-        { "kind": "noRetrieval" },
-        { "kind": "maxModelRequests", "value": 2 }
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["391"]
+        },
+        {
+          "kind": "maxToolCalls",
+          "value": 0,
+          "label": "модель не звала тулы"
+        },
+        {
+          "kind": "noRetrieval"
+        },
+        {
+          "kind": "maxModelRequests",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "remote-faq-named",
+      "suite": "capability",
+      "question": "можно ли работать из дома три дня в неделю? в FAQ написано, что два",
+      "origin": "урок 7: противоречие регламента и FAQ — назвать оба источника, а не только ответ",
+      "checks": [
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["трёх", "три дня", "3 дня"]
+        },
+        {
+          "kind": "documentCited",
+          "document": "regulations/remoteWork"
+        },
+        {
+          "kind": "documentCited",
+          "document": "faq/hrFaq"
+        },
+        {
+          "kind": "judge",
+          "rubric": "Ответ подтверждает, что можно до трёх дней в неделю по регламенту удалённой работы, и объясняет, что FAQ с двумя днями устарел и уступает регламенту."
+        }
+      ]
+    },
+    {
+      "id": "trip-report-and-taxi",
+      "suite": "capability",
+      "question": "в какой срок сдавать отчёт о командировке и вернут ли деньги за такси",
+      "origin": "ответ из двух документов: регламент о командировках и регламент о расходах расходятся в сроке отчёта",
+      "checks": [
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["пяти рабочих", "5 рабочих"]
+        },
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["22:00", "аэропорт"]
+        },
+        {
+          "kind": "documentSeen",
+          "document": "regulations/businessTrips"
+        },
+        {
+          "kind": "documentSeen",
+          "document": "regulations/expenses"
+        },
+        {
+          "kind": "judge",
+          "rubric": "Ответ называет срок отчёта о командировке — пять рабочих дней после возвращения — и предупреждает, что в регламенте о расходах другой срок: 30 дней."
+        }
+      ]
+    },
+    {
+      "id": "probation-budget",
+      "suite": "capability",
+      "question": "сколько длится испытательный срок",
+      "origin": "бюджет: простой факт из одного документа — не больше трёх запросов к модели, источник назван",
+      "checks": [
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["три месяца", "3 месяца", "трёх месяцев"]
+        },
+        {
+          "kind": "documentCited",
+          "document": "regulations/onboarding"
+        },
+        {
+          "kind": "maxModelRequests",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "sick-during-vacation",
+      "suite": "capability",
+      "question": "заболел в отпуске — что будет с отпуском",
+      "origin": "регламент о больничном, п. 5; бюджет — не больше трёх запросов",
+      "checks": [
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["продлева", "продлит", "продлён", "продлен"]
+        },
+        {
+          "kind": "documentCited",
+          "document": "regulations/sickLeave"
+        },
+        {
+          "kind": "maxModelRequests",
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "work-abroad",
+      "suite": "capability",
+      "question": "можно ли месяц поработать из Грузии",
+      "origin": "регламент удалённой работы, п. 7: не дольше 30 дней в году и только после согласования с безопасностью",
+      "checks": [
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["30 дней", "тридцати дней"]
+        },
+        {
+          "kind": "answerIncludes",
+          "anyOf": ["безопасност"]
+        },
+        {
+          "kind": "judge",
+          "rubric": "Ответ не обещает, что можно без условий: говорит о лимите 30 дней в году и о согласовании с отделом безопасности до поездки."
+        }
+      ]
+    },
+    {
+      "id": "gym-compensation",
+      "suite": "capability",
+      "question": "какая компенсация за спортзал",
+      "origin": "в базе нет ни слова о спорте: сказать прямо и не выдумать сумму; бюджет — не больше четырёх запросов",
+      "checks": [
+        {
+          "kind": "maxModelRequests",
+          "value": 4
+        },
+        {
+          "kind": "judge",
+          "rubric": "Ответ прямо говорит, что о компенсации спортзала в документах компании ничего нет, и не называет сумм, процентов или условий такой компенсации. Может предложить, к кому обратиться."
+        }
       ]
     }
   ]

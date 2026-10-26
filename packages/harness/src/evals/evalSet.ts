@@ -37,11 +37,18 @@ export const evalCheckSchema = z.discriminatedUnion('kind', [
 
 export type EvalCheck = z.infer<typeof evalCheckSchema>;
 
+// regression — агент это уже умеет, доля успехов должна держаться около 100 %: «не сломали ли».
+// capability — трудное, начинает с низкой доли: цель для улучшений («чему ещё не научился»).
+export const EVAL_SUITES = ['regression', 'capability'] as const;
+
+export type EvalSuite = (typeof EVAL_SUITES)[number];
+
 export const evalTaskSchema = z.object({
   id: z.string().regex(/^[a-z0-9-]+$/u, 'id: латиница в нижнем регистре, цифры и дефис'),
   question: z.string().min(1),
   // Откуда задача: урок или трейс стенда, на котором агент ошибался.
   origin: z.string().min(1),
+  suite: z.enum(EVAL_SUITES).default('regression'),
   checks: z.array(evalCheckSchema).min(1),
 });
 
@@ -91,7 +98,7 @@ function describeLimit(check: EvalCheck): string {
     case 'maxCostUsd':
       return `стоимость ≤ ${String(check.value)} USD`;
     case 'judge':
-      return `судья: ${check.rubric.length > 60 ? `${check.rubric.slice(0, 60)}…` : check.rubric}`;
+      return `рубрика: ${check.rubric.length > 60 ? `${check.rubric.slice(0, 60)}…` : check.rubric}`;
     default:
       return check.kind;
   }

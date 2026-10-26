@@ -4,6 +4,7 @@
 //   pnpm eval --trials 5                   — по 5 попыток
 //   pnpm eval --configs tool,auto,rewrite  — конфигурации из compare-runs
 //   pnpm eval --task vacation-days         — только эти задачи (через запятую)
+//   pnpm eval --suite capability           — только трудные задачи (или regression)
 //   pnpm eval --no-judge                   — без судьи: только проверки кодом, без лишних денег
 //
 // Каждая попытка — обычная сессия со своим трейсом в traces/ и своей временной рабочей
@@ -24,7 +25,13 @@ import {
   type EvalReport,
   type TrialResult,
 } from '../evals/evalReport.js';
-import { evalSetSchema, type EvalSet, type EvalTask } from '../evals/evalSet.js';
+import {
+  EVAL_SUITES,
+  evalSetSchema,
+  type EvalSet,
+  type EvalSuite,
+  type EvalTask,
+} from '../evals/evalSet.js';
 import { markOf, printEvalSummary } from '../evals/printEvalSummary.js';
 import { startEvalJudge, type EvalJudge } from '../evals/judgeAnswers.js';
 import type { HarnessEvent } from '../events/harnessEvents.js';
@@ -41,6 +48,7 @@ interface EvalOptions {
   trials: number;
   configs: RunVariant[];
   taskIds: string[] | null;
+  suite: EvalSuite | null;
   judge: boolean;
 }
 
@@ -59,7 +67,9 @@ async function main(): Promise<void> {
   const projectRoot = process.cwd();
   const loadedSettings = await loadSettings(projectRoot);
   const set = await readSet(join(projectRoot, options.setFile));
-  const tasks = pickTasks(set, options.taskIds);
+  const tasks = pickTasks(set, options.taskIds).filter(
+    (task) => options.suite === null || task.suite === options.suite,
+  );
   const context = await createContext({ options, set, tasks, loadedSettings, projectRoot });
   printIntroduction(context);
   try {
@@ -101,6 +111,7 @@ function parseOptions(argumentList: string[]): EvalOptions {
       trials: { type: 'string' },
       configs: { type: 'string' },
       task: { type: 'string' },
+      suite: { type: 'string' },
       'no-judge': { type: 'boolean', default: false },
     },
   });
@@ -113,8 +124,20 @@ function parseOptions(argumentList: string[]): EvalOptions {
     trials,
     configs: parseConfigs(values.configs),
     taskIds: values.task === undefined ? null : values.task.split(',').map((id) => id.trim()),
+    suite: parseSuite(values.suite),
     judge: !values['no-judge'],
   };
+}
+
+function parseSuite(value: string | undefined): EvalSuite | null {
+  if (value === undefined) {
+    return null;
+  }
+  const suite = EVAL_SUITES.find((candidate) => candidate === value);
+  if (suite === undefined) {
+    throw new Error(`--suite: ${EVAL_SUITES.join(' или ')}`);
+  }
+  return suite;
 }
 
 function parseConfigs(value: string | undefined): RunVariant[] {

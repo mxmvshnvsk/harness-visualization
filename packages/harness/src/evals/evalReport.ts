@@ -6,7 +6,7 @@
 // «можно ли на него положиться». При k = 1 они совпадают; чем больше k, тем дальше расходятся.
 
 import type { CheckResult } from './codeChecks.js';
-import type { EvalTask } from './evalSet.js';
+import type { EvalSuite, EvalTask } from './evalSet.js';
 
 export const EVAL_REPORT_VERSION = 1;
 
@@ -38,6 +38,10 @@ export interface TrialResult {
   answer?: string | null;
 }
 
+// Задача, как она записана в отчёте: в отчётах до разделения на regression и capability
+// вида задачи нет — такие задачи считаются regression.
+export type ReportTask = Omit<EvalTask, 'suite'> & { suite?: EvalSuite };
+
 export interface EvalReport {
   kind: 'evalReport';
   version: number;
@@ -48,7 +52,7 @@ export interface EvalReport {
   finishedAt: string | null;
   trials: number;
   configs: EvalConfig[];
-  tasks: EvalTask[];
+  tasks: ReportTask[];
   results: TrialResult[];
   // Трейс судьи — все его запросы за прогон; null — судью не звали.
   judgeTracePath: string | null;
@@ -104,8 +108,14 @@ export function summarizeCell(report: EvalReport, taskId: string, config: string
   };
 }
 
-export function summarizeConfig(report: EvalReport, config: string): ConfigSummary {
+// suite — только задачи этого вида; без него — все. В старых отчётах вида нет: regression.
+export function summarizeConfig(
+  report: EvalReport,
+  config: string,
+  suite?: EvalSuite,
+): ConfigSummary {
   const cells = report.tasks
+    .filter((task) => suite === undefined || (task.suite ?? 'regression') === suite)
     .map((task) => summarizeCell(report, task.id, config))
     .filter((cell) => cell.trials.length > 0);
   const trials = cells.flatMap((cell) => cell.trials);

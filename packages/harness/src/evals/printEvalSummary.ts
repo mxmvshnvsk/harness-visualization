@@ -3,6 +3,7 @@
 
 import { styleText } from 'node:util';
 import { summarizeCell, summarizeConfig, type EvalReport } from './evalReport.js';
+import { EVAL_SUITES } from './evalSet.js';
 
 const TASK_WIDTH = 24;
 
@@ -27,6 +28,17 @@ export function printEvalSummary(report: EvalReport): void {
   console.log(`\n${styleText('bold', `Итоги, k = ${String(report.trials)}`)}`);
   for (const config of configs) {
     console.log(`  ${describeConfig(report, config)}`);
+    for (const suite of EVAL_SUITES) {
+      if (report.tasks.some((task) => (task.suite ?? 'regression') === suite)) {
+        const summary = summarizeConfig(report, config, suite);
+        console.log(
+          styleText(
+            'dim',
+            `    ${suite.padEnd(10)} задач ${String(summary.tasks)} · pass@k ${percentOf(summary.passAtK)} · pass^k ${percentOf(summary.passHatK)}`,
+          ),
+        );
+      }
+    }
   }
   console.log(
     styleText(
@@ -35,6 +47,10 @@ export function printEvalSummary(report: EvalReport): void {
         'Разница между ними — насколько агент непостоянен. ? — провалов нет, но судья не вынес вердикта.',
     ),
   );
+}
+
+function percentOf(share: number): string {
+  return `${String(Math.round(share * 100))} %`;
 }
 
 export function markOf(passed: boolean | null): string {

@@ -147,6 +147,17 @@ describe('pass@k и pass^k', () => {
     expect(summarizeConfig(partial, 'tool').passHatK).toBe(1);
   });
 
+  it('по видам задач: трудное не прячется в общем проценте', () => {
+    const mixed = {
+      ...report,
+      tasks: report.tasks.map((task) =>
+        task.id === 'flaky' ? { ...task, suite: 'capability' as const } : task,
+      ),
+    };
+    expect(summarizeConfig(mixed, 'tool', 'regression').passHatK).toBe(1);
+    expect(summarizeConfig(mixed, 'tool', 'capability').passHatK).toBe(0);
+  });
+
   it('по конфигурации: доля задач и удачных попыток', () => {
     const summary = summarizeConfig(report, 'tool');
     expect(summary.passAtK).toBe(1);

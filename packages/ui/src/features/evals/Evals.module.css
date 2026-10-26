@@ -172,6 +172,25 @@
   --tag: var(--judge);
 }
 
+/* Вид задачи: regression — уже умеет, capability — трудное. */
+.suite {
+  display: inline-block;
+  padding: 0 7px;
+  border-radius: 6px;
+  font: 11px var(--font-mono);
+  white-space: nowrap;
+}
+
+.suite[data-suite='regression'] {
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.suite[data-suite='capability'] {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
 /* Прогон */
 .toolbar {
   display: flex;

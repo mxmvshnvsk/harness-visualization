@@ -2,6 +2,7 @@
 // «задача × попытка» и попытка крупно по клику на клетку.
 
 import {
+  EVAL_SUITES,
   summarizeCell,
   summarizeConfig,
   type EvalReport,
@@ -11,6 +12,7 @@ import { useState, type ReactElement } from 'react';
 import { Button } from '../../components/Button';
 import labStyles from '../rag/RagLab.module.css';
 import styles from './Evals.module.css';
+import { SuiteTag } from './EvalTasks';
 import { resultOf, RESULT_MARKS, TrialDetail, type CellRef } from './TrialDetail';
 import { useEvalReport } from './useEvals';
 
@@ -160,6 +162,7 @@ function ConfigTotals({ report }: { report: EvalReport }): ReactElement {
                 <small>pass^{report.trials}</small>
               </div>
             </div>
+            <SuiteLines report={report} config={config.name} />
             <span className={`${styles.small} ${styles.muted}`}>
               {summary.costUsd === null ? 'цена неизвестна' : `${summary.costUsd.toFixed(4)} USD`}{' '}
               всего · медиана {(summary.medianDurationMs / 1000).toFixed(1)} с и{' '}
@@ -169,6 +172,23 @@ function ConfigTotals({ report }: { report: EvalReport }): ReactElement {
         );
       })}
     </div>
+  );
+}
+
+// pass^k отдельно по видам задач: общий процент прячет, что трудное не решается.
+function SuiteLines({ report, config }: { report: EvalReport; config: string }): ReactElement {
+  const suites = EVAL_SUITES.filter((suite) =>
+    report.tasks.some((task) => (task.suite ?? 'regression') === suite),
+  );
+  return (
+    <span className={`${styles.small} ${styles.muted}`}>
+      {suites
+        .map((suite) => {
+          const summary = summarizeConfig(report, config, suite);
+          return `${suite}: pass^${String(report.trials)} ${percent(summary.passHatK)} из ${String(summary.tasks)} задач`;
+        })
+        .join(' · ')}
+    </span>
   );
 }
 
@@ -195,7 +215,9 @@ function Matrix(props: {
         <tbody>
           {report.tasks.map((task) => (
             <tr key={task.id}>
-              <td>{task.question}</td>
+              <td>
+                <SuiteTag suite={task.suite} /> {task.question}
+              </td>
               {report.configs.map((config) => (
                 <ConfigCells
                   key={config.name}
