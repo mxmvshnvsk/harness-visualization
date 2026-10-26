@@ -7,7 +7,13 @@ import type { Schedule } from '../timeline/schedule';
 import type { TimelineClock } from '../timeline/TimelineClock';
 import styles from './PlayerBar.module.css';
 import { segmentsOf } from './stripSegments';
-import { centerOn, dragMinimap, type MinimapDrag, type StripWindow } from './stripWindow';
+import {
+  centerOn,
+  dragMinimap,
+  zoomActive,
+  type MinimapDrag,
+  type StripWindow,
+} from './stripWindow';
 import type { StripView } from './stripWindow';
 import { useViewValue } from './useViewValue';
 
@@ -18,7 +24,7 @@ interface MinimapProps {
 }
 
 export function StripMinimap(props: MinimapProps): ReactElement | null {
-  const enabled = useViewValue(props.view, (state) => state.enabled);
+  const enabled = useViewValue(props.view, zoomActive);
   return enabled ? <MinimapBody {...props} /> : null;
 }
 

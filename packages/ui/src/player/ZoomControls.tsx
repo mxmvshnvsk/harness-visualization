@@ -5,7 +5,7 @@
 import { useEffect, useRef, type ReactElement } from 'react';
 import { IconButton } from './IconButton';
 import styles from './PlayerBar.module.css';
-import { centerOn, zoomAround, type StripView, type StripWindow } from './stripWindow';
+import { centerOn, zoomActive, zoomAround, type StripView, type StripWindow } from './stripWindow';
 import { useViewValue } from './useViewValue';
 
 interface ZoomControlsProps {
@@ -17,7 +17,7 @@ interface ZoomControlsProps {
 }
 
 export function ZoomControls({ view, describe, head }: ZoomControlsProps): ReactElement | null {
-  const enabled = useViewValue(view, (state) => state.enabled);
+  const enabled = useViewValue(view, zoomActive);
   const follow = useViewValue(view, (state) => state.follow);
   if (!enabled) {
     return null;

@@ -11,7 +11,7 @@ import type { Schedule } from '../timeline/schedule';
 import type { TimelineClock } from '../timeline/TimelineClock';
 import styles from './PlayerBar.module.css';
 import { questionMarks, segmentsOf, type Segment } from './stripSegments';
-import { followHead, needsZoom, type StripView } from './stripWindow';
+import { followHead, needsZoom, zoomActive, type StripView } from './stripWindow';
 import { useStripPointer, useStripWheel } from './useStripGestures';
 
 interface ActionStripProps {
@@ -118,13 +118,14 @@ function useTrackWindow(
 ): void {
   useEffect(() => {
     const draw = (): void => {
-      const { win, total, enabled } = view.get();
+      const state = view.get();
+      const { win, total } = state;
       const span = Math.max(1, win.to - win.from);
       if (trackRef.current !== null) {
         trackRef.current.style.left = `${String((-win.from / span) * 100)}%`;
         trackRef.current.style.width = `${String((total / span) * 100)}%`;
       }
-      stripRef.current?.setAttribute('data-zoom', String(enabled));
+      stripRef.current?.setAttribute('data-zoom', String(zoomActive(state)));
     };
     draw();
     return view.subscribe(draw);
@@ -152,7 +153,7 @@ function useHead(clock: TimelineClock, view: StripView, total: number, refs: Hea
         segment.dataset.past = String(time >= Number(segment.dataset.from));
       }
       const state = view.get();
-      if (state.enabled && state.follow && (playing || following)) {
+      if (zoomActive(state) && state.follow && (playing || following)) {
         view.setWindow(followHead(state.win, time, state.total));
       }
     };

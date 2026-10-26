@@ -13,8 +13,10 @@ import type { TimelineClock } from '../timeline/TimelineClock';
 import { actionAt } from './stripSegments';
 import {
   DRAG_THRESHOLD_PX,
+  isZoomed,
   panBy,
   wheelZoomFactor,
+  zoomActive,
   zoomAround,
   type StripView,
   type StripWindow,
@@ -31,10 +33,12 @@ export function timeAtX(strip: HTMLElement, win: StripWindow, clientX: number): 
 // и не уходит «назад» по свайпу.
 function handleWheel(event: WheelEvent, strip: HTMLElement, view: StripView): void {
   // strip — то, что измеряем: у дорожек «Агентов» события ловит весь блок, а время — по дорожке.
-  const { enabled, win, total } = view.get();
+  const state = view.get();
+  const { win, total } = state;
   const zooming = event.ctrlKey || event.metaKey || event.altKey;
   const dx = event.shiftKey ? event.deltaY : event.deltaX;
-  if (!enabled || (!zooming && dx === 0)) {
+  // Сдвигать есть что, только если приблизили; иначе свайп остаётся браузеру.
+  if (!zooming && (dx === 0 || !isZoomed(state))) {
     return;
   }
   event.preventDefault();
@@ -70,9 +74,6 @@ export function useStripWheel(
       handleWheel(event, strip, view);
     };
     const onGesture = (event: Event): void => {
-      if (!view.get().enabled) {
-        return;
-      }
       event.preventDefault();
       const gesture = event as GestureLike;
       if (event.type === 'gesturestart') {
@@ -107,17 +108,18 @@ interface Drag {
 
 // Клавиши на ленте: ← → — перемотка на 1/50 окна, + − — зум вокруг бегунка, 0 — вся сессия.
 function handleKey(event: KeyboardEvent<HTMLElement>, clock: TimelineClock, view: StripView): void {
-  const { win, total, enabled } = view.get();
+  const state = view.get();
+  const { win, total } = state;
   const span = win.to - win.from;
   const time = clock.getState().time;
   const seek = { ArrowRight: span / 50, ArrowLeft: -span / 50 }[event.key];
-  const zoom = enabled ? { '+': 1 / 1.5, '=': 1 / 1.5, '-': 1.5 }[event.key] : undefined;
+  const zoom = { '+': 1 / 1.5, '=': 1 / 1.5, '-': 1.5 }[event.key];
   if (seek !== undefined) {
     clock.seek(time + seek);
   } else if (zoom !== undefined) {
     view.setFollow(false);
     view.setWindow(zoomAround(win, zoom, time, total));
-  } else if (event.key === '0' && enabled) {
+  } else if (event.key === '0' && isZoomed(state)) {
     view.setWindow({ from: 0, to: total });
   } else {
     return;
@@ -150,8 +152,8 @@ export function useStripPointer(
     },
     onPointerDown: (event: PointerEvent<HTMLElement>): void => {
       event.currentTarget.setPointerCapture(event.pointerId);
-      const { enabled, win } = view.get();
-      if (enabled) {
+      const { win } = view.get();
+      if (zoomActive(view.get())) {
         drag.current = { x: event.clientX, win, moved: false };
       } else {
         clock.seek(timeOf(event));

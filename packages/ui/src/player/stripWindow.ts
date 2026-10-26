@@ -2,8 +2,11 @@
 // вокруг курсора, время под ним остаётся на месте. По вопросу автора и мокапу, одобренному
 // им 26.10.2026 (https://claude.ai/artifact/LoY58mTraFkZEjQPv75SbY).
 //
-// Зум включается не по длине сессии, а по пикселям: когда самый короткий отрезок на ленте уже
-// MIN_SEGMENT_PX — в него не попасть мышью. Так порог сам учитывает узкое окно и телефон.
+// Порог — по пикселям, а не по длине сессии: когда самый короткий отрезок на ленте уже
+// MIN_SEGMENT_PX, в него не попасть мышью — тогда кнопки зума и мини-карта появляются сами.
+// Жесты зума работают всегда, на любой ширине: ширина ленты разная на разных вкладках и в
+// свёрнутом плеере, и зум, который то есть, то нет, выглядит поломкой (замечание автора,
+// 26.10.2026). Приблизили жестом — кнопки появляются, чтобы было как вернуться.
 
 export interface StripWindow {
   from: number;
@@ -13,7 +16,7 @@ export interface StripWindow {
 export interface StripViewState {
   win: StripWindow;
   total: number;
-  // Нужен ли зум: короткие отрезки на ленте слишком узкие.
+  // Порог: короткие отрезки на ленте слишком узкие — зум подсказан.
   enabled: boolean;
   // Окно само едет за бегунком при воспроизведении; ручной сдвиг или зум это выключают.
   follow: boolean;
@@ -24,6 +27,16 @@ export const MIN_SEGMENT_PX = 6;
 export const MIN_WINDOW_MS = 1500;
 // Сдвиг больше этого — перетаскивание ленты, меньше — клик и перемотка.
 export const DRAG_THRESHOLD_PX = 4;
+
+// Видна не вся сессия.
+export function isZoomed(state: StripViewState): boolean {
+  return state.win.from > 0 || state.win.to < state.total;
+}
+
+// Показывать кнопки, мини-карту и перетаскивание: зум подсказан порогом или уже приблизили.
+export function zoomActive(state: StripViewState): boolean {
+  return state.enabled || isZoomed(state);
+}
 
 export function needsZoom(durations: readonly number[], total: number, widthPx: number): boolean {
   const positive = durations.filter((duration) => duration > 0);
@@ -131,7 +144,8 @@ export function createStripView(): StripView {
     },
     setEnabled: (enabled) => {
       if (enabled !== state.enabled) {
-        update({ enabled, follow: true, win: enabled ? state.win : { from: 0, to: state.total } });
+        // Порог пропал (лента стала шире) — окно не сбрасываем: приближение остаётся.
+        update({ enabled });
       }
     },
     setFollow: (follow) => {

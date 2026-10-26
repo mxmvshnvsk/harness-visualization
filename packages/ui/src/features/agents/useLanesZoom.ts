@@ -8,6 +8,7 @@ import {
   followHead,
   needsZoom,
   panBy,
+  zoomActive,
   type StripView,
   type StripWindow,
 } from '../../player/stripWindow';
@@ -52,7 +53,7 @@ function useThreshold(
   useEffect(() => {
     zoom.setTotal(total);
     const state = zoom.get();
-    if (state.enabled && state.follow) {
+    if (zoomActive(state) && state.follow) {
       zoom.setWindow(followHead(state.win, view.now, total));
     }
     const track = lanesRef.current?.querySelector<HTMLElement>(LAYER)?.parentElement;
@@ -79,13 +80,14 @@ function useThreshold(
 function useLayers(lanesRef: RefObject<HTMLDivElement | null>, zoom: StripView): void {
   useEffect(() => {
     const draw = (): void => {
-      const { win, total, enabled } = zoom.get();
+      const state = zoom.get();
+      const { win, total } = state;
       const span = Math.max(1, win.to - win.from);
       for (const layer of lanesRef.current?.querySelectorAll<HTMLElement>(LAYER) ?? []) {
         layer.style.left = `${String((-win.from / span) * 100)}%`;
         layer.style.width = `${String((total / span) * 100)}%`;
       }
-      lanesRef.current?.setAttribute('data-zoom', String(enabled));
+      lanesRef.current?.setAttribute('data-zoom', String(zoomActive(state)));
     };
     draw();
     return zoom.subscribe(draw);
@@ -102,7 +104,7 @@ function useDragPan(zoom: StripView, measure: () => HTMLElement | null): LanesPo
   const drag = useRef<Drag | null>(null);
   return {
     onPointerDown: (event) => {
-      if (zoom.get().enabled && event.button === 0) {
+      if (zoomActive(zoom.get()) && event.button === 0) {
         drag.current = { x: event.clientX, win: zoom.get().win };
       }
     },

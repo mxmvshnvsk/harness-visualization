@@ -7,6 +7,7 @@ import {
   MIN_WINDOW_MS,
   needsZoom,
   panBy,
+  zoomActive,
   zoomAround,
 } from './stripWindow';
 
@@ -83,12 +84,21 @@ describe('createStripView', () => {
     expect(view.get().win).toEqual({ from: 0, to: 20_000 });
   });
 
-  it('без зума окно возвращается ко всей сессии', () => {
+  it('порог пропал (лента шире) — приближение остаётся, кнопки не прячутся', () => {
     const view = createStripView();
     view.setTotal(90_000);
     view.setEnabled(true);
     view.setWindow({ from: 10_000, to: 20_000 });
     view.setEnabled(false);
-    expect(view.get().win).toEqual({ from: 0, to: 90_000 });
+    expect(view.get().win).toEqual({ from: 10_000, to: 20_000 });
+    expect(zoomActive(view.get())).toBe(true);
+  });
+
+  it('без порога и без приближения кнопок нет, но зум жестом работает', () => {
+    const view = createStripView();
+    view.setTotal(17_000);
+    expect(zoomActive(view.get())).toBe(false);
+    view.setWindow(zoomAround(view.get().win, 0.5, 8000, 17_000));
+    expect(zoomActive(view.get())).toBe(true);
   });
 });
