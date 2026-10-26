@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  compareReports,
   runCodeCheck,
   summarizeCell,
   summarizeConfig,
@@ -165,5 +166,57 @@ describe('pass@k и pass^k', () => {
     expect(summary.trialPassRate).toBeCloseTo(4 / 6);
     expect(summary.costUsd).toBeCloseTo(0.006);
     expect(summary.medianDurationMs).toBe(2000);
+  });
+});
+
+describe('сравнение прогонов', () => {
+  const base: EvalReport = {
+    kind: 'evalReport',
+    version: 1,
+    set: { name: 'тест', description: 'тест', file: 'evals/test.json' },
+    model: 'deepseek-flash',
+    reasoningEffort: 'high',
+    startedAt: '2026-10-26T10:00:00.000Z',
+    finishedAt: '2026-10-26T10:10:00.000Z',
+    trials: 2,
+    configs: [{ name: 'auto', description: 'харнесс ищет' }],
+    tasks: [
+      { id: 'fixed', question: 'q', origin: 'o', checks: [{ kind: 'maxToolCalls', value: 1 }] },
+      { id: 'broken', question: 'q', origin: 'o', checks: [{ kind: 'maxToolCalls', value: 1 }] },
+      { id: 'steady', question: 'q', origin: 'o', checks: [{ kind: 'maxToolCalls', value: 1 }] },
+    ],
+    results: [
+      trial('fixed', 'auto', 1, false),
+      trial('fixed', 'auto', 2, true),
+      trial('broken', 'auto', 1, true),
+      trial('broken', 'auto', 2, true),
+      trial('steady', 'auto', 1, true),
+      trial('steady', 'auto', 2, true),
+    ],
+    judgeTracePath: null,
+  };
+  const next: EvalReport = {
+    ...base,
+    tasks: [...base.tasks, { id: 'new', question: 'q', origin: 'o', checks: [] }],
+    results: [
+      trial('fixed', 'auto', 1, true),
+      trial('fixed', 'auto', 2, true),
+      trial('broken', 'auto', 1, true),
+      trial('broken', 'auto', 2, false),
+      trial('steady', 'auto', 1, true),
+      trial('steady', 'auto', 2, true),
+      trial('new', 'auto', 1, true),
+    ],
+  };
+
+  it('клетка позеленела, покраснела, осталась или появилась', () => {
+    const comparison = compareReports(base, next);
+    const change = (taskId: string) =>
+      comparison.cells.find((cell) => cell.taskId === taskId)?.change;
+    expect(change('fixed')).toBe('better');
+    expect(change('broken')).toBe('worse');
+    expect(change('steady')).toBe('same');
+    expect(change('new')).toBe('added');
+    expect(comparison).toMatchObject({ better: 1, worse: 1 });
   });
 });

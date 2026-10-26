@@ -12,6 +12,7 @@ import { useState, type ReactElement } from 'react';
 import { Button } from '../../components/Button';
 import labStyles from '../rag/RagLab.module.css';
 import styles from './Evals.module.css';
+import { EvalCompare } from './EvalCompare';
 import { SuiteTag } from './EvalTasks';
 import { resultOf, RESULT_MARKS, TrialDetail, type CellRef } from './TrialDetail';
 import { useEvalReport } from './useEvals';
@@ -53,6 +54,7 @@ function ReportView(props: {
   const [version, setVersion] = useState(0);
   const loaded = useEvalReport(props.file, version);
   const [cell, setCell] = useState<CellRef | null>(null);
+  const [compareFile, setCompareFile] = useState('');
   const reload = (): void => {
     setVersion((value) => value + 1);
   };
@@ -74,6 +76,12 @@ function ReportView(props: {
               </option>
             ))}
           </select>
+          <CompareSelect
+            reports={props.reports}
+            file={props.file}
+            value={compareFile}
+            onChange={setCompareFile}
+          />
           <Button variant="quiet" onClick={reload}>
             Перечитать
           </Button>
@@ -86,6 +94,9 @@ function ReportView(props: {
           </p>
         )}
       </section>
+      {loaded.status === 'ready' && compareFile !== '' && (
+        <EvalCompare after={loaded.value} beforeFile={compareFile} version={version} />
+      )}
       {loaded.status === 'ready' && cell !== null && (
         <TrialDetail report={loaded.value} cell={cell} onOpenTrace={props.onOpenTrace} />
       )}
@@ -99,6 +110,36 @@ function markOf(value: boolean | null): string {
     return '…';
   }
   return value ? '✓' : '✗';
+}
+
+// С чем сравнить: другой прогон — «было», выбранный — «стало».
+function CompareSelect(props: {
+  reports: EvalReportSummary[];
+  file: string;
+  value: string;
+  onChange: (file: string) => void;
+}): ReactElement | null {
+  const others = props.reports.filter((report) => report.file !== props.file);
+  if (others.length === 0) {
+    return null;
+  }
+  return (
+    <select
+      className={styles.select}
+      aria-label="Сравнить с прогоном"
+      value={props.value}
+      onChange={(event) => {
+        props.onChange(event.target.value);
+      }}
+    >
+      <option value="">сравнить с… (было)</option>
+      {others.map((report) => (
+        <option key={report.file} value={report.file}>
+          {describeReport(report)}
+        </option>
+      ))}
+    </select>
+  );
 }
 
 function describeReport(report: EvalReportSummary): string {

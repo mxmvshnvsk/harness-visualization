@@ -22,3 +22,10 @@ export {
   type ReportTask,
   type TrialResult,
 } from './evalReport.js';
+export {
+  compareReports,
+  passRate,
+  type CellChange,
+  type CellComparison,
+  type ReportComparison,
+} from './compareReports.js';
