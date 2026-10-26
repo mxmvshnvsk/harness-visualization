@@ -39,7 +39,8 @@ import { AgentsView } from '../features/agents/AgentsView';
 import { AgentLabelsContext, useAgentLabelsOf } from '../features/agents/agentLabels';
 import { McpLab } from '../features/mcp/McpLab';
 import { EvalLab } from '../features/evals/EvalLab';
-import { OpenSessionContext } from '../features/branch/BranchContext';
+import { NavigationContext, type Navigation } from '../features/branch/BranchContext';
+import { BranchesView } from '../features/branch/BranchesView';
 import { McpSessionView } from '../features/mcp/session/McpSessionView';
 import { RagLab } from '../features/rag/RagLab';
 import { RetrievalView } from '../features/rag/session/RetrievalView';
@@ -57,9 +58,10 @@ import { ViewLinksContext, type SearchLink, type ViewLinks } from './viewLinks';
 
 export function App(): ReactElement {
   const [selection, select] = useSelection();
-  const { drawerOpen, setDrawerOpen, closeDrawer, pick, openSession } = useDrawer(select);
+  const { drawerOpen, setDrawerOpen, closeDrawer, pick } = useDrawer(select);
   const sessions = useServerList(listSessions);
   const traces = useServerList(listTraces);
+  const navigation = useNavigation(pick, traces.items);
   const { opened, stream, sessionId, pending } = useOpenedStream(selection);
   const { openLab, closeLab } = useLabNavigation(select, pick, opened);
   useReloadOnEnd(stream.state, sessions.reload, traces.reload);
@@ -81,7 +83,7 @@ export function App(): ReactElement {
       <div hidden={lab !== null}>
         {/* key: другая сессия или трейс — повтор, выбор в инспекторе и диалог начинаются заново. */}
         <LiveDeltasContext.Provider value={stream.deltas}>
-          <OpenSessionContext.Provider value={openSession}>
+          <NavigationContext.Provider value={navigation}>
             <OpenStream
               key={streamUrl(opened)}
               events={stream.events}
@@ -100,13 +102,32 @@ export function App(): ReactElement {
               }
               prompt={permissionPrompt(sessionId, pending, stream.events)}
             />
-          </OpenSessionContext.Provider>
+          </NavigationContext.Provider>
         </LiveDeltasContext.Provider>
         <Drawer open={drawerOpen} label="Сессии и трейсы" onClose={closeDrawer}>
           {sources}
         </Drawer>
       </div>
     </>
+  );
+}
+
+// Ветки (этап 9): открыть запущенную ветку, трейс из дерева веток; список трейсов — для дерева.
+function useNavigation(
+  pick: (next: Selection | null) => void,
+  traces: readonly TraceSummary[],
+): Navigation {
+  return useMemo(
+    () => ({
+      openSession: (sessionId: string) => {
+        pick({ kind: 'session', sessionId });
+      },
+      openTrace: (file: string) => {
+        pick({ kind: 'trace', file });
+      },
+      traces,
+    }),
+    [pick, traces],
   );
 }
 
@@ -152,14 +173,7 @@ function useDrawer(select: (next: Selection | null) => void) {
     },
     [select],
   );
-  // Ветка запущена (этап 9) — открыть её как живую сессию.
-  const openSession = useCallback(
-    (sessionId: string) => {
-      pick({ kind: 'session', sessionId });
-    },
-    [pick],
-  );
-  return { drawerOpen, setDrawerOpen, closeDrawer, pick, openSession };
+  return { drawerOpen, setDrawerOpen, closeDrawer, pick };
 }
 
 function LabScreen(props: {
@@ -377,6 +391,7 @@ const VIEWS = [
   { value: 'rag', label: 'RAG' },
   { value: 'mcp', label: 'MCP' },
   { value: 'agents', label: 'Агенты' },
+  { value: 'branches', label: 'Ветки' },
   { value: 'skills', label: 'Скиллы и память' },
   { value: 'events', label: 'Сырые события' },
 ] as const;
@@ -427,6 +442,7 @@ function OpenStream(props: OpenStreamProps): ReactElement {
               replay={replay}
               liveStartedAt={liveStartedAt}
               traceFile={props.traceFile}
+              sessionId={sessionId}
             />
           </div>
           {/* Колонка и полоса живут обе: колонка раздвигается и сдвигается плавно, а текст в ней
@@ -463,10 +479,12 @@ interface ViewSwitchProps {
   replay: ReturnType<typeof useReplay>;
   liveStartedAt: number | null;
   traceFile: string | null;
+  sessionId: string | null;
 }
 
 // Переключатель видов и сам выбранный вид.
-function ViewSwitch({ events, replay, liveStartedAt, traceFile }: ViewSwitchProps): ReactElement {
+function ViewSwitch(props: ViewSwitchProps): ReactElement {
+  const { events, replay, liveStartedAt, traceFile, sessionId } = props;
   const [viewName, setViewName] = useState<ViewName>('flow');
   const { clock, cursor, schedule, shown, view } = replay;
   const { links, link } = useLinkedViews(setViewName);
@@ -510,6 +528,9 @@ function ViewSwitch({ events, replay, liveStartedAt, traceFile }: ViewSwitchProp
           />
         )}
         {viewName === 'agents' && <AgentsView events={events} shown={cursor} />}
+        {viewName === 'branches' && (
+          <BranchesView events={events} traceFile={traceFile} sessionId={sessionId} />
+        )}
         {viewName === 'skills' && (
           <SkillsMemoryView events={events} shown={cursor} clock={clock} schedule={schedule} />
         )}

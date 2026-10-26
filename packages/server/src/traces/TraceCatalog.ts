@@ -6,7 +6,7 @@
 // и с расширением .jsonl — иначе через адрес можно было бы прочитать любой файл на диске.
 
 import { readdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import type { HarnessEvent } from '@harness-visualization/harness';
 import { readTraceFile, type TraceContents } from './readTraceFile.js';
 
@@ -34,6 +34,15 @@ export interface TraceSummary {
   hasError: boolean;
   skippedLines: number;
   sizeBytes: number;
+  // Ветка (этап 9): от какого трейса и с какого шага; null — не ветка.
+  branch: TraceBranch | null;
+}
+
+export interface TraceBranch {
+  // Имя файла исходного трейса в той же папке.
+  sourceFile: string;
+  step: number;
+  change: 'replay' | 'toolResult';
 }
 
 interface CachedSummary {
@@ -116,6 +125,19 @@ function buildSummary(file: string, contents: TraceContents, sizeBytes: number):
     hasError: events.some((event) => event.type === 'error'),
     skippedLines,
     sizeBytes,
+    branch: branchOf(events),
+  };
+}
+
+function branchOf(events: HarnessEvent[]): TraceBranch | null {
+  const started = events.find((event) => event.type === 'branch_started');
+  if (started?.type !== 'branch_started') {
+    return null;
+  }
+  return {
+    sourceFile: basename(started.sourceTracePath),
+    step: started.step,
+    change: started.change.kind,
   };
 }
 

@@ -23,6 +23,7 @@ export const HELP_TOPICS = [
   'orchestration',
   'model-vs-harness',
   'evals',
+  'branches',
 ] as const;
 
 export type HelpTopic = (typeof HELP_TOPICS)[number];

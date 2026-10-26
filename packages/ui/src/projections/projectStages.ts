@@ -159,6 +159,13 @@ const DESCRIBE: Describers = {
         : `каталог скиллов в system prompt: ${event.skills.map((skill) => skill.name).join(', ')}`,
   }),
   skill_loaded: (event) => ({ code: event.name, text: SKILL_TRIGGERS[event.trigger] }),
+  branch_started: (event) => ({
+    code: `⑂ ${event.sourceSessionId ?? event.sourceTracePath} · шаг ${String(event.step)}`,
+    text:
+      event.replayedSteps === 0
+        ? 'ветка с шага 1: из записи — только начало, дальше новый прогон'
+        : `ветка: шаги 1–${String(event.replayedSteps)} — replay из трейса (${format(event.replayedMessages)} сообщений истории, без запросов к модели и тулов), с шага ${String(event.step)} — новый прогон${event.change.kind === 'toolResult' ? `; результат ${event.change.toolName} изменён` : ''}`,
+  }),
   memory_loaded: (event) => ({
     code: event.memoPath,
     text:

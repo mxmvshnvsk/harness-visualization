@@ -22,6 +22,7 @@ export {
   type ReportTask,
   type TrialResult,
 } from './evalReport.js';
+export { workEnd, workMs } from '../events/workTime.js';
 export {
   compareReports,
   passRate,

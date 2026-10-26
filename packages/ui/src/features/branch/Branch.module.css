@@ -70,3 +70,120 @@
   color: var(--error);
   font-size: 13.5px;
 }
+
+/* Вкладка «Ветки» (этап 9.2). */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block);
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: var(--space-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 72ch;
+  padding: 24px 0;
+  color: var(--muted);
+}
+
+.empty p {
+  margin: 0;
+}
+
+.tree {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.node {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 14px;
+  padding-block: 10px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.node[aria-current='true'] .nodeLabel b {
+  color: var(--accent);
+}
+
+.nodeLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.here {
+  font: 12px var(--font-mono);
+  color: var(--muted);
+}
+
+.pickers,
+.pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.numbers {
+  font: 12.5px var(--font-mono);
+  color: var(--muted);
+}
+
+.answer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--raised);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+/* Абзац, которого нет в другом ответе. */
+.paragraph[data-unique] {
+  margin-inline: -6px;
+  padding-inline: 6px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+}
+
+@media (width <= 760px) {
+  .pickers,
+  .pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

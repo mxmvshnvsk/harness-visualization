@@ -1,10 +1,12 @@
 // Маршруты записанных трейсов (папка traces/):
 //   GET /api/traces                — список: что за трейс, вопрос, когда, дописан ли до конца;
-//   GET /api/traces/:file/events   — его события тем же потоком SSE, что у живой сессии.
+//   GET /api/traces/:file/events   — его события тем же потоком SSE, что у живой сессии;
+//   GET /api/traces/:file/outcome  — чем кончилась сессия: ответ, шаги, тулы, цена (сравнение веток).
 //
 // Поток отдаёт события сразу, без исходных пауз: время каждого события есть в timestamp,
 // а темп воспроизведения — забота интерфейса (там же пауза, перемотка, шаг вперёд).
 
+import { readTrialFacts } from '@harness-visualization/harness/evals';
 import type { FastifyInstance } from 'fastify';
 import { openEventStream } from '../sse/openEventStream.js';
 import { formatEnd, formatEvent, parseLastEventId } from '../sse/sseMessages.js';
@@ -26,8 +28,30 @@ interface EventsQuery {
   after?: string;
 }
 
+// Итог сессии для сравнения веток (этап 9): последний ответ и сколько это стоило.
+export interface TraceOutcome {
+  file: string;
+  answer: string | null;
+  modelRequests: number;
+  toolCalls: string[];
+  costUsd: number | null;
+  durationMs: number;
+  // Без простоя после ответа — сравнивать ветки по нему, а не по durationMs.
+  workMs: number;
+}
+
 export function registerTraceRoutes(app: FastifyInstance, catalog: TraceCatalog): void {
   app.get('/api/traces', () => catalog.list());
+
+  app.get<{ Params: TraceParams }>('/api/traces/:file/outcome', async (request, reply) => {
+    const { file } = request.params;
+    const contents = await catalog.read(file);
+    if (contents === null) {
+      return reply.code(404).send({ error: 'Такого трейса нет в traces/' });
+    }
+    const outcome: TraceOutcome = { file, ...readTrialFacts(contents.events) };
+    return outcome;
+  });
 
   app.get<{ Params: TraceParams; Querystring: EventsQuery }>(
     '/api/traces/:file/events',

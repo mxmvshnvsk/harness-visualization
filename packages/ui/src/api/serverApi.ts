@@ -9,6 +9,7 @@ import type {
   StartSessionRequest,
   StartSessionResponse,
   TraceSummary,
+  TraceOutcome,
   GroundingReportResponse,
   McpCourseResponse,
   EvalsResponse,
@@ -22,6 +23,11 @@ export async function listSessions(): Promise<SessionSummary[]> {
 
 export async function listTraces(): Promise<TraceSummary[]> {
   return getJson<TraceSummary[]>('/api/traces');
+}
+
+// Чем кончилась записанная сессия — для сравнения веток (этап 9).
+export async function getTraceOutcome(file: string): Promise<TraceOutcome> {
+  return getJson<TraceOutcome>(`/api/traces/${encodeURIComponent(file)}/outcome`);
 }
 
 export async function getSession(sessionId: string): Promise<SessionDetails> {

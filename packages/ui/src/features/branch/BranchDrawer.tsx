@@ -8,7 +8,7 @@ import { startBranch } from '../../api/serverApi';
 import { Button } from '../../components/Button';
 import { Drawer } from '../../components/Drawer';
 import { Segmented } from '../../components/Segmented';
-import { OpenSessionContext } from './BranchContext';
+import { NavigationContext } from './BranchContext';
 import styles from './Branch.module.css';
 
 const CHANGES = [
@@ -38,7 +38,7 @@ export function BranchDrawer({ traceFile, step, onClose }: BranchDrawerProps): R
 }
 
 function BranchForm({ traceFile, step }: { traceFile: string; step: BranchStep }): ReactElement {
-  const openSession = useContext(OpenSessionContext);
+  const navigation = useContext(NavigationContext);
   const [change, setChange] = useState<Change>('replay');
   const results = step.toolResults;
   const [toolCallId, setToolCallId] = useState(results.at(-1)?.toolCallId ?? '');
@@ -56,7 +56,7 @@ function BranchForm({ traceFile, step }: { traceFile: string; step: BranchStep }
           ? ({ kind: 'replay' } as const)
           : ({ kind: 'toolResult', toolCallId, content: content[toolCallId] ?? original } as const);
       const { sessionId } = await startBranch({ traceFile, step: step.step, edit });
-      openSession?.(sessionId);
+      navigation?.openSession(sessionId);
     } catch (error) {
       setState({ busy: false, error: error instanceof Error ? error.message : String(error) });
     }

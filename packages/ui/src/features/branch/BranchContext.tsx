@@ -2,6 +2,7 @@
 // Ветвить можно записанный трейс обычного агента: у оркестрации свои истории у исполнителей.
 
 import type { HarnessEvent } from '@harness-visualization/harness';
+import type { TraceSummary } from '@harness-visualization/server';
 import { listBranchSteps, type BranchStep } from '@harness-visualization/harness/branch';
 import { createContext, useContext, useMemo } from 'react';
 
@@ -18,8 +19,15 @@ export function useBranching(): Branching | null {
   return useContext(BranchContext);
 }
 
-// Открыть живую сессию — ветку, которую только что запустили.
-export const OpenSessionContext = createContext<((sessionId: string) => void) | null>(null);
+// Переходы для веток: открыть запущенную ветку как живую сессию, открыть трейс из дерева,
+// список трейсов — из него строится дерево веток.
+export interface Navigation {
+  openSession: (sessionId: string) => void;
+  openTrace: (file: string) => void;
+  traces: readonly TraceSummary[];
+}
+
+export const NavigationContext = createContext<Navigation | null>(null);
 
 export function useBranchSteps(
   events: readonly HarnessEvent[],

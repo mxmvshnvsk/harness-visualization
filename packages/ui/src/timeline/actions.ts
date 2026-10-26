@@ -436,6 +436,25 @@ const HANDLERS: Handlers = {
       },
     );
   },
+  // Ветка (этап 9): шаги до точки ветвления — replay из записи; их событий в трейсе ветки нет,
+  // поэтому в плеере они — одно действие у «Контекста»: история пришла из чужого трейса.
+  branch_started: (builder, event, at) => {
+    addInside(
+      builder,
+      { event, at },
+      {
+        node: 'context',
+        group: 'meta',
+        out:
+          event.replayedSteps === 0 ? 'ветка с шага 1' : `replay 1–${String(event.replayedSteps)}`,
+        what:
+          event.replayedSteps === 0
+            ? 'Ветка с шага 1 — новый прогон'
+            : `Replay: шаги 1–${String(event.replayedSteps)} из трейса ${event.sourceSessionId ?? ''}`,
+        detail: `${String(event.replayedMessages)} сообщений истории без запросов к модели и тулов; с шага ${String(event.step)} — новый прогон`,
+      },
+    );
+  },
   memory_loaded: (builder, event, at) => {
     addInside(
       builder,

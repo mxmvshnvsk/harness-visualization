@@ -7,6 +7,7 @@ import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { plural } from '../text/plural';
 import styles from './SourceList.module.css';
+import { nestBranches } from '../projections/branchTree';
 
 interface SourceSectionProps {
   title: string;
@@ -79,8 +80,12 @@ export function TraceList(props: TraceListProps): ReactElement {
   const { traces, selection, onSelect } = props;
   return (
     <SourceSection title="Трейсы" error={props.error} onReload={props.onReload}>
-      {traces.map((trace) => (
-        <li key={trace.file}>
+      {nestBranches(traces).map(({ trace, depth }) => (
+        // Ветки (этап 9) — под исходной сессией, с отступом.
+        <li
+          key={trace.file}
+          style={depth > 0 ? { paddingLeft: `${String(depth * 18)}px` } : undefined}
+        >
           <button
             type="button"
             className={styles.item}
@@ -92,6 +97,7 @@ export function TraceList(props: TraceListProps): ReactElement {
             <span className={styles.itemTitle}>
               {trace.synthetic && <Badge tone="error">синтетический</Badge>}
               {trace.kind !== 'session' && <Badge tone="judge">{trace.kind}</Badge>}
+              {trace.branch !== null && <Badge>⑂ шаг {trace.branch.step}</Badge>}
               {trace.title ?? trace.file}
             </span>
             <span className={styles.meta}>

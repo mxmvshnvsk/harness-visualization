@@ -5,6 +5,7 @@
 import type { HarnessEvent } from '../events/harnessEvents.js';
 import { checkGrounding } from '../grounding/checkGrounding.js';
 import { collectSeenSources, normalizeReference } from '../grounding/collectSeenSources.js';
+import { workMs } from '../events/workTime.js';
 import { describeCheck, type EvalCheck } from './evalSet.js';
 
 export interface CheckResult {
@@ -22,6 +23,8 @@ export interface TrialFacts {
   toolCalls: string[];
   costUsd: number | null;
   durationMs: number;
+  // Без простоя между ответом и новым вопросом (events/workTime.ts).
+  workMs: number;
 }
 
 export function readTrialFacts(events: readonly HarnessEvent[]): TrialFacts {
@@ -35,6 +38,7 @@ export function readTrialFacts(events: readonly HarnessEvent[]): TrialFacts {
     toolCalls: events.flatMap((event) => (event.type === 'tool_call' ? [event.toolName] : [])),
     costUsd: finished?.type === 'session_finished' ? (finished.modelCost?.total ?? null) : null,
     durationMs: finished?.type === 'session_finished' ? finished.durationMs : 0,
+    workMs: workMs(events),
   };
 }
 
