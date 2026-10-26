@@ -6,6 +6,7 @@ import type { HarnessEvent, HarnessEventType, TokenUsage } from '@harness-visual
 import { classifyCacheWarmth } from '@harness-visualization/harness/tokenomics';
 import type { EventOfType } from '../events/eventTypes';
 import type { AgentStep, CacheView, ModelCall, SessionView, ToolCallView } from './sessionView';
+import { workMs } from './workTime';
 
 interface Builder {
   view: SessionView;
@@ -101,6 +102,7 @@ export function projectSession(events: readonly HarnessEvent[]): SessionView {
     handle?.(builder, event);
   }
   builder.view.totals.durationMs = builder.finishedDurationMs ?? elapsedMs(events);
+  builder.view.totals.workMs = workMs(events);
   return builder.view;
 }
 
@@ -126,6 +128,7 @@ function createBuilder(): Builder {
         unpricedModelRequests: 0,
         toolCosts: [],
         durationMs: 0,
+        workMs: 0,
       },
     },
     calls: new Map(),

@@ -104,6 +104,8 @@ export interface SessionTotals {
   toolCosts: ToolCostTotal[];
   // От первого события до последнего (или до session_finished).
   durationMs: number;
+  // Сколько из этого шла работа — без простоя между ответом и новым вопросом (workTime.ts).
+  workMs: number;
 }
 
 export interface MoneyTotal {

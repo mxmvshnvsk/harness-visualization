@@ -27,11 +27,27 @@ export function TokenomicsLine({ totals }: { totals: SessionTotals }): ReactElem
         <span className={styles.muted}>(reasoning {formatNumber(usage.reasoningTokens)})</span>
       </span>
       <span className={styles.money}>{describeCosts(totals)}</span>
-      <span className={styles.muted}>{formatSeconds(totals.durationMs)}</span>
+      <Duration totals={totals} />
       <span className={styles.help}>
         <Term topic="tokens">что это?</Term>
       </span>
     </div>
+  );
+}
+
+// Работа и простой — отдельно: после ответа сессия ждёт вопроса, и это не время агента.
+// Простой меньше секунды не показываем.
+function Duration({ totals }: { totals: SessionTotals }): ReactElement {
+  if (totals.durationMs - totals.workMs < 1000) {
+    return <span className={styles.muted}>{formatSeconds(totals.durationMs)}</span>;
+  }
+  return (
+    <span
+      className={styles.muted}
+      title="Работа — без простоя между ответом и новым вопросом; сессия открыта — вся запись"
+    >
+      работа {formatSeconds(totals.workMs)} · сессия открыта {formatSeconds(totals.durationMs)}
+    </span>
   );
 }
 

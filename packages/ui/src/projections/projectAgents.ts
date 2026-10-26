@@ -5,6 +5,7 @@
 
 import type { HarnessEvent, OrchestrationMode } from '@harness-visualization/harness';
 import { projectSubagents, type AgentColor, type SubagentRun } from './projectSubagents';
+import { workEnd } from './workTime';
 
 // step — шаг каркаса оркестрации, который задал код (этап 6d).
 export type SegmentKind = 'model' | 'tool' | 'wait' | 'step';
@@ -93,7 +94,8 @@ export function projectAgents(events: readonly HarnessEvent[], shown: number): A
   for (const event of visible) {
     collect(builder, event);
   }
-  const last = visible.at(-1);
+  // Дорожки кончаются на последней работе: простой после ответа — не работа (workTime.ts).
+  const last = workEnd(visible);
   builder.view.now = last === undefined ? 0 : Date.parse(last.timestamp) - startedAt;
   const main = builder.lanes.get('main');
   if (main !== undefined) {
