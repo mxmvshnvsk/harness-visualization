@@ -28,6 +28,7 @@ import { EventList } from '../features/EventList';
 import { ContextView } from '../features/context/ContextView';
 import { FlowView } from '../features/flow/FlowView';
 import { InspectorView } from '../features/inspector/InspectorView';
+import { StepsView } from '../features/research/StepsView';
 import { SkillsMemoryView } from '../features/skills/SkillsMemoryView';
 import { TokenomicsLine } from '../features/TokenomicsLine';
 import { DialogPanel } from '../features/dialog/DialogPanel';
@@ -584,12 +585,20 @@ function ViewSwitch(props: ViewSwitchProps): ReactElement {
 
 type ViewContext = ViewSwitchProps & { link: ReturnType<typeof useLinkedViews>['link'] };
 
-// Каждый вид — по событиям до курсора повтора.
-const VIEW_RENDERERS: Record<ViewName, (context: ViewContext) => ReactNode> = {
-  flow: ({ replay, liveStartedAt }) => (
-    <FlowView clock={replay.clock} schedule={replay.schedule} liveStartedAt={liveStartedAt} />
-  ),
-  inspector: ({ replay, events, traceFile, link }) => (
+// В «Исследовании» инспектор — экран шагов (решение автора 26.10.2026), в «Обучении» — этапы.
+function InspectorOrSteps({ replay, events, traceFile, link }: ViewContext): ReactElement {
+  const mode = useMode();
+  if (mode === 'research') {
+    return (
+      <StepsView
+        events={events}
+        shown={replay.cursor}
+        clock={replay.clock}
+        schedule={replay.schedule}
+      />
+    );
+  }
+  return (
     <InspectorView
       key={`inspector-${String(link.nonce)}`}
       focus={link.focusFor('inspector')}
@@ -600,7 +609,15 @@ const VIEW_RENDERERS: Record<ViewName, (context: ViewContext) => ReactNode> = {
       schedule={replay.schedule}
       traceFile={traceFile}
     />
+  );
+}
+
+// Каждый вид — по событиям до курсора повтора.
+const VIEW_RENDERERS: Record<ViewName, (context: ViewContext) => ReactNode> = {
+  flow: ({ replay, liveStartedAt }) => (
+    <FlowView clock={replay.clock} schedule={replay.schedule} liveStartedAt={liveStartedAt} />
   ),
+  inspector: (context) => <InspectorOrSteps {...context} />,
   code: ({ events, replay }) => <CodeView events={events} shown={replay.cursor} />,
   context: ({ events, replay }) => (
     <ContextView
