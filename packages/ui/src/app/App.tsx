@@ -364,12 +364,6 @@ const VIEWS = [
 
 type ViewName = (typeof VIEWS)[number]['value'];
 
-// «Агенты» — только у сессии с поручениями субагентам (этап 6c).
-function viewsFor(events: readonly HarnessEvent[]): readonly (typeof VIEWS)[number][] {
-  const delegated = events.some((event) => event.type === 'subagent_started');
-  return delegated ? VIEWS : VIEWS.filter((view) => view.value !== 'agents');
-}
-
 interface OpenStreamProps {
   events: HarnessEvent[];
   // Сессия сервера — у неё есть диалог; null — трейс.
@@ -460,7 +454,7 @@ function ViewSwitch({ events, replay, liveStartedAt, traceFile }: ViewSwitchProp
   return (
     <ViewLinksContext.Provider value={links}>
       <div className={styles.views}>
-        <Segmented label="Вид" options={viewsFor(events)} value={viewName} onChange={setViewName} />
+        <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
         {viewName === 'flow' && (
           <FlowView clock={clock} schedule={schedule} liveStartedAt={liveStartedAt} />
         )}

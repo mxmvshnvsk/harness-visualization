@@ -29,7 +29,8 @@ export function AgentsView({ events, shown }: AgentsViewProps): ReactElement {
   if (view.runs.length === 0 && orchestration === null) {
     return (
       <div className={styles.empty}>
-        Главный агент ещё никому ничего не поручал — повтор до поручений не дошёл.
+        <p>{describeNoAgents(events, shown)}</p>
+        <HelpButton topic="subagents" />
       </div>
     );
   }
@@ -50,6 +51,27 @@ export function AgentsView({ events, shown }: AgentsViewProps): ReactElement {
       <BudgetBars view={view} />
     </div>
   );
+}
+
+// Вкладка видна всегда, как RAG: пустая — объясняет почему. «Субагенты» — тул в меню модели,
+// поручать или нет решает она; поручения точно будут только в оркестрации.
+export function describeNoAgents(events: readonly HarnessEvent[], shown: number): string {
+  const started = events.find((event) => event.type === 'session_started');
+  const enabled =
+    started?.type === 'session_started' &&
+    ((started.subagents ?? null) !== null || (started.orchestration ?? null) !== null);
+  if (!enabled) {
+    return 'В этой сессии мультиагентности нет: субагенты не были включены. В новой сессии включите «Субагенты» — модель сможет поручать сама, — или «Оркестрация» — тогда поручения будут точно.';
+  }
+  if (events.some((event) => event.type === 'subagent_started')) {
+    return 'Главный агент ещё никому ничего не поручал — повтор до поручений не дошёл.';
+  }
+  const answered = events
+    .slice(0, shown)
+    .some((event) => event.type === 'assistant_message' || event.type === 'awaiting_question');
+  return answered
+    ? 'Субагенты были доступны, но поручений не было: модель справилась сама. Чтобы поручения были точно, в новой сессии включите «Оркестрация».'
+    : 'Субагенты доступны, но поручений пока не было: решает модель — может и не поручить.';
 }
 
 function Tiles({ view }: { view: View }): ReactElement {
