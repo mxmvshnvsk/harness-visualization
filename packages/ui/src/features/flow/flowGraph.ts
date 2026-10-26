@@ -6,7 +6,16 @@
 // цикл внутри — так видно, где кончается агент и начинается харнесс (docs/plan.md, этап 8c).
 
 export type FlowNodeId =
-  'user' | 'loop' | 'context' | 'policy' | 'retrieval' | 'tools' | 'model' | 'mcp' | 'network';
+  | 'user'
+  | 'loop'
+  | 'context'
+  | 'policy'
+  | 'retrieval'
+  | 'tools'
+  | 'model'
+  | 'mcp'
+  | 'network'
+  | 'sandbox';
 
 export interface FlowNode {
   id: FlowNodeId;
@@ -101,6 +110,16 @@ const SPECS: Record<FlowNodeId, NodeSpec> = {
     part: false,
     ...place(990, 380, 170, 72),
   },
+  // Код-арена (этап 10): тесты — отдельный процесс Node на вашей машине. Снаружи харнесса:
+  // харнесс его запускает, но код в нём написала модель.
+  sandbox: {
+    title: 'Тесты',
+    role: 'node --permission',
+    about:
+      'Отдельный процесс Node: запускает тесты в копии проекта с моделью разрешений — файлы только в копии, без других программ и ключей. Код в нём написала модель.',
+    part: false,
+    ...place(115, 475, 170, 72),
+  },
   network: {
     title: 'Интернет',
     role: 'поиск и сайты',
@@ -127,6 +146,7 @@ export const FLOW_EDGES: readonly [FlowNodeId, FlowNodeId][] = [
   ['retrieval', 'mcp'],
   ['tools', 'mcp'],
   ['tools', 'network'],
+  ['tools', 'sandbox'],
 ];
 
 export interface Point {

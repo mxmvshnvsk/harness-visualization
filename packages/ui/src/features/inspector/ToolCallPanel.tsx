@@ -8,6 +8,7 @@ import styles from './Inspector.module.css';
 import { isMcpTool } from '../../timeline/actions';
 import { HelpButton, Term } from '../../help/HelpLinks';
 import { McpCallBlock } from './McpCallBlock';
+import { WriteFileDiff } from '../code/WriteFileDiff';
 
 export function ToolCallPanel({ tool }: { tool: ToolCallView }): ReactElement {
   return (
@@ -28,6 +29,12 @@ export function ToolCallPanel({ tool }: { tool: ToolCallView }): ReactElement {
         <h3 className={styles.blockTitle}>аргументы от модели</h3>
         <pre className={styles.code}>{formatJson(tool.call.arguments)}</pre>
       </section>
+      {tool.toolName === 'write_file' && (
+        <section className={styles.block}>
+          <h3 className={styles.blockTitle}>что поменялось в файле</h3>
+          <WriteFileDiff call={tool.call} />
+        </section>
+      )}
       <PermissionChain tool={tool} />
       {isMcpTool(tool.toolName) && (
         <McpCallBlock toolCallId={tool.toolCallId} toolName={tool.toolName} />

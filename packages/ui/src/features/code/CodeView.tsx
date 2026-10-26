@@ -6,7 +6,7 @@ import type { HarnessEvent } from '@harness-visualization/harness';
 import { useMemo, useState, type ReactElement } from 'react';
 import { HelpButton } from '../../help/HelpLinks';
 import { projectCode, type CodeFile, type CodeView as View } from '../../projections/projectCode';
-import { countChanges, diffHunks, lineDiff } from '../../projections/lineDiff';
+import { countChanges, diffHunks, lineDiff, type DiffHunk } from '../../projections/lineDiff';
 import { AcceptanceCard } from './AcceptanceCard';
 import { describeArena, describeNoCode, STATUS_LABELS } from './codeLabels';
 import styles from './Code.module.css';
@@ -120,29 +120,37 @@ function FileDiff({ file }: { file: CodeFile }): ReactElement {
           ? ' · агент записал файл, не прочитав: исходного текста в трейсе нет'
           : ''}
       </p>
-      <pre className={styles.diff}>
-        {hunks.map((hunk, index) =>
-          hunk.kind === 'skip' ? (
-            <div key={index} className={styles.skip}>
-              ⋯ без изменений: {hunk.count} строк
-            </div>
-          ) : (
-            hunk.lines.map((line, lineIndex) => (
-              <div
-                key={`${String(index)}-${String(lineIndex)}`}
-                className={styles.line}
-                data-kind={line.kind}
-              >
-                <span className={styles.number}>{line.oldNumber ?? ''}</span>
-                <span className={styles.number}>{line.newNumber ?? ''}</span>
-                <span>{MARKS[line.kind]}</span>
-                <span>{line.text}</span>
-              </div>
-            ))
-          ),
-        )}
-      </pre>
+      <DiffBlock hunks={hunks} />
     </div>
+  );
+}
+
+// Построчный diff: изменения и строки вокруг, остальное свёрнуто. Им же пользуется инспектор
+// у write_file.
+export function DiffBlock({ hunks }: { hunks: readonly DiffHunk[] }): ReactElement {
+  return (
+    <pre className={styles.diff}>
+      {hunks.map((hunk, index) =>
+        hunk.kind === 'skip' ? (
+          <div key={index} className={styles.skip}>
+            ⋯ без изменений: {hunk.count} строк
+          </div>
+        ) : (
+          hunk.lines.map((line, lineIndex) => (
+            <div
+              key={`${String(index)}-${String(lineIndex)}`}
+              className={styles.line}
+              data-kind={line.kind}
+            >
+              <span className={styles.number}>{line.oldNumber ?? ''}</span>
+              <span className={styles.number}>{line.newNumber ?? ''}</span>
+              <span>{MARKS[line.kind]}</span>
+              <span>{line.text}</span>
+            </div>
+          ))
+        ),
+      )}
+    </pre>
   );
 }
 

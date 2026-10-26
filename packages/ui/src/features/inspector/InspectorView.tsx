@@ -20,6 +20,7 @@ import { StageCard } from './StageCard';
 import { SubagentStepsContext, subagentOfCall, useSubagentStepsOf } from './subagentSteps';
 import styles from './Stages.module.css';
 import { useFollowActive } from './useFollowActive';
+import { SessionEventsContext } from '../code/WriteFileDiff';
 
 interface InspectorViewProps {
   view: SessionView;
@@ -58,36 +59,38 @@ export function InspectorView({
     return <div className={styles.empty}>Событий пока нет.</div>;
   }
   return (
-    <BranchContext.Provider value={branch.context}>
-      <McpPairsContext.Provider value={mcpPairs}>
-        <SubagentStepsContext.Provider value={subagents}>
-          <div className={styles.stages}>
-            {stages.map((stage) => (
-              <StageCard
-                key={stage.id}
-                stage={stage}
-                view={view}
-                shown={shown}
-                active={stage.id === active?.id}
-                focus={subagents.focused === null ? inStage(stage, target) : null}
-                cardRef={follow.register(stage.id)}
-                onSeek={(at) => {
-                  clock.seek(timeAt(schedule, at));
-                }}
-              />
-            ))}
-            {follow.paused && (
-              <button type="button" className={styles.followChip} onClick={follow.resume}>
-                ↓ к текущему шагу
-              </button>
-            )}
-          </div>
-        </SubagentStepsContext.Provider>
-      </McpPairsContext.Provider>
-      {traceFile !== null && (
-        <BranchDrawer traceFile={traceFile} step={branch.step} onClose={branch.close} />
-      )}
-    </BranchContext.Provider>
+    <SessionEventsContext.Provider value={events}>
+      <BranchContext.Provider value={branch.context}>
+        <McpPairsContext.Provider value={mcpPairs}>
+          <SubagentStepsContext.Provider value={subagents}>
+            <div className={styles.stages}>
+              {stages.map((stage) => (
+                <StageCard
+                  key={stage.id}
+                  stage={stage}
+                  view={view}
+                  shown={shown}
+                  active={stage.id === active?.id}
+                  focus={subagents.focused === null ? inStage(stage, target) : null}
+                  cardRef={follow.register(stage.id)}
+                  onSeek={(at) => {
+                    clock.seek(timeAt(schedule, at));
+                  }}
+                />
+              ))}
+              {follow.paused && (
+                <button type="button" className={styles.followChip} onClick={follow.resume}>
+                  ↓ к текущему шагу
+                </button>
+              )}
+            </div>
+          </SubagentStepsContext.Provider>
+        </McpPairsContext.Provider>
+        {traceFile !== null && (
+          <BranchDrawer traceFile={traceFile} step={branch.step} onClose={branch.close} />
+        )}
+      </BranchContext.Provider>
+    </SessionEventsContext.Provider>
   );
 }
 

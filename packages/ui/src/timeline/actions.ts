@@ -298,7 +298,7 @@ const HANDLERS: Handlers = {
         detail: shorten(event.argumentsText),
       },
     );
-    const route: Route = mcp ? ['policy', 'tools', 'mcp'] : ['policy', 'tools'];
+    const route = toolRoute(event.toolName, mcp);
     openExchange(
       builder,
       `tool:${event.toolCallId}`,
@@ -307,7 +307,7 @@ const HANDLERS: Handlers = {
         route,
         group: 'tool',
         out: event.toolName,
-        busy: delegates(event.toolName) ? 'работает субагент…' : 'выполняет…',
+        busy: toolBusy(event.toolName),
         what: toolWhat(event.toolName, mcp),
         detail: shorten(event.argumentsText),
       },
@@ -527,6 +527,22 @@ const HANDLERS: Handlers = {
   },
 };
 
+// Куда уходит вызов от исполнения: к MCP-серверу, к процессу тестов (Код-арена, этап 10)
+// или никуда — свой тул выполняется внутри харнесса.
+function toolRoute(toolName: string, mcp: boolean): Route {
+  if (toolName === 'run_tests') {
+    return ['policy', 'tools', 'sandbox'];
+  }
+  return mcp ? ['policy', 'tools', 'mcp'] : ['policy', 'tools'];
+}
+
+function toolBusy(toolName: string): string {
+  if (toolName === 'run_tests') {
+    return 'гоняет тесты…';
+  }
+  return delegates(toolName) ? 'работает субагент…' : 'выполняет…';
+}
+
 function modelPhases(event: EventOfType<'model_response'>): ModelPhases | null {
   const timing = event.timing ?? null;
   if (timing === null || timing.firstTokenMs === null) {
@@ -550,6 +566,9 @@ function delegates(toolName: string): boolean {
 function toolWhat(toolName: string, mcp: boolean): string {
   if (delegates(toolName)) {
     return 'Харнесс запускает субагента — он работает в своей истории';
+  }
+  if (toolName === 'run_tests') {
+    return 'Харнесс запускает тесты в отдельном процессе Node — код в нём написала модель';
   }
   return mcp ? `MCP-сервер выполняет ${toolName}` : `Харнесс выполняет ${toolName}`;
 }
