@@ -86,7 +86,7 @@ function readSessionTotals(events: HarnessEvent[]): SessionTotals {
 
 // Первый шаг агента, а не первый запрос вообще: служебный запрос rewrite короткий,
 // без тулов и с другим началом — его кэш ничего не говорит о прогретости контекста агента.
-function readFirstRequestCache(events: HarnessEvent[]): CacheWarmth | null {
+export function readFirstRequestCache(events: HarnessEvent[]): CacheWarmth | null {
   const firstAgentRequest = events.find(
     (event) => event.type === 'model_request' && event.purpose === 'agentStep',
   );

@@ -13,6 +13,10 @@
     "./tokenomics": {
       "types": "./dist/tokenomics/browserSafe.d.ts",
       "default": "./dist/tokenomics/browserSafe.js"
+    },
+    "./evals": {
+      "types": "./dist/evals/browserSafe.d.ts",
+      "default": "./dist/evals/browserSafe.js"
     }
   },
   "scripts": {

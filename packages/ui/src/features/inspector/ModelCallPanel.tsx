@@ -173,6 +173,8 @@ function describePurpose(call: ModelCall): string {
       return 'Вопрос судье · groundingJudge';
     case 'compaction':
       return 'Сводка истории · compaction';
+    case 'evalJudge':
+      return 'Вопрос судье evals · evalJudge';
   }
 }
 

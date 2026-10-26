@@ -135,6 +135,7 @@ function describeRequest(event: HarnessEvent): string {
       return 'харнесс сжимает историю в сводку';
     case 'queryRewrite':
     case 'groundingJudge':
+    case 'evalJudge':
       return 'служебный запрос к модели';
   }
 }

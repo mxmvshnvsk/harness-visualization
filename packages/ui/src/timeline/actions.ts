@@ -748,6 +748,14 @@ function describeModelRequest(event: EventOfType<'model_request'>): ExchangeStar
         what: 'Судья оценивает claim ответа',
         detail: 'служебный запрос харнесса, не шаг агента',
       };
+    case 'evalJudge':
+      return {
+        ...base,
+        group: 'judge',
+        out: 'вопрос судье',
+        what: 'Судья evals сверяет ответ с рубрикой задачи',
+        detail: 'служебный запрос харнесса, не шаг агента',
+      };
     case 'compaction':
       // Сводку заказывает часть «Контекст и prompt» — через тот же клиент модели, что у цикла.
       return {

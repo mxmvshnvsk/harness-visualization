@@ -1,0 +1,124 @@
+{
+  "name": "kedr",
+  "description": "Вопросы сотрудников «Кедр Софт» к базе знаний — из уроков стенда, на которых агент ошибался или вёл себя по-разному",
+  "tasks": [
+    {
+      "id": "vacation-days",
+      "question": "сколько дней можно отдыхать в году",
+      "origin": "урок 1: перефразирование — в вопросе нет слова «отпуск»",
+      "checks": [
+        { "kind": "answerIncludes", "anyOf": ["28"] },
+        { "kind": "documentSeen", "document": "regulations/vacation" },
+        { "kind": "maxModelRequests", "value": 6 }
+      ]
+    },
+    {
+      "id": "remote-days",
+      "question": "удалённая работа количество дней в неделю",
+      "origin": "урок 7: свежий регламент против старого FAQ",
+      "checks": [
+        { "kind": "answerIncludes", "anyOf": ["трёх", "три дня", "3 дня", "3 дн"] },
+        { "kind": "documentSeen", "document": "regulations/remoteWork" },
+        {
+          "kind": "judge",
+          "rubric": "Ответ называет до трёх дней удалённой работы в неделю как действующее правило. Если ответ упоминает два дня, он говорит, что это устаревшие сведения (например, из FAQ), а не действующее правило."
+        }
+      ]
+    },
+    {
+      "id": "remote-short",
+      "question": "удалёнка",
+      "origin": "урок 3: короткий вопрос, подмешанное якорит поиск модели",
+      "checks": [
+        { "kind": "documentSeen", "document": "regulations/remoteWork" },
+        {
+          "kind": "judge",
+          "rubric": "Ответ сообщает, что удалённо можно работать до трёх дней в неделю, и предупреждает о расхождении с более старыми сведениями о двух днях."
+        }
+      ]
+    },
+    {
+      "id": "sick-pay",
+      "question": "сколько платят, если сидишь дома с температурой",
+      "origin": "урок 5: трудный вопрос, ни один способ поиска не берёт его словами пользователя",
+      "checks": [
+        { "kind": "documentSeen", "document": "regulations/sickLeave" },
+        { "kind": "answerIncludes", "anyOf": ["10 дней", "10 первых", "первых 10", "десяти"] },
+        { "kind": "answerIncludes", "anyOf": ["три дня", "3 дня", "трёх дней", "первые три"] }
+      ]
+    },
+    {
+      "id": "probation",
+      "question": "испытательный срок",
+      "origin": "набор сравнения поиска (этап 5.2)",
+      "checks": [
+        { "kind": "answerIncludes", "anyOf": ["три месяца", "3 месяца", "трёх месяцев"] },
+        { "kind": "documentSeen", "document": "regulations/onboarding" }
+      ]
+    },
+    {
+      "id": "ios-owner",
+      "question": "кто отвечает за мобилку под айфон",
+      "origin": "урок 1: жаргон — «мобилка», «айфон» вместо iOS",
+      "checks": [
+        { "kind": "answerIncludes", "anyOf": ["Волков"] },
+        { "kind": "documentSeen", "document": "team/contacts" }
+      ]
+    },
+    {
+      "id": "per-diem-abroad",
+      "question": "какие суточные в командировке за рубежом",
+      "origin": "регламент о командировках: короткая копия в рабочей папке против полной в базе",
+      "checks": [{ "kind": "answerIncludes", "anyOf": ["50 евро", "50 €", "€50", "50 EUR"] }]
+    },
+    {
+      "id": "vacation-carryover",
+      "question": "сколько неиспользованных дней отпуска переносится на следующий год",
+      "origin": "регламент об отпусках, п. 3.2 — есть в базе, нет в FAQ",
+      "checks": [
+        { "kind": "answerIncludes", "anyOf": ["14"] },
+        { "kind": "documentSeen", "document": "regulations/vacation" }
+      ]
+    },
+    {
+      "id": "health-day",
+      "question": "можно ли не выйти на работу без больничного, если плохо себя чувствую",
+      "origin": "регламент о больничном, п. 4 — «день здоровья»",
+      "checks": [
+        { "kind": "answerIncludes", "anyOf": ["день здоровья", "дня здоровья", "дни здоровья"] },
+        { "kind": "answerIncludes", "anyOf": ["трёх", "три", "3"] }
+      ]
+    },
+    {
+      "id": "purchase-approval",
+      "question": "кто согласует покупку монитора за 100 000 рублей",
+      "origin": "регламент о расходах, п. 5 — порог между руководителем и финансовым отделом",
+      "checks": [
+        { "kind": "answerIncludes", "anyOf": ["финансов"] },
+        { "kind": "documentSeen", "document": "regulations/expenses" }
+      ]
+    },
+    {
+      "id": "colleagues-vacations",
+      "question": "найди информацию об отпусках моих коллег",
+      "origin": "трейс 19b7e04d: данных о людях в базе нет — нельзя выдумывать",
+      "checks": [
+        { "kind": "toolNotCalled", "tool": "write_file" },
+        {
+          "kind": "judge",
+          "rubric": "Ответ прямо говорит, что сведений о том, кто из коллег когда в отпуске, нет, и не приводит выдуманных дат или графиков отпусков конкретных людей. Может рассказать общие правила отпусков или куда обратиться."
+        }
+      ]
+    },
+    {
+      "id": "off-topic-math",
+      "question": "сколько будет 17 умножить на 23",
+      "origin": "вопрос не про базу: искать не нужно",
+      "checks": [
+        { "kind": "answerIncludes", "anyOf": ["391"] },
+        { "kind": "maxToolCalls", "value": 0, "label": "не искал в базе и не звал тулы" },
+        { "kind": "maxModelRequests", "value": 2 }
+      ]
+    }
+  ]
+}

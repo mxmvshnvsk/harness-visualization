@@ -406,6 +406,9 @@ function describeModelRequest(event: EventOfType<'model_request'>): string[] {
       ...describeBudget(event.budget),
     ];
   }
+  if (event.purpose === 'evalJudge') {
+    return [styleText('cyan', `Харнесс → модель (судья evals: ответ против рубрики): ${target}`)];
+  }
   if (event.purpose === 'groundingJudge') {
     return [styleText('cyan', `Харнесс → модель (судья: оценить claim, без тулов): ${target}`)];
   }

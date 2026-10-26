@@ -215,7 +215,13 @@ export interface PromptAssembledPayload {
 // переформулировать вопрос пользователя в поисковый запрос (retrieval rewrite)
 // или оценить claim ответа как судья (check-grounding --judge, этап 5b.3).
 // compaction — сжать прошлые ходы диалога в сводку (этап 6.5).
-export type ModelRequestPurpose = 'agentStep' | 'queryRewrite' | 'groundingJudge' | 'compaction';
+export type ModelRequestPurpose =
+  | 'agentStep'
+  | 'queryRewrite'
+  | 'groundingJudge'
+  | 'compaction'
+  // Судья evals (этап 8e): ответ агента против рубрики задачи.
+  | 'evalJudge';
 
 export interface ModelRequestPayload {
   type: 'model_request';
