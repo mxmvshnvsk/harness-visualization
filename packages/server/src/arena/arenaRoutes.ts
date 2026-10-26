@@ -137,7 +137,7 @@ export function registerArenaRoutes(app: FastifyInstance, options: SessionRoutes
   });
 }
 
-// Свободный режим (этап 10.4): проекты в workspace-arena/free и запуск по ним.
+// Свободный режим (этап 10.4): проекты в workspaces/arena/free и запуск по ним.
 function registerFreeRoutes(app: FastifyInstance, options: SessionRoutesOptions): void {
   const { settings } = options.loadedSettings;
   app.get('/api/arena/projects', async (): Promise<FreeProjectsResponse> => ({

@@ -91,9 +91,9 @@
     "charsPerToken": 3.24
   },
   "workspace": {
-    "directory": "workspace",
+    "directory": "workspaces/demo",
     "seedDirectory": "examples/workspace",
-    "blankDirectory": "workspace-blank"
+    "blankDirectory": "workspaces/blank"
   },
   "permissions": {
     "defaultDecision": "ask",

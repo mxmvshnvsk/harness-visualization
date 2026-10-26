@@ -12,7 +12,7 @@ import type { SandboxInfo } from './nodeSandbox.js';
 export interface ArenaSessionInput {
   // null — свободный режим (этап 10.4).
   task: ArenaTaskDetails | null;
-  // Проект свободного режима: имя папки в workspace-arena/free; null — задача «Кедр Софт».
+  // Проект свободного режима: имя папки в workspaces/arena/free; null — задача «Кедр Софт».
   project: string | null;
   // Абсолютный путь копии.
   directory: string;

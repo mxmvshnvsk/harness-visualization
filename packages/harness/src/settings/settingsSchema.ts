@@ -124,7 +124,7 @@ const workspaceSettingsSchema = z.object({
   // Откуда взять файлы, если песочницы ещё нет.
   seedDirectory: z.string().min(1),
   // Песочница сессии без демо-проекта: в начале пустая, документов «Кедр Софт» в ней нет.
-  blankDirectory: z.string().min(1).default('workspace-blank'),
+  blankDirectory: z.string().min(1).default('workspaces/blank'),
 });
 
 // Код-арена (этап 10): заготовленные задачи и копии проектов, в которых работает агент.
@@ -133,7 +133,7 @@ const arenaSettingsSchema = z.object({
   directory: z.string().min(1).default('arena'),
   // Копии проектов для прогонов — вне песочницы демо-проекта, чтобы их не видел агент
   // обычных сессий.
-  workspaceDirectory: z.string().min(1).default('workspace-arena'),
+  workspaceDirectory: z.string().min(1).default('workspaces/arena'),
   testTimeoutSeconds: z.number().int().positive().default(30),
   // Вывод тестов для модели обрезается: длинный stack trace съедает контекст.
   outputMaxCharacters: z.number().int().positive().default(4000),
@@ -462,7 +462,7 @@ export const harnessSettingsSchema = z.object({
   traces: tracesSettingsSchema,
   arena: arenaSettingsSchema.default({
     directory: 'arena',
-    workspaceDirectory: 'workspace-arena',
+    workspaceDirectory: 'workspaces/arena',
     testTimeoutSeconds: 30,
     outputMaxCharacters: 4000,
     contextPreset: 'real',
