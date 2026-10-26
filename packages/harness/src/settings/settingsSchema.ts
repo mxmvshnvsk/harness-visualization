@@ -337,6 +337,9 @@ const pipelineSettingsSchema = z.object({
 const superagentSettingsSchema = z.object({
   // Сколько раз можно вернуть отчёт одного субагента на доработку.
   maxReworks: z.number().int().min(0).max(5).default(1),
+  // Лимит шагов оркестратора — свой, больше, чем у агента: у него каждый шаг — план, поручение
+  // или приёмка, и 10 шагов не хватило (прогон bbd5a21e).
+  maxIterations: z.number().int().min(1).max(50).default(16),
   // Свои тулы оркестратора кроме plan_tasks, delegate_task и review_report: только посмотреть,
   // какие документы есть, — читают исполнители.
   orchestratorTools: z.array(z.string().min(1)).default(['kedr__list_documents']),
@@ -345,6 +348,7 @@ const superagentSettingsSchema = z.object({
 const orchestrationSettingsSchema = z.object({
   superagent: superagentSettingsSchema.default({
     maxReworks: 1,
+    maxIterations: 16,
     orchestratorTools: ['kedr__list_documents'],
   }),
   pipeline: pipelineSettingsSchema.default({
@@ -386,7 +390,7 @@ export const harnessSettingsSchema = z.object({
   skills: skillsSettingsSchema.default({ directory: 'skills', always: [], manual: [] }),
   subagents: subagentsSettingsSchema.default({ enabled: false, parallel: true, agents: {} }),
   orchestration: orchestrationSettingsSchema.default({
-    superagent: { maxReworks: 1, orchestratorTools: ['kedr__list_documents'] },
+    superagent: { maxReworks: 1, maxIterations: 16, orchestratorTools: ['kedr__list_documents'] },
     pipeline: {
       searchTool: null,
       maxDocuments: 3,

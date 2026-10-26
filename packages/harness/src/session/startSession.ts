@@ -416,12 +416,12 @@ function superagentOf(input: SessionInput): SuperagentOptions | null {
   if (orchestrationOf(input) !== 'superagent') {
     return null;
   }
-  const { orchestration, subagents, agent } = input.loadedSettings.settings;
+  const { orchestration, subagents } = input.loadedSettings.settings;
   return {
     settings: orchestration.superagent,
     subagents,
     reasoningEffort: input.reasoningEffort,
-    maxIterations: agent.maxIterations,
+    maxIterations: orchestration.superagent.maxIterations,
   };
 }
 

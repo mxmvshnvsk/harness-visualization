@@ -19,12 +19,22 @@ export const REVIEW_TOOL_NAME = 'review_report';
 // Что оркестратор успел сделать за ход — для итога orchestration_finished.
 export interface SuperagentState {
   runs: Map<string, { run: SubagentRun; taskId: string | null }>;
-  plannedTasks: number;
+  // Задачи плана по названию — чтобы повторный plan_tasks не плодил дубли (прогон bbd5a21e).
+  plan: Map<string, PlannedTask>;
   reworks: number;
 }
 
 export function createSuperagentState(): SuperagentState {
-  return { runs: new Map(), plannedTasks: 0, reworks: 0 };
+  return { runs: new Map(), plan: new Map(), reworks: 0 };
+}
+
+// Название задачи без регистра, пометок в скобках и лишних пробелов: «… (выполнено)» — та же задача.
+function taskKey(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\([^)]*\)/gu, '')
+    .replace(/\s+/gu, ' ')
+    .trim();
 }
 
 export function createSuperagentTools(
@@ -58,8 +68,9 @@ function createPlanTool(
     name: PLAN_TOOL_NAME,
     description: [
       'Записать план: на какие подзадачи разбить задачу пользователя и кому поручить каждую.',
-      'Подзадачи — независимые, чтобы их можно было делать одновременно. План можно уточнить',
-      'новым вызовом. Тул возвращает номера задач — указывай их в delegate_task.',
+      'Подзадачи — независимые, чтобы их можно было делать одновременно. Тул возвращает номера',
+      'задач — указывай их в delegate_task. Чтобы дополнить план, вызови тул ещё раз только с новыми',
+      'задачами: уже поставленные остаются в плане, повторять их не нужно.',
     ].join('\n'),
     argumentsSchema: z.object({
       tasks: z
@@ -77,28 +88,41 @@ function createPlanTool(
     effects: ['delegate'],
     describeAction: ({ tasks }) => `План из ${String(tasks.length)} задач`,
     execute({ tasks }) {
-      const planned: PlannedTask[] = tasks.map((task) => {
-        state.plannedTasks += 1;
-        return {
-          taskId: `task-${String(state.plannedTasks)}`,
+      const known: PlannedTask[] = [];
+      const added: PlannedTask[] = [];
+      for (const task of tasks) {
+        const existing = state.plan.get(taskKey(task.title));
+        if (existing !== undefined) {
+          known.push(existing);
+          continue;
+        }
+        const planned = {
+          taskId: `task-${String(state.plan.size + 1)}`,
           title: task.title,
           agent: task.agent,
         };
-      });
-      dependenciesOf().events.emit({
-        type: 'plan_created',
-        author: 'model',
-        stepId: null,
-        tasks: planned,
-      });
-      return Promise.resolve(
-        [
-          'План записан:',
-          ...planned.map((task) => `${task.taskId} → ${task.agent}: ${task.title}`),
-        ].join('\n'),
-      );
+        state.plan.set(taskKey(task.title), planned);
+        added.push(planned);
+      }
+      if (added.length > 0) {
+        dependenciesOf().events.emit({
+          type: 'plan_created',
+          author: 'model',
+          stepId: null,
+          tasks: added,
+        });
+      }
+      return Promise.resolve(describePlan(added, known));
     },
   });
+}
+
+function describePlan(added: PlannedTask[], known: PlannedTask[]): string {
+  const line = (task: PlannedTask): string => `${task.taskId} → ${task.agent}: ${task.title}`;
+  return [
+    ...(added.length === 0 ? ['Новых задач нет.'] : ['Добавлено в план:', ...added.map(line)]),
+    ...(known.length === 0 ? [] : ['Уже в плане, не добавлены повторно:', ...known.map(line)]),
+  ].join('\n');
 }
 
 function createReviewTool(

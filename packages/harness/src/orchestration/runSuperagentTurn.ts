@@ -63,7 +63,7 @@ export async function runSuperagentTurn(
     const answer = await runAgentLoop(messages, orchestrator, {
       reasoningEffort: options.reasoningEffort,
       maxIterations: options.maxIterations,
-      limitSetting: 'agent.maxIterations',
+      limitSetting: 'orchestration.superagent.maxIterations',
     });
     events.emit({ type: 'assistant_message', text: answer });
     finish('done');

@@ -49,6 +49,7 @@ export async function runAgentLoop(
       dependencies,
       { purpose: 'agentStep', iteration },
     );
+    rejectEmptyReply(reply);
     messages.push(toAssistantMessage(reply));
     if (reply.toolCalls.length === 0 || (last && (reply.text ?? '') !== '')) {
       return reply.text ?? '';
@@ -158,6 +159,21 @@ async function compact(
 }
 
 // Ответ модели становится частью истории — вместе с рассуждениями и просьбами вызвать тулы.
+// Ни текста, ни тулов — это не ответ, а сбой. Так бывает, когда рассуждение съедает весь лимит
+// ответа (finish_reason: length, прогон bbd5a21e). Пустое сообщение в историю не кладём:
+// следующий запрос с ним DeepSeek отклоняет ошибкой 400.
+function rejectEmptyReply(reply: ModelReply): void {
+  if (reply.toolCalls.length > 0 || (reply.text ?? '') !== '') {
+    return;
+  }
+  throw new Error(
+    reply.finishReason === 'length'
+      ? 'Модель не дописала ответ: рассуждение заняло весь лимит длины ответа ' +
+          '(model.maxOutputTokens в harness.config.json)'
+      : `Модель вернула пустой ответ (finish_reason: ${reply.finishReason})`,
+  );
+}
+
 function toAssistantMessage(reply: ModelReply): AssistantMessage {
   return {
     role: 'assistant',
