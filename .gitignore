@@ -148,6 +148,9 @@ vite.config.ts.timestamp-*
 # Turbo Repo
 .turbo
 
+# macOS: служебные файлы Finder
+.DS_Store
+
 # Harness Visualization
 # Шаблон с пустыми ключами хранится в репозитории
 !.env.example
