@@ -1,13 +1,14 @@
-// Что можно открыть: сессии этого запуска сервера и записанные трейсы из traces/.
+// Что можно открыть: сессии этого запуска сервера и записанные трейсы из traces/; примеры
+// из репозитория (examples/traces) — отдельно, в раскрывашке под своими трейсами.
 
 import type { SessionSummary, TraceSummary } from '@harness-visualization/server';
-import type { ReactElement, ReactNode } from 'react';
+import { useState, type ReactElement, type ReactNode } from 'react';
 import type { Selection } from '../app/useSelection';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { plural } from '../text/plural';
 import styles from './SourceList.module.css';
-import { nestBranches } from '../projections/branchTree';
+import { nestBranches, type BranchNode } from '../projections/branchTree';
 import { ImportTrace } from './ImportTrace';
 
 interface SourceSectionProps {
@@ -83,6 +84,27 @@ interface TraceListProps {
 
 export function TraceList(props: TraceListProps): ReactElement {
   const { traces, selection, onSelect } = props;
+  const own = traces.filter((trace) => !trace.example);
+  const examples = traces.filter((trace) => trace.example);
+  const exampleFiles = new Set(examples.map((trace) => trace.file));
+  const selectedFile = selection?.kind === 'trace' ? selection.file : null;
+  const [examplesOpen, toggleExamples] = useExamplesOpen(
+    own.length > 0,
+    selectedFile !== null && exampleFiles.has(selectedFile) ? selectedFile : null,
+  );
+  const row = (node: BranchNode): ReactElement => (
+    <TraceRow
+      key={node.trace.file}
+      node={node}
+      current={selectedFile === node.trace.file}
+      fromExample={
+        !node.trace.example &&
+        node.trace.branch !== null &&
+        exampleFiles.has(node.trace.branch.sourceFile)
+      }
+      onSelect={onSelect}
+    />
+  );
   return (
     <SourceSection
       title="Трейсы"
@@ -97,37 +119,136 @@ export function TraceList(props: TraceListProps): ReactElement {
         />
       }
     >
-      {nestBranches(traces).map(({ trace, depth }) => (
-        // Ветки (этап 9) — под исходной сессией, с отступом.
-        <li
-          key={trace.file}
-          style={depth > 0 ? { paddingLeft: `${String(depth * 18)}px` } : undefined}
-        >
-          <button
-            type="button"
-            className={styles.item}
-            aria-current={selection?.kind === 'trace' && selection.file === trace.file}
-            onClick={() => {
-              onSelect({ kind: 'trace', file: trace.file });
-            }}
-          >
-            <span className={styles.itemTitle}>
-              {trace.synthetic && <Badge tone="error">синтетический</Badge>}
-              {trace.kind !== 'session' && <Badge tone="judge">{trace.kind}</Badge>}
-              {trace.branch !== null && <Badge>⑂ шаг {trace.branch.step}</Badge>}
-              {trace.example && <Badge>пример</Badge>}
-              {trace.importedFrom !== null && <Badge tone="judge">{trace.importedFrom}</Badge>}
-              {trace.title ?? trace.file}
-            </span>
-            <span className={styles.meta}>
-              {formatDate(trace.startedAt)} · {countEvents(trace.eventCount)} ·{' '}
-              {describeTraceState(trace)}
-            </span>
-          </button>
+      {own.length === 0 && (
+        <li className={styles.empty}>
+          Своих трейсов пока нет — задайте вопрос агенту или откройте пример ниже.
         </li>
-      ))}
+      )}
+      {nestBranches(own).map(row)}
+      {examples.length > 0 && (
+        <ExamplesGroup
+          count={examples.length}
+          open={examplesOpen}
+          onToggle={toggleExamples}
+          rows={nestBranches(examples).map(row)}
+        />
+      )}
     </SourceSection>
   );
+}
+
+interface ExamplesGroupProps {
+  count: number;
+  open: boolean;
+  onToggle: (open: boolean) => void;
+  rows: ReactElement[];
+}
+
+// Примеры из репозитория (examples/traces) — отдельно от своих, свёрнуты, пока свои есть.
+function ExamplesGroup({ count, open, onToggle, rows }: ExamplesGroupProps): ReactElement {
+  return (
+    <li className={styles.examples}>
+      <details
+        open={open}
+        onToggle={(event) => {
+          onToggle(event.currentTarget.open);
+        }}
+      >
+        <summary className={styles.examplesSummary}>
+          <span className={styles.chevron} aria-hidden="true">
+            ▸
+          </span>
+          <span className={styles.examplesTitle}>Примеры из репозитория</span>
+          <span className={styles.count}>{count}</span>
+          {!open && <span className={styles.examplesHint}>открываются без ключа</span>}
+        </summary>
+        <ul className={styles.examplesList}>{rows}</ul>
+      </details>
+    </li>
+  );
+}
+
+interface TraceRowProps {
+  node: BranchNode;
+  current: boolean;
+  // Своя ветка от примера: родитель — в раскрывашке примеров, а не над ней.
+  fromExample: boolean;
+  onSelect: (selection: Selection) => void;
+}
+
+function TraceRow({ node, current, fromExample, onSelect }: TraceRowProps): ReactElement {
+  const { trace, depth } = node;
+  return (
+    // Ветки (этап 9) — под исходной сессией, с отступом.
+    <li style={depth > 0 ? { paddingLeft: `${String(depth * 18)}px` } : undefined}>
+      <button
+        type="button"
+        className={styles.item}
+        aria-current={current}
+        onClick={() => {
+          onSelect({ kind: 'trace', file: trace.file });
+        }}
+      >
+        <span className={styles.itemTitle}>
+          {trace.synthetic && <Badge tone="error">синтетический</Badge>}
+          {trace.kind !== 'session' && <Badge tone="judge">{trace.kind}</Badge>}
+          {trace.branch !== null && (
+            <Badge>
+              {fromExample ? '⑂ от примера, шаг' : '⑂ шаг'} {trace.branch.step}
+            </Badge>
+          )}
+          {trace.importedFrom !== null && <Badge tone="judge">{trace.importedFrom}</Badge>}
+          {trace.title ?? trace.file}
+        </span>
+        <span className={styles.meta}>
+          {formatDate(trace.startedAt)} · {countEvents(trace.eventCount)} ·{' '}
+          {describeTraceState(trace)}
+        </span>
+      </button>
+    </li>
+  );
+}
+
+const EXAMPLES_OPEN_KEY = 'hv-examples-open';
+
+// Раскрыты ли примеры. По умолчанию — только если своих трейсов нет: новичку есть что открыть.
+// Раскрыли или свернули руками — запоминаем в браузере. Выбран пример (из адреса, из дерева
+// веток) — раскрываем, чтобы выбранный был виден; это не запоминается.
+function useExamplesOpen(
+  hasOwn: boolean,
+  selectedExample: string | null,
+): [boolean, (open: boolean) => void] {
+  const [stored, setStored] = useState<boolean | null>(readExamplesOpen);
+  const [revealed, setRevealed] = useState<string | null>(null);
+  if (selectedExample !== null && selectedExample !== revealed) {
+    setRevealed(selectedExample);
+    setStored(true);
+  }
+  const open = stored ?? !hasOwn;
+  const toggle = (next: boolean): void => {
+    if (next !== open) {
+      setStored(next);
+      writeExamplesOpen(next);
+    }
+  };
+  return [open, toggle];
+}
+
+function readExamplesOpen(): boolean | null {
+  try {
+    const value = window.localStorage.getItem(EXAMPLES_OPEN_KEY);
+    return value === null ? null : value === 'true';
+  } catch {
+    return null;
+  }
+}
+
+function writeExamplesOpen(open: boolean): void {
+  try {
+    window.localStorage.setItem(EXAMPLES_OPEN_KEY, String(open));
+  } catch {
+    // Хранилище недоступно (приватное окно) — просто не запоминаем.
+  }
 }
 
 export function countEvents(count: number): string {
