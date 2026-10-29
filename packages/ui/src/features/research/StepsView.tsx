@@ -11,6 +11,7 @@ import { projectResearch, type ResearchStep } from '../../projections/projectRes
 import { timeAt, type Schedule } from '../../timeline/schedule';
 import type { TimelineClock } from '../../timeline/TimelineClock';
 import { StepContext } from './StepContext';
+import { StepExplain } from './StepExplain';
 import { StepRaw } from './StepRaw';
 import { StepResponse } from './StepResponse';
 import { StepsTable } from './StepsTable';
@@ -38,11 +39,12 @@ export function StepsView(props: StepsViewProps): ReactElement {
   const { events, shown, clock, schedule } = props;
   const focus = props.focus ?? null;
   const highlight = focus?.toolCallId ?? null;
-  const view = useMemo(() => projectResearch(events, shown), [events, shown]);
-  // null — следовать за повтором: открыт последний показанный запрос.
+  // Вся запись, а не до плеера: перемотка не прячет шаги (мокап 29.10.2026).
+  const view = useMemo(() => projectResearch(events, events.length), [events]);
+  // null — следовать за повтором: открыт последний запрос, до которого дошёл плеер.
   const [picked, setPicked] = useState<number | null>(() => stepOfFocus(view.steps, focus));
   const [tab, setTab] = useState<Tab>(highlight === null ? 'context' : 'response');
-  const selected = Math.min(picked ?? view.steps.length - 1, view.steps.length - 1);
+  const selected = Math.min(picked ?? reachedStep(view.steps, shown), view.steps.length - 1);
   useStepKeys(view.steps.length, selected, setPicked, setTab);
   const step = view.steps[selected];
   if (step === undefined) {
@@ -52,9 +54,12 @@ export function StepsView(props: StepsViewProps): ReactElement {
     <div className={styles.layout}>
       <StepsTable
         view={view}
+        cursor={shown}
         selected={selected}
         onSelect={setPicked}
         onSeek={(index) => {
+          // Перемотка к событию не меняет открытый шаг — он остаётся, каким был.
+          setPicked(selected);
           clock.seek(timeAt(schedule, offsetOf(events, index)));
         }}
       />
@@ -69,12 +74,54 @@ export function StepsView(props: StepsViewProps): ReactElement {
             onChange={setTab}
           />
         </div>
-        {tab === 'context' && <StepContext step={step} steps={view.steps} />}
-        {tab === 'request' && <StepRaw step={step} side="request" />}
-        {tab === 'response' && <StepResponse step={step} highlight={highlight} />}
+        <StepTab
+          tab={tab}
+          step={step}
+          steps={view.steps}
+          startedAt={startOf(events)}
+          highlight={highlight}
+        />
       </section>
     </div>
   );
+}
+
+interface StepTabProps {
+  tab: Tab;
+  step: ResearchStep;
+  steps: readonly ResearchStep[];
+  startedAt: number;
+  highlight: string | null;
+}
+
+// Содержимое вкладки; над сырым запросом и ответом — плашка «что это».
+function StepTab({ tab, step, steps, startedAt, highlight }: StepTabProps): ReactElement {
+  if (tab === 'context') {
+    return <StepContext step={step} steps={steps} />;
+  }
+  return (
+    <>
+      <StepExplain step={step} side={tab} startedAt={startedAt} />
+      {tab === 'request' ? (
+        <StepRaw step={step} side="request" />
+      ) : (
+        <StepResponse step={step} highlight={highlight} />
+      )}
+    </>
+  );
+}
+
+// Последний запрос, до которого дошёл плеер; плеер ещё до первого — первый.
+function reachedStep(steps: readonly ResearchStep[], shown: number): number {
+  return Math.max(
+    0,
+    steps.findLastIndex((step) => step.index < shown),
+  );
+}
+
+function startOf(events: readonly HarnessEvent[]): number {
+  const first = events[0];
+  return first === undefined ? 0 : Date.parse(first.timestamp);
 }
 
 // timeAt ждёт мс от начала сессии, а таблица отдаёт номер события — переводим по его времени.

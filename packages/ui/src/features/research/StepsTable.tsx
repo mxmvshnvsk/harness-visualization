@@ -1,5 +1,7 @@
 // Таблица запросов к модели: input, доля кэша, output, время; между запросами — события
 // харнесса мелким шрифтом (клик — перемотка плеера к событию). Сверху — input по запросам.
+// Таблица — по всей записи (мокап, одобренный 29.10.2026): перемотка не прячет шаги, а ставит
+// отметку «плеер здесь»; то, что после неё, — бледнее, но открывается.
 
 import { Fragment, type ReactElement } from 'react';
 import type { ResearchNote, ResearchStep, ResearchView } from '../../projections/projectResearch';
@@ -8,12 +10,16 @@ import styles from './Research.module.css';
 
 interface StepsTableProps {
   view: ResearchView;
+  // Сколько событий показал плеер: всё с номером не меньше — «впереди».
+  cursor: number;
   selected: number;
   onSelect: (index: number) => void;
   onSeek: (eventIndex: number) => void;
 }
 
-export function StepsTable({ view, selected, onSelect, onSeek }: StepsTableProps): ReactElement {
+export function StepsTable(props: StepsTableProps): ReactElement {
+  const { view, selected, onSelect, onSeek, cursor } = props;
+  const place = { cursor, marker: firstAhead(view, cursor) };
   return (
     <section className={styles.panel}>
       <InputBars steps={view.steps} selected={selected} onSelect={onSelect} />
@@ -30,15 +36,17 @@ export function StepsTable({ view, selected, onSelect, onSeek }: StepsTableProps
             </tr>
           </thead>
           <tbody>
-            <Notes notes={view.before} onSeek={onSeek} />
+            <Notes notes={view.before} place={place} onSeek={onSeek} />
             {view.steps.map((step, index) => (
               <Fragment key={step.request.requestId}>
+                {step.index === place.marker && <CursorRow />}
                 <StepRow
                   step={step}
+                  ahead={step.index >= cursor}
                   selected={index === selected}
                   onSelect={() => onSelect(index)}
                 />
-                <Notes notes={step.notes} onSeek={onSeek} />
+                <Notes notes={step.notes} place={place} onSeek={onSeek} />
               </Fragment>
             ))}
           </tbody>
@@ -52,15 +60,41 @@ export function StepsTable({ view, selected, onSelect, onSeek }: StepsTableProps
   );
 }
 
+// Первое событие впереди плеера — перед ним отметка; undefined — плеер в конце записи.
+function firstAhead(view: ResearchView, cursor: number): number | undefined {
+  const indexes = [
+    ...view.before.map((note) => note.index),
+    ...view.steps.flatMap((step) => [step.index, ...step.notes.map((note) => note.index)]),
+  ];
+  const ahead = indexes.filter((index) => index >= cursor);
+  return ahead.length === 0 ? undefined : Math.min(...ahead);
+}
+
+function CursorRow(): ReactElement {
+  return (
+    <tr className={styles.cursorRow}>
+      <td colSpan={6}>
+        <span>плеер здесь</span>
+      </td>
+    </tr>
+  );
+}
+
+interface Place {
+  cursor: number;
+  marker: number | undefined;
+}
+
 function StepRow(props: {
   step: ResearchStep;
+  ahead: boolean;
   selected: boolean;
   onSelect: () => void;
 }): ReactElement {
   const { step } = props;
   const tools = step.response?.reply.toolCalls.map((call) => call.name) ?? [];
   return (
-    <tr className={styles.stepRow} aria-selected={props.selected}>
+    <tr className={styles.stepRow} aria-selected={props.selected} data-ahead={props.ahead}>
       <td>{step.number}</td>
       <td>
         <button type="button" className={styles.stepButton} onClick={props.onSelect}>
@@ -104,23 +138,32 @@ function summarizeTools(names: readonly string[]): string {
 
 function Notes(props: {
   notes: readonly ResearchNote[];
+  place: Place;
   onSeek: (index: number) => void;
 }): ReactElement {
+  const { place } = props;
   return (
     <>
       {props.notes.map((note) => (
-        <tr key={note.index} className={styles.noteRow} data-type={note.type}>
-          <td />
-          <td colSpan={5}>
-            <button
-              type="button"
-              className={styles.noteButton}
-              onClick={() => props.onSeek(note.index)}
-            >
-              {note.text}
-            </button>
-          </td>
-        </tr>
+        <Fragment key={note.index}>
+          {note.index === place.marker && <CursorRow />}
+          <tr
+            className={styles.noteRow}
+            data-type={note.type}
+            data-ahead={note.index >= place.cursor}
+          >
+            <td />
+            <td colSpan={5}>
+              <button
+                type="button"
+                className={styles.noteButton}
+                onClick={() => props.onSeek(note.index)}
+              >
+                {note.text}
+              </button>
+            </td>
+          </tr>
+        </Fragment>
       ))}
     </>
   );
