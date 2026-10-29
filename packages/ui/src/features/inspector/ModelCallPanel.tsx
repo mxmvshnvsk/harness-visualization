@@ -14,7 +14,7 @@ import { MessageList } from './MessageList';
 import { ReplyTokens } from '../tokens/ReplyTokens';
 import { HelpButton, Term } from '../../help/HelpLinks';
 import { ChainLinks } from '../ChainLinks';
-import { formatRu } from '../../text/formatNumber';
+import { formatFixed, formatRu } from '../../text/formatNumber';
 
 interface ModelCallPanelProps {
   call: ModelCall;
@@ -95,7 +95,7 @@ function CallStats({ response, share }: CallStatsProps): ReactElement {
         note={
           cost === null
             ? 'цена неизвестна'
-            : `${cost.total.toFixed(6)} ${cost.currency} · ${cost.tariffName}`
+            : `${formatFixed(cost.total, 6)} ${cost.currency} · ${cost.tariffName}`
         }
       />
     </div>

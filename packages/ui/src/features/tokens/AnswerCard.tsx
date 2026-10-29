@@ -12,6 +12,7 @@ import {
 } from '../../projections/projectTokenLab';
 import labStyles from '../rag/RagLab.module.css';
 import styles from './TokenLab.module.css';
+import { formatFixed } from '../../text/formatNumber';
 
 export function formatProbability(probability: number): string {
   if (probability >= 0.995) {
@@ -20,7 +21,7 @@ export function formatProbability(probability: number): string {
   if (probability > 0 && probability < 0.001) {
     return '<0.1 %';
   }
-  return `${(probability * 100).toFixed(probability < 0.1 ? 1 : 0)} %`;
+  return `${formatFixed(probability * 100, probability < 0.1 ? 1 : 0)} %`;
 }
 
 // Пробел — часть токена; показываем его точкой, иначе токен « Т» не отличить от «Т».

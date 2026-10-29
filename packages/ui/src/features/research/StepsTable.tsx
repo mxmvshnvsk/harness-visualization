@@ -7,6 +7,7 @@ import { Fragment, type ReactElement } from 'react';
 import type { ResearchNote, ResearchStep, ResearchView } from '../../projections/projectResearch';
 import { formatNumber, percent } from './StepsView';
 import styles from './Research.module.css';
+import { formatFixed } from '../../text/formatNumber';
 
 interface StepsTableProps {
   view: ResearchView;
@@ -121,7 +122,7 @@ function usageCells(step: ResearchStep): string[] {
     formatNumber(usage.inputTokens),
     percent(usage.inputCacheHitTokens, usage.inputTokens),
     formatNumber(usage.outputTokens),
-    (step.response.durationMs / 1000).toFixed(1),
+    formatFixed(step.response.durationMs / 1000, 1),
   ];
 }
 

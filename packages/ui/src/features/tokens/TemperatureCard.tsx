@@ -15,6 +15,7 @@ import {
 import labStyles from '../rag/RagLab.module.css';
 import { OptionBars, showToken } from './AnswerCard';
 import styles from './TokenLab.module.css';
+import { formatFixed } from '../../text/formatNumber';
 
 export function TemperatureCard({ view }: { view: TokenLabView }): ReactElement {
   const answers = [...view.answers].sort(
@@ -205,7 +206,7 @@ function Slider(props: {
         value={props.value}
         onChange={(event) => props.onChange(Number(event.target.value))}
       />
-      <output>{props.value.toFixed(2)}</output>
+      <output>{formatFixed(props.value, 2)}</output>
     </label>
   );
 }

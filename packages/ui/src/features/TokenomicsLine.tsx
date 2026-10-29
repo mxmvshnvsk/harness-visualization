@@ -6,7 +6,7 @@ import { Term } from '../help/HelpLinks';
 import type { SessionTotals } from '../projections/sessionView';
 import { plural } from '../text/plural';
 import styles from './TokenomicsLine.module.css';
-import { formatRu } from '../text/formatNumber';
+import { formatFixed, formatRu } from '../text/formatNumber';
 
 const REQUESTS = { one: 'запрос', few: 'запроса', many: 'запросов' };
 
@@ -53,13 +53,13 @@ function Duration({ totals }: { totals: SessionTotals }): ReactElement {
 }
 
 function describeCosts(totals: SessionTotals): string {
-  const parts = totals.modelCosts.map((cost) => `${cost.total.toFixed(6)} ${cost.currency}`);
+  const parts = totals.modelCosts.map((cost) => `${formatFixed(cost.total, 6)} ${cost.currency}`);
   if (totals.unpricedModelRequests > 0) {
     parts.push(`цена неизвестна: ${plural(totals.unpricedModelRequests, REQUESTS)}`);
   }
   for (const tool of totals.toolCosts) {
     parts.push(
-      `${tool.toolName} ×${String(tool.calls)}: ${String(Number(tool.total.toFixed(3)))} ${tool.currency}`,
+      `${tool.toolName} ×${String(tool.calls)}: ${formatRu(Number(tool.total.toFixed(3)))} ${tool.currency}`,
     );
   }
   return parts.length === 0 ? 'стоимость: 0' : parts.join(' · ');

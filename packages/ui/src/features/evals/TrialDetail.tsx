@@ -8,6 +8,7 @@ import { MarkdownView } from '../../help/MarkdownView';
 import labStyles from '../rag/RagLab.module.css';
 import { CheckTag, graderOf } from './EvalTasks';
 import styles from './Evals.module.css';
+import { formatFixed } from '../../text/formatNumber';
 
 export interface CellRef {
   taskId: string;
@@ -48,7 +49,7 @@ export function TrialDetail(props: {
   }
   const outcome = resultOf(trial.passed);
   const traceFile = trial.tracePath.split('/').at(-1) ?? trial.tracePath;
-  const cost = trial.costUsd === null ? 'цена неизвестна' : `${trial.costUsd.toFixed(6)} USD`;
+  const cost = trial.costUsd === null ? 'цена неизвестна' : `${formatFixed(trial.costUsd, 6)} USD`;
   return (
     <section className={labStyles.card}>
       <span className={styles.eyebrow}>Попытка крупно</span>
@@ -60,7 +61,7 @@ export function TrialDetail(props: {
           <span className={`${styles.small} ${styles.muted}`}>
             {trial.failed ? 'Сессия оборвалась ошибкой. ' : ''}
             {trial.modelRequests} запр. к модели · {trial.toolCalls} вызовов тулов · {cost} ·{' '}
-            {(trial.durationMs / 1000).toFixed(1)} с
+            {formatFixed(trial.durationMs / 1000, 1)} с
             {trial.cacheWarm ? ' · кэш прогрет чужой сессией' : ''}
           </span>
           <div className={styles.answer}>

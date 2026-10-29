@@ -17,6 +17,7 @@ import { SuiteTag } from './EvalTasks';
 import { PassAtHint, PassHatHint, PassRateHint } from './PassHints';
 import { resultOf, RESULT_MARKS, TrialDetail, type CellRef } from './TrialDetail';
 import { useEvalReport } from './useEvals';
+import { formatFixed } from '../../text/formatNumber';
 
 interface EvalRunProps {
   reports: EvalReportSummary[];
@@ -213,8 +214,10 @@ function ConfigTotals({ report }: { report: EvalReport }): ReactElement {
             </div>
             <SuiteLines report={report} config={config.name} />
             <span className={`${styles.small} ${styles.muted}`}>
-              {summary.costUsd === null ? 'цена неизвестна' : `${summary.costUsd.toFixed(4)} USD`}{' '}
-              всего · медиана {(summary.medianDurationMs / 1000).toFixed(1)} с и{' '}
+              {summary.costUsd === null
+                ? 'цена неизвестна'
+                : `${formatFixed(summary.costUsd, 4)} USD`}{' '}
+              всего · медиана {formatFixed(summary.medianDurationMs / 1000, 1)} с и{' '}
               {summary.medianModelRequests} запр. на попытку
             </span>
           </div>

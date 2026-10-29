@@ -16,6 +16,7 @@ import { PassHatHint, PassRateHint } from './PassHints';
 import styles from './Evals.module.css';
 import { resultOf, RESULT_MARKS } from './TrialDetail';
 import { useEvalReport } from './useEvals';
+import { formatFixed } from '../../text/formatNumber';
 
 const CHANGE_WORDS = {
   better: 'позеленело',
@@ -134,7 +135,7 @@ function ConfigShift(props: {
   configs: string[];
 }): ReactElement {
   const percent = (share: number): string => `${String(Math.round(share * 100))} %`;
-  const cost = (value: number | null): string => (value === null ? '?' : value.toFixed(4));
+  const cost = (value: number | null): string => (value === null ? '?' : formatFixed(value, 4));
   return (
     <div className={styles.totals}>
       {props.configs.map((config) => {
@@ -150,8 +151,8 @@ function ConfigShift(props: {
             </span>
             <span className={`${styles.small} ${styles.muted}`}>
               {cost(was.costUsd)} → {cost(now.costUsd)} USD всего · медиана{' '}
-              {(was.medianDurationMs / 1000).toFixed(1)} →{' '}
-              {(now.medianDurationMs / 1000).toFixed(1)} с
+              {formatFixed(was.medianDurationMs / 1000, 1)} →{' '}
+              {formatFixed(now.medianDurationMs / 1000, 1)} с
             </span>
           </div>
         );

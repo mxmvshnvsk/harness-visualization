@@ -9,6 +9,7 @@ import { Segmented } from '../components/Segmented';
 import { AgentChip } from './agents/AgentChip';
 import { useAgentLabels } from './agents/agentLabels';
 import styles from './EventList.module.css';
+import { formatFixed } from '../text/formatNumber';
 
 interface EventListProps {
   events: HarnessEvent[];
@@ -83,7 +84,7 @@ function EventRow({ event, startedAt }: EventRowProps): ReactElement {
     >
       <summary className={styles.summary}>
         <span className={styles.number}>{event.sequence}</span>
-        <span className={styles.time}>+{offsetSeconds.toFixed(2)} с</span>
+        <span className={styles.time}>+{formatFixed(offsetSeconds, 2)} с</span>
         <span className={styles.type}>
           {event.type} <AgentChip agentId={event.agentId} />
         </span>

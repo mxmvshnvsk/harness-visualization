@@ -16,7 +16,7 @@ import { StepRaw } from './StepRaw';
 import { StepResponse } from './StepResponse';
 import { StepsTable } from './StepsTable';
 import styles from './Research.module.css';
-import { formatRu } from '../../text/formatNumber';
+import { formatFixed, formatRu } from '../../text/formatNumber';
 
 const TABS = [
   { value: 'context', label: 'Контекст' },
@@ -172,7 +172,7 @@ function describeOutcome(step: ResearchStep): string {
     `кэш ${percent(usage.inputCacheHitTokens, usage.inputTokens)}`,
     `${formatNumber(usage.outputTokens)} out`,
     formatSeconds(step.response.durationMs),
-    ...(cost === undefined ? [] : [`$${cost.toFixed(4)}`]),
+    ...(cost === undefined ? [] : [`$${formatFixed(cost, 4)}`]),
   ].join(' · ');
 }
 
@@ -217,5 +217,5 @@ export function percent(part: number, whole: number): string {
 }
 
 export function formatSeconds(ms: number): string {
-  return `${(ms / 1000).toFixed(1)} с`;
+  return `${formatFixed(ms / 1000, 1)} с`;
 }

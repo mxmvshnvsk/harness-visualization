@@ -5,6 +5,7 @@ import type { ResearchStep } from '../../projections/projectResearch';
 import { formatNumber, percent } from './StepsView';
 import { ReplyTokens } from '../tokens/ReplyTokens';
 import styles from './Research.module.css';
+import { formatFixed } from '../../text/formatNumber';
 
 interface StepReplyProps {
   step: ResearchStep;
@@ -98,9 +99,9 @@ function ReplyNumbers(props: { reply: Response['reply']; cost: Response['cost'] 
           <div>
             <dt>цена</dt>
             <dd>
-              {cost.total.toFixed(5)} {cost.currency} = кэш {cost.inputCacheHit.toFixed(5)} + промах{' '}
-              {cost.inputCacheMiss.toFixed(5)} + вывод {cost.output.toFixed(5)} · тариф{' '}
-              {cost.tariffName}
+              {formatFixed(cost.total, 5)} {cost.currency} = кэш{' '}
+              {formatFixed(cost.inputCacheHit, 5)} + промах {formatFixed(cost.inputCacheMiss, 5)} +
+              вывод {formatFixed(cost.output, 5)} · тариф {cost.tariffName}
             </dd>
           </div>
         )}

@@ -14,3 +14,10 @@ export function formatRu(value: number, options?: Intl.NumberFormatOptions): str
   }
   return formatter.format(value);
 }
+
+// Дробное число с фиксированным числом знаков, по-русски — с запятой: «2,7», «0,000397».
+// Заменяет toFixed в тексте для человека; точка остаётся в данных — JSON, адресе, атрибутах SVG и
+// дословных цитатах того, что видела модель.
+export function formatFixed(value: number, digits: number): string {
+  return formatRu(value, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}

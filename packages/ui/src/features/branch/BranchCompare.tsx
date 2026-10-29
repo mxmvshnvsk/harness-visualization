@@ -11,6 +11,7 @@ import { paragraphsOf, uniqueParagraphs, type BranchNode } from '../../projectio
 import { useLoaded } from '../rag/useRagData';
 import { CURRENT, describeNode } from './branchLabels';
 import styles from './Branch.module.css';
+import { formatFixed } from '../../text/formatNumber';
 
 export function BranchCompare(props: {
   family: BranchNode[];
@@ -88,12 +89,12 @@ function OutcomeColumn(props: {
   const { answer } = mine.value;
   const otherAnswer = other.status === 'ready' ? (other.value.answer ?? '') : '';
   const unique = answer === null ? new Set<string>() : uniqueParagraphs(answer, otherAnswer);
-  const cost = mine.value.costUsd === null ? '?' : mine.value.costUsd.toFixed(6);
+  const cost = mine.value.costUsd === null ? '?' : formatFixed(mine.value.costUsd, 6);
   return (
     <div className={styles.column}>
       <span className={styles.numbers}>
         {mine.value.modelRequests} запр. · {mine.value.toolCalls.length} тулов · {cost} USD ·{' '}
-        {(mine.value.workMs / 1000).toFixed(1)} с работы
+        {formatFixed(mine.value.workMs / 1000, 1)} с работы
       </span>
       <div className={styles.answer}>
         {answer === null ? (

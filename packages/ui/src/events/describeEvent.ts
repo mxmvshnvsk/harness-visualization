@@ -4,7 +4,7 @@
 import type { HarnessEvent, HarnessEventType, TokenUsage } from '@harness-visualization/harness';
 import { plural } from '../text/plural';
 import type { EventOfType } from './eventTypes';
-import { formatRu } from '../text/formatNumber';
+import { formatFixed, formatRu } from '../text/formatNumber';
 
 const SKILL_TRIGGERS = {
   always: 'харнесс при старте',
@@ -133,7 +133,7 @@ export function formatNumber(value: number): string {
 }
 
 export function formatMoney(value: number, currency: string): string {
-  return `${value.toFixed(6)} ${currency}`;
+  return `${formatFixed(value, 6)} ${currency}`;
 }
 
 function describeMcpMessage(message: unknown): string {
