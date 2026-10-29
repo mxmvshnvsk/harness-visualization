@@ -195,3 +195,9 @@
   align-items: center;
   gap: 10px;
 }
+
+/* Ссылка на поручение задачи — под кнопкой задачи. */
+.taskLink {
+  display: block;
+  padding: 4px 12px 0;
+}

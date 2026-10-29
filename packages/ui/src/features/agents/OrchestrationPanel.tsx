@@ -14,6 +14,7 @@ import type {
 import type { SubagentRun } from '../../projections/projectSubagents';
 import { formatSeconds } from './agentFormat';
 import agents from './Agents.module.css';
+import { ChainLinks } from '../ChainLinks';
 import styles from './Orchestration.module.css';
 
 const MODES = {
@@ -96,6 +97,20 @@ function Steps({ steps }: { steps: OrchestrationStepView[] }): ReactElement {
   );
 }
 
+// Поручение задачи — вызов delegate_task, которым её выдали; у задачи без поручения ссылки нет.
+function TaskLink({ task }: { task: OrchestrationTask }): ReactElement | null {
+  const run = task.runs[0];
+  return run === undefined ? null : (
+    <span className={styles.taskLink}>
+      <ChainLinks
+        link={{ toolCallId: run.parentToolCallId, query: '' }}
+        inspector
+        inspectorLabel="поручение в инспекторе →"
+      />
+    </span>
+  );
+}
+
 function TaskList(props: {
   tasks: OrchestrationTask[];
   chosen: string | null;
@@ -131,6 +146,7 @@ function TaskList(props: {
               </span>
             )}
           </button>
+          <TaskLink task={task} />
         </li>
       ))}
     </ul>

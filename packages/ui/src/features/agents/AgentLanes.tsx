@@ -1,18 +1,25 @@
 // Дорожки агентов: запросы к модели, тулы и ожидание отчётов — по настоящему времени событий.
-// Наведение или фокус на отрезке — подпись под дорожками: кто, когда и что делал.
+// Наведение или фокус на отрезке — подпись под дорожками: кто, когда и что делал. Щелчок
+// закрепляет подпись и даёт ссылку в инспектор: у главного агента — на этот запрос или вызов,
+// у субагента — на его поручение (внутри субагента инспектор шаги по вызовам не раскрывает).
 // Длинную сессию можно приблизить — как ленту плеера (useLanesZoom.ts).
 
 import { useCallback, useRef, useState, type ReactElement } from 'react';
 import { createStripView, type StripView, type StripWindow } from '../../player/stripWindow';
 import { useViewValue } from '../../player/useViewValue';
 import { formatWindow, ZoomControls } from '../../player/ZoomControls';
+import type { SearchLink } from '../../app/viewLinks';
 import type { AgentLane, AgentSegment, AgentsView } from '../../projections/projectAgents';
+import { ChainLinks } from '../ChainLinks';
 import { formatSeconds } from './agentFormat';
 import styles from './Agents.module.css';
 import { useLanesZoom } from './useLanesZoom';
 
 export function AgentLanes({ view }: { view: AgentsView }): ReactElement {
   const [hovered, setHovered] = useState<string | null>(null);
+  const [pinned, setPinned] = useState<Pinned | null>(null);
+  // Ссылка закреплённого отрезка — пока мышь не над другим отрезком.
+  const pinnedLink = hovered === null ? (pinned?.link ?? null) : null;
   const total = Math.max(view.now, 1);
   const [zoom] = useState(createStripView);
   const lanesRef = useRef<HTMLDivElement>(null);
@@ -27,7 +34,17 @@ export function AgentLanes({ view }: { view: AgentsView }): ReactElement {
       </div>
       <div ref={lanesRef} className={styles.lanes} {...pointer}>
         {view.lanes.map((lane) => (
-          <Lane key={lane.id} lane={lane} total={total} now={view.now} onHover={setHovered} />
+          <Lane
+            key={lane.id}
+            lane={lane}
+            total={total}
+            now={view.now}
+            pinned={pinned}
+            onHover={setHovered}
+            onPin={(index) => {
+              setPinned({ laneId: lane.id, index, link: linkOf(view, lane, lane.segments[index]) });
+            }}
+          />
         ))}
         <div className={styles.axis}>
           <span />
@@ -35,39 +52,92 @@ export function AgentLanes({ view }: { view: AgentsView }): ReactElement {
         </div>
       </div>
       <p className={styles.caption} aria-live="polite">
-        {hovered ?? 'Наведите на отрезок — что в нём происходит.'}
+        {hovered ??
+          pinnedLabel(view, pinned) ??
+          'Наведите на отрезок — что в нём происходит; щелчок — ссылка в инспектор.'}
+        {pinnedLink !== null && (
+          <ChainLinks link={pinnedLink.target} inspector inspectorLabel={pinnedLink.label} />
+        )}
       </p>
-      <div className={styles.legend}>
-        <span>
-          <i data-kind="model" /> запрос к модели
-        </span>
-        <span>
-          <i data-kind="tool" /> тул
-        </span>
-        <span>
-          <i data-kind="wait" /> ждёт отчёта
-        </span>
-        {view.lanes.some((lane) => lane.id === 'steps') && (
-          <span>
-            <i data-kind="step" /> шаг каркаса — его задал код
-          </span>
-        )}
-        {view.hasRework && (
-          <span>
-            <i data-kind="rework" /> доработка после возврата
-          </span>
-        )}
-      </div>
+      <LanesLegend view={view} />
     </section>
   );
 }
 
-function Lane(props: {
+function LanesLegend({ view }: { view: AgentsView }): ReactElement {
+  return (
+    <div className={styles.legend}>
+      <span>
+        <i data-kind="model" /> запрос к модели
+      </span>
+      <span>
+        <i data-kind="tool" /> тул
+      </span>
+      <span>
+        <i data-kind="wait" /> ждёт отчёта
+      </span>
+      {view.lanes.some((lane) => lane.id === 'steps') && (
+        <span>
+          <i data-kind="step" /> шаг каркаса — его задал код
+        </span>
+      )}
+      {view.hasRework && (
+        <span>
+          <i data-kind="rework" /> доработка после возврата
+        </span>
+      )}
+    </div>
+  );
+}
+
+interface Pinned {
+  laneId: string;
+  index: number;
+  link: { target: SearchLink; label: string } | null;
+}
+
+// Куда ведёт отрезок: у главного — сам запрос или вызов, у субагента — его поручение.
+function linkOf(
+  view: AgentsView,
+  lane: AgentLane,
+  segment: AgentSegment | undefined,
+): Pinned['link'] {
+  if (lane.id !== 'main') {
+    const run = view.runs.find((item) => item.subagentId === lane.id);
+    return run === undefined
+      ? null
+      : {
+          target: { toolCallId: run.parentToolCallId, query: '' },
+          label: 'поручение в инспекторе →',
+        };
+  }
+  if (segment?.requestId !== undefined) {
+    return {
+      target: { toolCallId: null, query: '', requestId: segment.requestId },
+      label: 'запрос в инспекторе →',
+    };
+  }
+  return segment?.toolCallId === undefined
+    ? null
+    : { target: { toolCallId: segment.toolCallId, query: '' }, label: 'вызов в инспекторе →' };
+}
+
+function pinnedLabel(view: AgentsView, pinned: Pinned | null): string | null {
+  const lane = view.lanes.find((item) => item.id === pinned?.laneId);
+  const segment = pinned === null ? undefined : lane?.segments[pinned.index];
+  return lane === undefined || segment === undefined ? null : describe(lane, segment, view.now);
+}
+
+interface LaneProps {
   lane: AgentLane;
   total: number;
   now: number;
+  pinned: Pinned | null;
   onHover: (label: string | null) => void;
-}): ReactElement {
+  onPin: (index: number) => void;
+}
+
+function Lane(props: LaneProps): ReactElement {
   const { lane, total, now, onHover } = props;
   return (
     <div className={styles.lane} data-color={lane.color}>
@@ -88,8 +158,15 @@ function Lane(props: {
                 data-rework={segment.rework}
                 style={placement(segment, total, now)}
                 aria-label={label}
+                aria-pressed={props.pinned?.laneId === lane.id && props.pinned.index === index}
+                onClick={() => {
+                  props.onPin(index);
+                }}
                 onPointerEnter={() => {
                   onHover(label);
+                }}
+                onPointerLeave={() => {
+                  onHover(null);
                 }}
                 onFocus={() => {
                   onHover(label);

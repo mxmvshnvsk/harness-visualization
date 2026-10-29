@@ -18,6 +18,9 @@ export interface AgentSegment {
   label: string;
   // Работа после возврата на доработку (этап 6d.2).
   rework: boolean;
+  // Что это было — для ссылки в инспектор: запрос к модели или вызов тула; у шага каркаса — нет.
+  requestId?: string;
+  toolCallId?: string;
 }
 
 export interface AgentCall {
@@ -211,6 +214,7 @@ function openModel(builder: Builder, lane: AgentLane, event: EventOf<'model_requ
     label:
       step === null ? `служебный запрос: ${event.purpose}` : `шаг ${String(step)}: модель думает`,
     rework: builder.reworking.has(lane.id),
+    requestId: event.requestId,
   };
   lane.segments.push(segment);
   builder.open.set(`model:${event.requestId}`, segment);
@@ -270,6 +274,7 @@ function openTool(builder: Builder, lane: AgentLane, event: EventOf<'tool_call'>
       ? (WAITING_LABELS[event.toolName] ?? 'ждёт субагента')
       : `${event.toolName} ${shorten(event.argumentsText)}`,
     rework: builder.reworking.has(lane.id),
+    toolCallId: event.toolCallId,
   };
   lane.segments.push(segment);
   builder.open.set(`tool:${event.toolCallId}`, segment);
