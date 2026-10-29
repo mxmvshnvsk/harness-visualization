@@ -1,6 +1,7 @@
 // Справка из блоков parseMarkdown — обычными элементами React, без innerHTML.
 
 import type { ReactElement } from 'react';
+import { ExternalLink } from '../components/ExternalLink';
 import styles from './Help.module.css';
 import { parseMarkdown, type Block, type Inline } from './parseMarkdown';
 
@@ -49,9 +50,9 @@ function renderInlines(inlines: Inline[]): ReactElement[] {
         );
       case 'link':
         return (
-          <a key={index} href={inline.href} target="_blank" rel="noreferrer noopener">
+          <ExternalLink key={index} href={inline.href}>
             {inline.text}
-          </a>
+          </ExternalLink>
         );
     }
   });

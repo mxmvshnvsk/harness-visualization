@@ -1,6 +1,7 @@
 // «Когда гоняют»: evals — тесты для поведения агента; regression и capability.
 
 import type { ReactElement } from 'react';
+import { ExternalLink } from '../../components/ExternalLink';
 import labStyles from '../rag/RagLab.module.css';
 import { WHEN_STEPS } from './evalContent';
 import styles from './Evals.module.css';
@@ -36,9 +37,9 @@ export function EvalWhen(): ReactElement {
       </div>
       <p className={styles.note} data-teaching>
         Источник терминов и подхода — статья Anthropic{' '}
-        <a href="https://anthropic.com/engineering/demystifying-evals-for-ai-agents">
+        <ExternalLink href="https://anthropic.com/engineering/demystifying-evals-for-ai-agents">
           Demystifying evals for AI agents
-        </a>
+        </ExternalLink>
         : task, trial, grader, transcript, pass@k и pass^k, regression и capability evals.
       </p>
     </section>

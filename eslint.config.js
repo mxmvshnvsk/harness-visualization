@@ -38,6 +38,15 @@ const typeScriptRules = {
   ],
   '@typescript-eslint/explicit-module-boundary-types': 'error',
   '@typescript-eslint/consistent-type-imports': 'error',
+  // describe и it из node:test возвращают обещания, которые ждёт сам раннер тестов.
+  '@typescript-eslint/no-floating-promises': [
+    'error',
+    {
+      allowForKnownSafeCalls: [
+        { from: 'package', package: 'node:test', name: ['describe', 'it', 'test'] },
+      ],
+    },
+  ],
 };
 
 const readabilityRules = {
@@ -82,6 +91,23 @@ export default defineConfig([
     extends: [reactHooks.configs.flat.recommended],
     languageOptions: {
       globals: globals.browser,
+    },
+  },
+
+  // Ссылки: внешние — только ExternalLink (новая вкладка, сессия не прерывается), переходы внутри
+  // приложения — только LabLink. Голый <a> легко забыть открыть в новой вкладке.
+  {
+    files: ['packages/ui/src/**/*.tsx'],
+    ignores: ['packages/ui/src/components/ExternalLink.tsx', 'packages/ui/src/app/labLinks.tsx'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "JSXOpeningElement[name.name='a']",
+          message:
+            'Внешняя ссылка — через <ExternalLink> (открывается в новой вкладке), переход внутри приложения — через <LabLink>.',
+        },
+      ],
     },
   },
 
