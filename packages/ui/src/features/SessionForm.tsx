@@ -17,6 +17,7 @@ import {
 } from './session/sessionChoices';
 import styles from './SessionForm.module.css';
 import { formatRu } from '../text/formatNumber';
+import { useMode, type UiMode } from '../app/mode';
 
 // Поле вопроса: в него ставит курсор «Спросить агента самому» на стартовом экране.
 export const QUESTION_FIELD_ID = 'session-question';
@@ -97,8 +98,12 @@ export function SessionForm({ onStarted }: SessionFormProps): ReactElement {
           setQuestion(event.target.value);
         }}
       />
-      <Toggles state={state} />
-      <Choices state={state} />
+      {state.choices.demoProject && (
+        <p className={styles.note}>
+          Агент — сотрудник вымышленной компании «Кедр Софт» и отвечает по её документам.
+        </p>
+      )}
+      <HarnessSettings state={state} />
       {error !== null && <div className={styles.error}>Сессия не запущена: {error}</div>}
       <div className={styles.foot}>
         <span className={styles.cost}>{describeCost(state)}</span>
@@ -168,27 +173,93 @@ function Toggles({ state }: { state: ChoicesState }): ReactElement {
   );
 }
 
-function Choices({ state }: { state: ChoicesState }): ReactElement {
+// Effort на виду, остальное — под «Настройки харнесса»: в «Обучении» свёрнуто, новичку для
+// первого раза трогать нечего (мокап старта, 29.10.2026). Сколько настроек включено — в кнопке,
+// чтобы свёрнутое не забылось; что они меняют — в строке под формой.
+function HarnessSettings({ state }: { state: ChoicesState }): ReactElement {
   const { choices, change } = state;
+  const mode = useMode();
+  const [open, setOpen] = useSettingsOpen(mode);
+  const active = countActive(choices);
   return (
-    <div className={styles.row}>
-      {choices.orchestration && choices.demoProject ? (
-        <OrchestrationMenu state={state} />
-      ) : (
-        <SearchMenu state={state} />
+    <>
+      <div className={styles.row}>
+        <span className={styles.key}>Effort</span>
+        <Segmented
+          label="Reasoning effort"
+          size="small"
+          options={EFFORTS}
+          value={choices.reasoningEffort}
+          onChange={(reasoningEffort) => {
+            change({ reasoningEffort });
+          }}
+        />
+        <button
+          type="button"
+          className={styles.disclosure}
+          aria-expanded={open}
+          onClick={() => {
+            setOpen(!open);
+          }}
+        >
+          Настройки харнесса{active > 0 ? ` · ${String(active)}` : ''} {open ? '▴' : '▾'}
+        </button>
+        {!open && mode === 'learn' && (
+          <span className={styles.note}>
+            субагенты, оркестрация, поиск — для первого раза не трогайте
+          </span>
+        )}
+      </div>
+      {open && (
+        <>
+          <Toggles state={state} />
+          <div className={styles.row}>
+            {choices.orchestration && choices.demoProject ? (
+              <OrchestrationMenu state={state} />
+            ) : (
+              <SearchMenu state={state} />
+            )}
+          </div>
+        </>
       )}
-      <span className={styles.key}>Effort</span>
-      <Segmented
-        label="Reasoning effort"
-        size="small"
-        options={EFFORTS}
-        value={choices.reasoningEffort}
-        onChange={(reasoningEffort) => {
-          change({ reasoningEffort });
-        }}
-      />
-    </div>
+    </>
   );
+}
+
+// Сколько настроек харнесса отличается от обычного запуска.
+function countActive(choices: ChoicesState['choices']): number {
+  const orchestrated = choices.demoProject && choices.orchestration;
+  const flags = [
+    !choices.demoProject,
+    choices.demoProject && choices.subagents && !orchestrated,
+    choices.cleanWorkspace,
+    orchestrated,
+    choices.demoProject && !orchestrated && choices.retrievalMode !== 'tool',
+  ];
+  return flags.filter(Boolean).length;
+}
+
+const SETTINGS_OPEN_KEY = 'hv-harness-settings-open';
+
+// Раскрыты ли настройки — помним в браузере; по умолчанию раскрыты только в «Исследовании».
+function useSettingsOpen(mode: UiMode): [boolean, (open: boolean) => void] {
+  const [saved, setSaved] = useState<boolean | null>(() => {
+    try {
+      const value = window.localStorage.getItem(SETTINGS_OPEN_KEY);
+      return value === null ? null : value === '1';
+    } catch {
+      return null;
+    }
+  });
+  const change = (open: boolean): void => {
+    setSaved(open);
+    try {
+      window.localStorage.setItem(SETTINGS_OPEN_KEY, open ? '1' : '0');
+    } catch {
+      // Хранилище недоступно — выбор живёт до перезагрузки.
+    }
+  };
+  return [saved ?? mode === 'research', change];
 }
 
 // В оркестрации вместо выбора поиска — выбор режима: искать будут исполнители или код.

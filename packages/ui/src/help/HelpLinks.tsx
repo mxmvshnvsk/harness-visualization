@@ -21,6 +21,37 @@ export function HelpButton({ topic }: { topic: HelpTopic }): ReactElement {
   );
 }
 
+// Длинная фраза-термин переносится по строкам вместе с абзацем — кнопка так не умеет (она
+// переносится целым блоком), поэтому фраза — строчный span с ролью кнопки и клавишами Enter / пробел.
+export function TermPhrase({
+  topic,
+  children,
+}: {
+  topic: HelpTopic;
+  children: ReactNode;
+}): ReactElement {
+  const openHelp = useOpenHelp();
+  return (
+    <span
+      role="button"
+      tabIndex={0}
+      className={styles.term}
+      title="Что это? — открыть справку"
+      onClick={() => {
+        openHelp(topic);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openHelp(topic);
+        }
+      }}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function Term({ topic, children }: { topic: HelpTopic; children: ReactNode }): ReactElement {
   const openHelp = useOpenHelp();
   return (

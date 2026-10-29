@@ -483,17 +483,6 @@ function settingsItems(
   ];
 }
 
-const START_TEXT: Record<UiMode, { title: string; text: string }> = {
-  learn: {
-    title: 'Как запрос проходит через харнесс',
-    text: 'Ниже — что здесь к чему и три способа начать: готовая запись, свой вопрос или одна тема.',
-  },
-  research: {
-    title: 'Сессии и записи',
-    text: 'Свои сессии и записи Claude Code и OpenCode — по шагам: контекст, сырые запросы и ответы.',
-  },
-};
-
 // Пока ничего не открыто — вопрос агенту и списки прямо на экране, без панели.
 // Сверху вопрос и лаборатории во всю ширину, под ними сессии и записи — по половине.
 function StartScreen(props: {
@@ -506,11 +495,18 @@ function StartScreen(props: {
   return (
     <div className={styles.start}>
       <div className={styles.startTop}>
-        {/* Заголовок и подпись есть в обоих режимах, в одну строку: шапка не скачет. */}
+        {/* В «Обучении» заголовок экрана — во введении; в «Исследовании» введения нет. */}
         <div className={styles.startIntro}>
           <span className={styles.eyebrow}>Harness Visualization</span>
-          <h1 className={styles.startTitle}>{START_TEXT[mode].title}</h1>
-          <p className={styles.startText}>{START_TEXT[mode].text}</p>
+          {mode === 'research' && (
+            <>
+              <h1 className={styles.startTitle}>Сессии и записи</h1>
+              <p className={styles.startText}>
+                Свои сессии и записи Claude Code и OpenCode — по шагам: контекст, сырые запросы и
+                ответы.
+              </p>
+            </>
+          )}
         </div>
         <span className={styles.startControls}>
           <ModeToggle />
@@ -526,32 +522,46 @@ function StartScreen(props: {
       )}
       <div className={styles.startGrid}>
         {props.children}
-        <aside className={`${styles.card} ${styles.labs}`}>
-          <h2 className={styles.labsTitle}>
-            {mode === 'research' ? 'Инструменты' : 'Лаборатории'}
-          </h2>
-          {labEntries(mode).map((entry) => (
-            <button
-              key={entry.lab}
-              type="button"
-              className={styles.labEntry}
-              title={entry.question}
-              onClick={() => {
-                props.onOpenLab(entry.lab);
-              }}
-            >
-              <b>{entry.title}</b>
-              <span>{entry.short}</span>
-            </button>
-          ))}
-          {mode === 'learn' && (
-            <button type="button" className={styles.allLabs} onClick={props.onOpenLabs}>
-              Все лаборатории — с вопросами и временем →
-            </button>
-          )}
-        </aside>
+        <StartLabs mode={mode} onOpenLab={props.onOpenLab} onOpenLabs={props.onOpenLabs} />
       </div>
     </div>
+  );
+}
+
+// Лаборатории (в «Исследовании» — инструменты) плитками во всю ширину.
+function StartLabs(props: {
+  mode: UiMode;
+  onOpenLab: (lab: LabName) => void;
+  onOpenLabs: () => void;
+}): ReactElement {
+  const { mode } = props;
+  return (
+    <section className={styles.labs}>
+      <div className={styles.labsHead}>
+        <h2 className={styles.labsTitle}>{mode === 'research' ? 'Инструменты' : 'Лаборатории'}</h2>
+        {mode === 'learn' && (
+          <button type="button" className={styles.allLabs} onClick={props.onOpenLabs}>
+            Все — с вопросами и временем →
+          </button>
+        )}
+      </div>
+      <div className={styles.labTiles}>
+        {labEntries(mode).map((entry) => (
+          <button
+            key={entry.lab}
+            type="button"
+            className={styles.labTile}
+            title={entry.question}
+            onClick={() => {
+              props.onOpenLab(entry.lab);
+            }}
+          >
+            <b>{entry.name}</b>
+            <span>{mode === 'learn' ? entry.hook : entry.short}</span>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 

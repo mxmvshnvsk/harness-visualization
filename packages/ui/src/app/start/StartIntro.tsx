@@ -1,11 +1,11 @@
-// Стартовый экран в режиме «Обучение»: что это за стенд, три слова, без которых не разобраться,
+// Стартовый экран в режиме «Обучение»: что это за тренажёр, три слова, без которых не разобраться,
 // и три входа — посмотреть готовую запись, спросить самому, разобраться в одной теме.
 // По фидбэку экспертов (29.10.2026): на старте было непонятно, что такое сессия и трейс и с чего
 // начать. Образцы входа: публичный пример-проект Langfuse — сначала готовые трейсы, потом свои;
 // пошаговый разбор одной задачи у LLM Visualization Брендана Байкрофта.
 
-import type { ReactElement } from 'react';
-import { Button } from '../../components/Button';
+import { useState, type ReactElement } from 'react';
+import { TermPhrase } from '../../help/HelpLinks';
 import styles from './Start.module.css';
 
 interface StartIntroProps {
@@ -15,96 +15,154 @@ interface StartIntroProps {
   onOpenLabs: () => void;
 }
 
+// Введение на старте или, если его скрыли, одна строка со ссылками (мокап, одобренный 29.10.2026:
+// старт был перегружен — заголовок экрана дублировал введение, у введения была своя рамка).
 export function StartIntro(props: StartIntroProps): ReactElement {
+  const [hidden, setHidden] = useIntroHidden();
+  if (hidden) {
+    return (
+      <div className={styles.strip}>
+        <b>Тренажёр по AI-агентам</b>
+        <span className={styles.stripLinks}>
+          <StripLink onClick={props.onOpenExample}>Как работает тренажёр</StripLink>
+          <StripLink onClick={props.onOpenLabs}>Все лаборатории</StripLink>
+          <StripLink onClick={() => setHidden(false)}>Показать введение</StripLink>
+        </span>
+      </div>
+    );
+  }
   return (
-    <>
-      <section className={styles.intro}>
-        <div className={styles.introText}>
-          <h2 className={styles.introTitle}>Тренажёр: как устроены агенты изнутри</h2>
-          <p className={styles.muted}>
-            Агент работает на настоящей модели, а вы видите каждый его шаг: что ушло в модель, какие
-            тулы она попросила, что разрешил харнесс и из чего сложился ответ. Агент — сотрудник
-            вымышленной компании «Кедр Софт», отвечает по её документам.
-          </p>
-          <dl className={styles.glossary}>
-            <div>
-              <dt>Сессия</dt>
-              <dd>разговор с агентом, который идёт сейчас</dd>
-            </div>
-            <div>
-              <dt>Трейс</dt>
-              <dd>запись сессии в файле: открыть снова, переслать, ответвиться от шага</dd>
-            </div>
-            <div>
-              <dt>Харнесс</dt>
-              <dd>код вокруг модели: собирает prompt, вызывает тулы, решает, что можно</dd>
-            </div>
-          </dl>
-        </div>
+    <div className={styles.introBlock}>
+      <section className={styles.hero}>
+        <button type="button" className={styles.dismiss} onClick={() => setHidden(true)}>
+          Скрыть введение ×
+        </button>
+        <Lead />
         <LoopDiagram />
       </section>
-      <div className={styles.entries}>
-        <span className={styles.label}>С чего начать</span>
-        <div className={styles.entryGrid}>
-          <Entry
-            main
-            title="Как работает тренажёр"
-            text="Готовая запись по шагам: что где на экране и как по нему проследить путь агента от вопроса к ответу."
-            tags={['3 минуты', 'без ключа']}
-            action="Открыть пример"
-            onAction={props.onOpenExample}
-          />
-          <Entry
-            title="Спросить агента самому"
-            text="Ваш вопрос — новая сессия. Смотрите её вживую; когда закончится, она сохранится трейсом."
-            tags={['нужен ключ DeepSeek']}
-            action="К вопросу ↓"
-            onAction={props.onAsk}
-          />
-          <Entry
-            title="Разобраться в одной теме"
-            text="Лаборатории: поиск по документам, тулы и MCP, оценка агента, выбор токена, агент-программист."
-            tags={['5 тем', '10–20 минут']}
-            action="Выбрать тему"
-            onAction={props.onOpenLabs}
-          />
-        </div>
+      <Entries {...props} />
+    </div>
+  );
+}
+
+function Lead(): ReactElement {
+  return (
+    <div className={styles.introText}>
+      <h1 className={styles.heroTitle}>Тренажёр по AI-агентам</h1>
+      <p className={styles.lead}>
+        {/* Определение — с источниками в справке: формула «модель + харнесс» — общепринятое
+            упрощение, а не строгий термин. */}
+        <TermPhrase topic="model-vs-harness">
+          Агент складывается из модели и харнесса — кода вокруг неё
+        </TermPhrase>
+        . Задайте вопрос или откройте готовую запись и посмотрите по шагам, что делает каждый: что
+        уходит в модель, какие тулы она вызывает, что разрешает харнесс.
+      </p>
+      <div className={styles.terms} aria-label="Словарь">
+        <span>
+          <b>Сессия</b> — разговор с агентом
+        </span>
+        <span>
+          <b>Трейс</b> — его запись в файле
+        </span>
+        <span>
+          <b>Харнесс</b> — код вокруг модели
+        </span>
       </div>
-    </>
+    </div>
+  );
+}
+
+function Entries(props: StartIntroProps): ReactElement {
+  return (
+    <div className={styles.entryGrid}>
+      <Entry
+        main
+        title="Как работает тренажёр"
+        mark="→"
+        text="Готовая запись по шагам: что где на экране и куда смотреть."
+        meta="3 минуты · без ключа"
+        onClick={props.onOpenExample}
+      />
+      <Entry
+        title="Спросить агента самому"
+        mark="↓"
+        text="Ваш вопрос станет сессией, а потом записью."
+        meta="нужен ключ DeepSeek"
+        onClick={props.onAsk}
+      />
+      <Entry
+        title="Разобраться в одной теме"
+        mark="→"
+        text="Лаборатории: RAG, MCP, токены, Evals, код-арена."
+        meta="10–20 минут"
+        onClick={props.onOpenLabs}
+      />
+    </div>
   );
 }
 
 interface EntryProps {
   title: string;
+  mark: string;
   text: string;
-  tags: readonly string[];
-  action: string;
-  onAction: (() => void) | null;
+  meta: string;
+  onClick: (() => void) | null;
   main?: boolean;
 }
 
+// Вход — целиком кнопка: крупная цель, без отдельной кнопки внутри карточки.
 function Entry(props: EntryProps): ReactElement {
   return (
-    <article className={styles.entry} data-main={props.main === true}>
-      <h3 className={styles.entryTitle}>{props.title}</h3>
-      <p className={styles.muted}>{props.text}</p>
-      <span className={styles.tags}>
-        {props.tags.map((tag) => (
-          <span key={tag} className={styles.tag}>
-            {tag}
-          </span>
-        ))}
+    <button
+      type="button"
+      className={styles.entry}
+      data-main={props.main === true}
+      disabled={props.onClick === null}
+      onClick={() => props.onClick?.()}
+    >
+      <span className={styles.entryTitle}>
+        {props.title} <span aria-hidden>{props.mark}</span>
       </span>
-      <Button
-        className={styles.entryAction}
-        variant={props.main === true ? 'accent' : 'ink'}
-        disabled={props.onAction === null}
-        onClick={() => props.onAction?.()}
-      >
-        {props.action}
-      </Button>
-    </article>
+      <span className={styles.entryText}>{props.text}</span>
+      <span className={styles.entryMeta}>{props.meta}</span>
+    </button>
   );
+}
+
+function StripLink(props: { onClick: (() => void) | null; children: string }): ReactElement {
+  return (
+    <button
+      type="button"
+      className={styles.stripLink}
+      disabled={props.onClick === null}
+      onClick={() => props.onClick?.()}
+    >
+      {props.children}
+    </button>
+  );
+}
+
+const HIDDEN_KEY = 'hv-intro-hidden';
+
+// Скрыто ли введение — помним в браузере; без хранилища введение просто видно.
+function useIntroHidden(): [boolean, (hidden: boolean) => void] {
+  const [hidden, setHidden] = useState(() => {
+    try {
+      return window.localStorage.getItem(HIDDEN_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const change = (next: boolean): void => {
+    setHidden(next);
+    try {
+      window.localStorage.setItem(HIDDEN_KEY, next ? '1' : '0');
+    } catch {
+      // Хранилище недоступно — выбор живёт до перезагрузки.
+    }
+  };
+  return [hidden, change];
 }
 
 // Агент = модель + цикл харнесса: вопрос → харнесс → модель → «вызови тул» → харнесс → … → ответ.

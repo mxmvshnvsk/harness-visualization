@@ -8,6 +8,10 @@ import type { LabName } from './useSelection';
 export interface LabEntry {
   lab: LabName;
   title: string;
+  // Коротко — для плитки на старте: «RAG», «Код-арена».
+  name: string;
+  // Плитка на старте в «Обучении»: о чём лаборатория, в несколько слов.
+  hook: string;
   // Одна строка для коротких списков.
   short: string;
   // Та же строка в режиме «Исследование» — в терминах; нет — как в «Обучении».
@@ -28,6 +32,8 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
     lab: 'rag',
     teaching: true,
     title: 'Лаборатория RAG',
+    name: 'RAG',
+    hook: 'как агент находит документ',
     short: 'поиск, векторы, проверка ответа',
     question: 'Как агент находит нужный документ?',
     learn:
@@ -39,6 +45,8 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
     lab: 'mcp',
     teaching: true,
     title: 'Лаборатория MCP',
+    name: 'MCP',
+    hook: 'что такое тул и откуда он',
     short: 'тулы, протокол, цена, доверие',
     question: 'Что такое тул для модели и откуда он берётся?',
     learn:
@@ -49,6 +57,8 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
   {
     lab: 'tokens',
     title: 'Выбор токена',
+    name: 'Выбор токена',
+    hook: 'почему ответ каждый раз разный',
     short: 'какие слова модель взвешивала на каждом шагу и почему ответ каждый раз разный',
     researchShort: 'logprobs, температура, ответ с другого токена',
     question: 'Как модель выбирает следующее слово?',
@@ -60,6 +70,8 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
   {
     lab: 'evals',
     title: 'Лаборатория Evals',
+    name: 'Evals',
+    hook: 'стал ли агент лучше',
     short: 'задачи, попытки, pass@k',
     question: 'Как понять, что агент стал лучше, а не «вроде лучше»?',
     learn:
@@ -70,6 +82,8 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
   {
     lab: 'arena',
     title: 'Код-арена',
+    name: 'Код-арена',
+    hook: 'правда ли «готово»',
     short: 'агент пишет код, харнесс принимает',
     question: 'Когда агент говорит «готово» — это правда?',
     learn:

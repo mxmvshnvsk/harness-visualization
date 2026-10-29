@@ -1,5 +1,9 @@
 # Где кончается модель и начинается харнесс
 
+## Что такое агент
+
+Модель сама по себе не агент: она получает текст и возвращает текст или просьбу вызвать тул. Агентом её делает код вокруг — **харнесс**: крутит цикл запросов, выполняет тулы, хранит историю, проверяет, что можно. Так это описывают и в индустрии — «Agent = Model + Harness». Это упрощение, а не строгий термин: слово молодое, то же называют scaffolding или agent framework.
+
 **Модель за API — не харнесс.** DeepSeek API получает историю разговора и описания тулов, возвращает текст или просьбу вызвать тул. Сама она ничего не выполняет и между запросами ничего не помнит: всю историю харнесс присылает каждый раз заново.
 
 ## Тулы — меню в каждом запросе
@@ -26,5 +30,9 @@
 
 ## Источники
 
+- [The Anatomy of an Agent Harness](https://langchain.com/blog/the-anatomy-of-an-agent-harness) (LangChain) — «Agent = Model + Harness».
+- [Building effective agents](https://www.anthropic.com/engineering/building-effective-agents) (Anthropic) — агент как модель, которая вызывает тулы в цикле.
+- [Effective harnesses for long-running agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) (Anthropic).
+- [Agent harness engineering](https://www.oreilly.com/radar/agent-harness-engineering/) (O’Reilly).
 - [DeepSeek API — Tool Calls](https://api-docs.deepseek.com/guides/tool_calls/) — модель возвращает `tool_calls`, выполняет их приложение.
 - [Tool use with Claude](https://platform.claude.com/docs/en/build-with-claude/tool-use) (Anthropic) — client tools против server tools, которые выполняет провайдер.
