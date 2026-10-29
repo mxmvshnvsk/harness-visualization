@@ -29,7 +29,7 @@ const HANDLERS: Handlers = {
     builder.view.kind = 'session';
     builder.view.sessionId = event.sessionId;
     builder.view.model = event.model;
-    builder.view.retrievalMode = event.retrievalMode;
+    builder.view.retrievalMode = event.retrievalMode ?? null;
   },
   grounding_check_started: (builder, event) => {
     builder.view.kind = 'groundingCheck';

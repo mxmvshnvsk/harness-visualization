@@ -21,7 +21,7 @@ const SUMMARY_LIMIT = 240;
 
 const DESCRIBERS: Describers = {
   session_started: (event) =>
-    `${event.model}, reasoning effort ${event.reasoningEffort}, retrieval ${event.retrievalMode}`,
+    `${event.model}, reasoning effort ${event.reasoningEffort}, retrieval ${event.retrievalMode ?? 'по режиму оркестрации'}`,
   workspace_prepared: (event) => event.directory + (event.wasReset ? ' (пересоздан)' : ''),
   mcp_server_starting: (event) => `${event.serverName}: ${event.command} ${event.args.join(' ')}`,
   mcp_server_ready: (event) =>

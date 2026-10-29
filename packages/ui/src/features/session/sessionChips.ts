@@ -150,7 +150,11 @@ function subagentsChip(agents: readonly string[], delegation: Delegation): Sessi
 // Без демо-проекта базы знаний нет — и чипа поиска нет. В оркестрации режим поиска не действует:
 // в пайплайне ищет код, у суперагента — исполнители своими тулами.
 function searchChip(started: Started): SessionChip[] {
-  if (started.demoProject === false || (started.orchestration ?? null) !== null) {
+  if (
+    started.demoProject === false ||
+    (started.orchestration ?? null) !== null ||
+    started.retrievalMode === undefined
+  ) {
     return [];
   }
   return [

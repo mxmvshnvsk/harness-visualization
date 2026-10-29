@@ -153,7 +153,7 @@ function Toggles({ state }: { state: ChoicesState }): ReactElement {
           label="Оркестрация"
           hint={
             choices.demoProject
-              ? 'Поручения будут точно: работу делят исполнители-субагенты, а кто решает порядок шагов — код, модель или оба — выбирается рядом с поиском.'
+              ? 'Поручения будут точно: работу делят исполнители-субагенты, а кто решает порядок шагов — код, модель или оба — выбирается в строке «Режим».'
               : 'Без демо-проекта оркестрации нет: исполнителям нечего читать.'
           }
           pressed={choices.orchestration && choices.demoProject}
@@ -213,13 +213,13 @@ function HarnessSettings({ state }: { state: ChoicesState }): ReactElement {
       {open && (
         <>
           <Toggles state={state} />
-          <div className={styles.row}>
-            {choices.orchestration && choices.demoProject ? (
-              <OrchestrationMenu state={state} />
-            ) : (
+          {choices.orchestration && choices.demoProject ? (
+            <OrchestrationRows state={state} />
+          ) : (
+            <div className={styles.row}>
               <SearchMenu state={state} />
-            )}
-          </div>
+            </div>
+          )}
         </>
       )}
     </>
@@ -260,6 +260,30 @@ function useSettingsOpen(mode: UiMode): [boolean, (open: boolean) => void] {
     }
   };
   return [saved ?? mode === 'research', change];
+}
+
+// Кто ищет в базе знаний в каждом режиме оркестрации: выбор поиска там не действует.
+const SEARCH_IN_ORCHESTRATION: Record<OrchestrationChoice, string> = {
+  pipeline: 'решает режим: в пайплайне документы ищет код — один раз, до исполнителей',
+  superagent: 'решает режим: у суперагента исполнители ищут сами, своими тулами',
+  hybrid: 'решает режим: в гибриде исполнители ищут сами внутри шага «выполнение»',
+};
+
+// В оркестрации — выбор режима, а строка «Поиск» остаётся и объясняет, почему выбора нет.
+function OrchestrationRows({ state }: { state: ChoicesState }): ReactElement {
+  return (
+    <>
+      <div className={styles.row}>
+        <OrchestrationMenu state={state} />
+      </div>
+      <div className={styles.row}>
+        <span className={styles.key}>Поиск</span>
+        <span className={styles.note}>
+          {SEARCH_IN_ORCHESTRATION[state.choices.orchestrationMode]}
+        </span>
+      </div>
+    </>
+  );
 }
 
 // В оркестрации вместо выбора поиска — выбор режима: искать будут исполнители или код.

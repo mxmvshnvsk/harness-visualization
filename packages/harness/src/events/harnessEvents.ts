@@ -52,7 +52,9 @@ export interface SessionStartedPayload {
   // Какой поисковый провайдер у тула web_search; null — поиск выключен.
   searchProvider: string | null;
   // tool — модель ищет в базе знаний сама; auto — харнесс подмешивает найденное до запроса.
-  retrievalMode: RetrievalMode;
+  // Нет поля — оркестрация: кто ищет, решает её режим (в пайплайне — код, у суперагента и гибрида —
+  // исполнители), выбор поиска не действует и в трейс не пишется.
+  retrievalMode?: RetrievalMode;
   // Субагенты сессии (этап 6c): кому модель может поручать задачи; null — выключены.
   // В трейсах до этого поля нет — субагентов там не было.
   subagents?: { agents: string[]; parallel: boolean } | null;

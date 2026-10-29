@@ -34,7 +34,8 @@ export function branchSessionInput(request: BranchRequest): SessionInput {
     question: point.step.question,
     reasoningEffort: point.step.reasoningEffort,
     searchProvider: null,
-    retrievalMode: started.retrievalMode,
+    // Нет поля — сессия с оркестрацией: режим поиска там не действует.
+    retrievalMode: started.retrievalMode ?? 'tool',
     retrievalToolName: null,
     freshWorkspace: false,
     subagents: (started.subagents ?? null) !== null,

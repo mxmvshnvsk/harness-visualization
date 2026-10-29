@@ -654,6 +654,13 @@ function describeAcceptance(event: AcceptanceCheckedPayload & EventMetadata): st
   ];
 }
 
+// Нет режима поиска — оркестрация: кто ищет, решает её режим.
+function describeRetrieval(mode: RetrievalMode | undefined): string {
+  return mode === undefined
+    ? 'кто ищет, решает режим оркестрации'
+    : RETRIEVAL_MODE_DESCRIPTIONS[mode];
+}
+
 function describeSessionMode(event: EventOfType<'session_started'>): string {
   const arena = event.arena ?? null;
   if (arena !== null) {
@@ -667,5 +674,5 @@ function describeSessionMode(event: EventOfType<'session_started'>): string {
   }
   return event.demoProject === false
     ? 'Без демо-проекта: ни «Кедр Софт», ни MCP, ни базы знаний — пустая песочница, файлы и веб'
-    : `База знаний: ${RETRIEVAL_MODE_DESCRIPTIONS[event.retrievalMode]}`;
+    : `База знаний: ${describeRetrieval(event.retrievalMode)}`;
 }

@@ -15,7 +15,8 @@ export interface SessionAnnouncement {
   preparedWorkspace: PreparedWorkspace;
   // null — веб-поиск выключен.
   searchProviderName: string | null;
-  retrievalMode: RetrievalMode;
+  // null — оркестрация: выбор поиска не действует, поле в событие не пишем.
+  retrievalMode: RetrievalMode | null;
   // null — субагенты выключены.
   subagents: { agents: string[]; parallel: boolean } | null;
   orchestration: OrchestrationMode | null;
@@ -34,7 +35,7 @@ export function announceSession(events: EventStream, announcement: SessionAnnoun
     reasoningEffort: announcement.reasoningEffort,
     networkProxy: describeNetworkProxy(),
     searchProvider: announcement.searchProviderName,
-    retrievalMode: announcement.retrievalMode,
+    ...(announcement.retrievalMode === null ? {} : { retrievalMode: announcement.retrievalMode }),
     subagents: announcement.subagents,
     orchestration: announcement.orchestration,
     demoProject: announcement.demoProject,

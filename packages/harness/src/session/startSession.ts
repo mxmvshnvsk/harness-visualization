@@ -228,7 +228,7 @@ async function prepareSession(
     workspaceDirectory: workspaceSetting,
     preparedWorkspace,
     searchProviderName: searchProvider?.name ?? null,
-    retrievalMode: input.demoProject ? input.retrievalMode : 'tool',
+    retrievalMode: announcedRetrieval(input),
     subagents: subagentsOf(input),
     orchestration: orchestrationOf(input),
     demoProject: input.demoProject,
@@ -519,6 +519,14 @@ function superagentOf(input: SessionInput): SuperagentOptions | null {
 }
 
 // Оркестрация — только в демо-проекте: исследователи читают базу знаний «Кедр Софт».
+// Режим поиска для session_started: в оркестрации он не действует — null, поле не пишется.
+function announcedRetrieval(input: SessionInput): RetrievalMode | null {
+  if (orchestrationOf(input) !== null) {
+    return null;
+  }
+  return input.demoProject ? input.retrievalMode : 'tool';
+}
+
 function orchestrationOf(input: SessionInput): OrchestrationMode | null {
   return input.demoProject ? input.orchestration : null;
 }
