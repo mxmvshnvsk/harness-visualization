@@ -6,9 +6,14 @@ import styles from './Help.module.css';
 import { parseMarkdown, type Block, type Inline } from './parseMarkdown';
 
 export function MarkdownView({ text }: { text: string }): ReactElement {
+  return <MarkdownBlocks blocks={parseMarkdown(text)} />;
+}
+
+// Уже разобранные блоки — для справки, где заголовок темы вынесен в закреплённую шапку.
+export function MarkdownBlocks({ blocks }: { blocks: readonly Block[] }): ReactElement {
   return (
     <div className={styles.markdown}>
-      {parseMarkdown(text).map((block, index) => (
+      {blocks.map((block, index) => (
         // Блоки неизменны и не переставляются — порядковый номер годится как ключ.
         <BlockView key={index} block={block} />
       ))}
@@ -35,7 +40,7 @@ function BlockView({ block }: { block: Block }): ReactElement {
   }
 }
 
-function renderInlines(inlines: Inline[]): ReactElement[] {
+export function renderInlines(inlines: Inline[]): ReactElement[] {
   return inlines.map((inline, index) => {
     switch (inline.kind) {
       case 'text':

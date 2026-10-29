@@ -12,16 +12,65 @@
   background: rgb(0 0 0 / 35%);
 }
 
+.dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Закреплённая шапка: при прокрутке — граница и тень, чтобы не сливалась с текстом. */
+.dialogHead {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 24px 28px 12px;
+  border-bottom: 1px solid transparent;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.dialogHead[data-scrolled='true'] {
+  border-color: var(--line);
+  box-shadow: 0 10px 14px -14px rgb(0 0 0 / 40%);
+}
+
+.dialogHead .title {
+  margin: 0;
+  text-wrap: balance;
+}
+
+/* Раздел, который сейчас читаете. */
+.section {
+  min-height: 1.4em;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+/* Сколько прочитано: ширину задаёт --read (0…1) из обработчика прокрутки. */
+.progress {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 100%;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(var(--read, 0));
+  transform-origin: left;
+}
+
 .dialogBody {
-  padding: 24px 28px 8px;
+  flex: 1;
+  min-height: 0;
+  padding: 8px 28px;
   overflow-y: auto;
-  max-height: calc(min(80vh, 760px) - 80px);
 }
 
 .dialogFooter {
   display: flex;
   justify-content: flex-end;
   padding: 12px 20px 20px;
+  border-top: 1px solid var(--line);
 }
 
 .markdown {
