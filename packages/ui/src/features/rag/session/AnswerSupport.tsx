@@ -7,6 +7,7 @@ import type { ReactElement } from 'react';
 import { useGrounding } from '../useRagData';
 import { formatSimilarity } from './retrievalLabels';
 import styles from './Retrieval.module.css';
+import { LabLink } from '../../../app/labLinks';
 
 const LEVEL_TEXT: Record<GroundingClaim['level'], string> = {
   quoted: 'цитата найдена',
@@ -42,9 +43,9 @@ export function AnswerSupport({ file }: { file: string }): ReactElement {
               <ClaimRow key={claim.number} claim={claim} />
             ))}
           </ol>
-          <a className={styles.link} href="?lab=rag">
+          <LabLink className={styles.link} lab="rag" step="check">
             Как устроена такая проверка — шаг 7 лаборатории RAG →
-          </a>
+          </LabLink>
         </>
       ) : (
         <p className={styles.sub}>

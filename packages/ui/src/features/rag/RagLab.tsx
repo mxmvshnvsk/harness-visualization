@@ -4,6 +4,7 @@
 
 import type { LabBase } from '@harness-visualization/mcp-server/lab';
 import { useState, type ReactElement } from 'react';
+import { useCourseStep } from '../useCourseStep';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { Button } from '../../components/Button';
 import { Segmented } from '../../components/Segmented';
@@ -25,20 +26,23 @@ const TABS = [
   { value: 'data', label: 'Данные' },
 ] as const;
 
+export interface CourseLabProps {
+  backLabel: string;
+  onBack: () => void;
+  // Шаг урока из адреса (?step=check); null — с начала.
+  step: string | null;
+  onStepChange: (id: string) => void;
+}
+
 export function RagLab({
   backLabel,
   onBack,
-}: {
-  backLabel: string;
-  onBack: () => void;
-}): ReactElement {
+  step: initialStep,
+  onStepChange,
+}: CourseLabProps): ReactElement {
   const base = useRagBase();
   const [tab, setTab] = useState<'course' | 'data'>('course');
-  const [step, setStep] = useState(0);
-  const go = (index: number): void => {
-    setStep(index);
-    window.scrollTo({ top: 0 });
-  };
+  const [step, go] = useCourseStep(COURSE_STEPS, initialStep, onStepChange);
   return (
     <div className={styles.screen}>
       <header className={styles.top}>

@@ -60,10 +60,11 @@ import { useTheme, type ThemeChoice } from './theme';
 import { setMode, useMode, type UiMode } from './mode';
 import { ModeToggle } from '../components/ModeToggle';
 import { useSelection, type LabName, type OpenedSelection, type Selection } from './useSelection';
+import { OpenLabContext, type OpenLab } from './labLinks';
 import { ViewLinksContext, type SearchLink, type ViewLinks } from './viewLinks';
 
 export function App(): ReactElement {
-  const [selection, select] = useSelection();
+  const [selection, select, replace] = useSelection();
   const { drawerOpen, setDrawerOpen, closeDrawer, pick } = useDrawer(select);
   const sessions = useServerList(listSessions);
   const traces = useServerList(listTraces);
@@ -78,10 +79,7 @@ export function App(): ReactElement {
   const startSources = (
     <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} wide />
   );
-  const lab =
-    selection?.kind === 'lab' ? (
-      <LabScreen lab={selection.lab} back={opened} onBack={closeLab} onSelect={pick} />
-    ) : null;
+  const lab = labScreenOf(selection, { back: opened, onBack: closeLab, onSelect: pick, replace });
   if (opened === null) {
     return lab ?? <StartScreen onOpenLab={openLab}>{startSources}</StartScreen>;
   }
@@ -93,24 +91,26 @@ export function App(): ReactElement {
         {/* key: другая сессия или трейс — повтор, выбор в инспекторе и диалог начинаются заново. */}
         <LiveDeltasContext.Provider value={stream.deltas}>
           <NavigationContext.Provider value={navigation}>
-            <OpenStream
-              key={streamUrl(opened)}
-              events={stream.events}
-              sessionId={sessionId}
-              traceFile={opened.kind === 'trace' ? opened.file : null}
-              live={opened.kind === 'session' && stream.state !== 'ended'}
-              header={
-                <Topbar
-                  {...describeSelection(opened, stream.events, traces.items)}
-                  stream={stream}
-                  onOpenSources={() => {
-                    setDrawerOpen(true);
-                  }}
-                  onOpenLab={openLab}
-                />
-              }
-              prompt={permissionPrompt(sessionId, pending, stream.events)}
-            />
+            <OpenLabContext.Provider value={openLab}>
+              <OpenStream
+                key={streamUrl(opened)}
+                events={stream.events}
+                sessionId={sessionId}
+                traceFile={opened.kind === 'trace' ? opened.file : null}
+                live={opened.kind === 'session' && stream.state !== 'ended'}
+                header={
+                  <Topbar
+                    {...describeSelection(opened, stream.events, traces.items)}
+                    stream={stream}
+                    onOpenSources={() => {
+                      setDrawerOpen(true);
+                    }}
+                    onOpenLab={openLab}
+                  />
+                }
+                prompt={permissionPrompt(sessionId, pending, stream.events)}
+              />
+            </OpenLabContext.Provider>
           </NavigationContext.Provider>
         </LiveDeltasContext.Provider>
         <Drawer open={drawerOpen} label="Сессии и трейсы" onClose={closeDrawer}>
@@ -118,6 +118,33 @@ export function App(): ReactElement {
         </Drawer>
       </div>
     </>
+  );
+}
+
+interface LabRoute {
+  back: OpenedSelection | null;
+  onBack: () => void;
+  onSelect: (next: Selection | null) => void;
+  // Сменить шаг урока в адресе, не добавляя записи в историю.
+  replace: (next: Selection | null) => void;
+}
+
+// Открыта лаборатория — её экран; иначе null.
+function labScreenOf(selection: Selection | null, route: LabRoute): ReactElement | null {
+  if (selection?.kind !== 'lab') {
+    return null;
+  }
+  return (
+    <LabScreen
+      lab={selection.lab}
+      step={selection.step}
+      back={route.back}
+      onBack={route.onBack}
+      onSelect={route.onSelect}
+      onStepChange={(step) => {
+        route.replace({ ...selection, step });
+      }}
+    />
   );
 }
 
@@ -187,6 +214,9 @@ function useDrawer(select: (next: Selection | null) => void) {
 
 function LabScreen(props: {
   lab: LabName;
+  // Шаг урока из адреса — у RAG и MCP; null — с начала.
+  step: string | null;
+  onStepChange: (step: string) => void;
   back: OpenedSelection | null;
   onBack: () => void;
   // Лаборатория evals открывает трейс попытки.
@@ -198,9 +228,23 @@ function LabScreen(props: {
   };
   switch (props.lab) {
     case 'rag':
-      return <RagLab backLabel={backLabel} onBack={props.onBack} />;
+      return (
+        <RagLab
+          backLabel={backLabel}
+          onBack={props.onBack}
+          step={props.step}
+          onStepChange={props.onStepChange}
+        />
+      );
     case 'mcp':
-      return <McpLab backLabel={backLabel} onBack={props.onBack} />;
+      return (
+        <McpLab
+          backLabel={backLabel}
+          onBack={props.onBack}
+          step={props.step}
+          onStepChange={props.onStepChange}
+        />
+      );
     case 'evals':
       return <EvalLab backLabel={backLabel} onBack={props.onBack} onOpenTrace={openTrace} />;
     case 'tokens':
@@ -230,12 +274,12 @@ function useLabNavigation(
   select: (next: Selection | null) => void,
   pick: (next: Selection | null) => void,
   opened: OpenedSelection | null,
-): { openLab: (lab: LabName) => void; closeLab: () => void } {
+): { openLab: OpenLab; closeLab: () => void } {
   const [scrollY, setScrollY] = useState(0);
   const openLab = useCallback(
-    (lab: LabName) => {
+    (lab: LabName, step?: string) => {
       setScrollY(window.scrollY);
-      pick({ kind: 'lab', lab, back: opened });
+      pick({ kind: 'lab', lab, back: opened, step: step ?? null });
     },
     [pick, opened],
   );

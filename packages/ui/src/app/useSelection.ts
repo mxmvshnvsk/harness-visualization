@@ -2,6 +2,7 @@
 // (?session=…, ?trace=… или ?lab=rag | mcp | evals), поэтому ссылкой можно поделиться, а «назад» работает.
 // null — ничего не открыто: стартовый экран. Лабораторию открыли из сессии или трейса — адрес
 // помнит и его (?lab=rag&trace=…): «назад» из лаборатории возвращает туда, а не на старт.
+// Шаг урока лаборатории — тоже в адресе (?lab=rag&step=check): ссылку на шаг можно дать студентам.
 
 import { useCallback, useEffect, useState } from 'react';
 
@@ -12,10 +13,15 @@ const LABS: readonly LabName[] = ['rag', 'mcp', 'evals', 'arena', 'tokens'];
 export type OpenedSelection =
   { kind: 'session'; sessionId: string } | { kind: 'trace'; file: string };
 
+// step — id шага урока лаборатории (RAG, MCP); null — с начала.
 export type Selection =
-  OpenedSelection | { kind: 'lab'; lab: LabName; back: OpenedSelection | null };
+  | OpenedSelection
+  | { kind: 'lab'; lab: LabName; back: OpenedSelection | null; step: string | null };
 
-export function useSelection(): [Selection | null, (selection: Selection | null) => void] {
+type SetSelection = (selection: Selection | null) => void;
+
+// select — новая запись в истории браузера; replace — та же запись (шаг урока сменился).
+export function useSelection(): [Selection | null, SetSelection, SetSelection] {
   const [selection, setSelection] = useState(readSelection);
 
   useEffect(() => {
@@ -29,12 +35,20 @@ export function useSelection(): [Selection | null, (selection: Selection | null)
   }, []);
 
   const select = useCallback((next: Selection | null) => {
-    const query = next === null ? '' : queryOf(next);
-    window.history.pushState(null, '', query === '' ? window.location.pathname : `?${query}`);
+    window.history.pushState(null, '', urlOf(next));
+    setSelection(next);
+  }, []);
+  const replace = useCallback((next: Selection | null) => {
+    window.history.replaceState(null, '', urlOf(next));
     setSelection(next);
   }, []);
 
-  return [selection, select];
+  return [selection, select, replace];
+}
+
+function urlOf(selection: Selection | null): string {
+  const query = selection === null ? '' : queryOf(selection);
+  return query === '' ? window.location.pathname : `?${query}`;
 }
 
 function queryOf(selection: Selection): string {
@@ -42,6 +56,9 @@ function queryOf(selection: Selection): string {
   const opened = selection.kind === 'lab' ? selection.back : selection;
   if (selection.kind === 'lab') {
     params.set('lab', selection.lab);
+    if (selection.step !== null) {
+      params.set('step', selection.step);
+    }
   }
   if (opened?.kind === 'session') {
     params.set('session', opened.sessionId);
@@ -55,7 +72,7 @@ function readSelection(): Selection | null {
   const params = new URLSearchParams(window.location.search);
   const lab = LABS.find((name) => name === params.get('lab'));
   const opened = readOpened(params);
-  return lab === undefined ? opened : { kind: 'lab', lab, back: opened };
+  return lab === undefined ? opened : { kind: 'lab', lab, back: opened, step: params.get('step') };
 }
 
 function readOpened(params: URLSearchParams): OpenedSelection | null {

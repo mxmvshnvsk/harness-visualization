@@ -2,7 +2,9 @@
 // говорит с MCP-сервером, сколько стоят тулы и можно ли верить серверу. Всё — на настоящих
 // событиях записанной сессии (examples/traces).
 
-import { useState, type ReactElement } from 'react';
+import type { ReactElement } from 'react';
+import type { CourseLabProps } from '../rag/RagLab';
+import { useCourseStep } from '../useCourseStep';
 import { ThemeToggle } from '../../components/ThemeToggle';
 import { Button } from '../../components/Button';
 import type { McpCourse } from '../../projections/projectMcpCourse';
@@ -18,16 +20,11 @@ import { useMcpCourse } from './useMcpCourse';
 export function McpLab({
   backLabel,
   onBack,
-}: {
-  backLabel: string;
-  onBack: () => void;
-}): ReactElement {
+  step: initialStep,
+  onStepChange,
+}: CourseLabProps): ReactElement {
   const course = useMcpCourse();
-  const [step, setStep] = useState(0);
-  const go = (index: number): void => {
-    setStep(index);
-    window.scrollTo({ top: 0 });
-  };
+  const [step, go] = useCourseStep(MCP_STEPS, initialStep, onStepChange);
   return (
     <div className={styles.screen}>
       <header className={styles.top}>
