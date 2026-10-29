@@ -8,6 +8,7 @@ import {
   type SkillLoad,
   type SkillsMemoryView,
 } from '../../projections/projectSkillsMemory';
+import { CallLink } from './CallLink';
 import styles from './SkillsMemory.module.css';
 import { formatRu } from '../../text/formatNumber';
 
@@ -94,15 +95,18 @@ function SkillRow({ skill, load, ended, onSeek }: SkillRowProps): ReactElement {
 function SkillStatus({ skill, load, ended, onSeek }: SkillRowProps): ReactElement {
   if (load !== null) {
     return (
-      <button
-        type="button"
-        className={styles.event}
-        onClick={() => {
-          onSeek(load);
-        }}
-      >
-        {TRIGGERS[load.trigger]} · {load.place}
-      </button>
+      <>
+        <button
+          type="button"
+          className={styles.event}
+          onClick={() => {
+            onSeek(load);
+          }}
+        >
+          {TRIGGERS[load.trigger]} · {load.place}
+        </button>
+        <CallLink moment={load} />
+      </>
     );
   }
   return <span className={styles.muted}>{statusText(skill, ended)}</span>;

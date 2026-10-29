@@ -11,6 +11,9 @@ export interface Moment {
   index: number;
   at: number;
   place: string;
+  // Вызов тула, во время которого это случилось (load_skill, memory, update_progress), — для
+  // перехода в инспектор; null — не из вызова (скилл «всегда в prompt», команда /имя).
+  toolCallId: string | null;
 }
 
 export interface SkillLoad extends Moment {
@@ -56,6 +59,8 @@ interface Cursor {
   step: number | null;
   // Аргументы последнего вызова memory — memory_updated приходит во время его выполнения.
   memoryArguments: Record<string, unknown> | null;
+  // Вызов тула, который сейчас выполняется: между tool_call и его tool_result.
+  toolCallId: string | null;
 }
 
 export function projectSkillsMemory(events: readonly HarnessEvent[]): SkillsMemoryView {
@@ -74,6 +79,7 @@ export function projectSkillsMemory(events: readonly HarnessEvent[]): SkillsMemo
     turn: 0,
     step: null,
     memoryArguments: null,
+    toolCallId: null,
   };
   events.forEach((event, index) => {
     advance(cursor, event);
@@ -90,8 +96,14 @@ function advance(cursor: Cursor, event: HarnessEvent): void {
   if (event.type === 'model_request' && event.purpose === 'agentStep') {
     cursor.step = event.iteration;
   }
-  if (event.type === 'tool_call' && event.toolName === 'memory') {
-    cursor.memoryArguments = asRecord(event.arguments);
+  if (event.type === 'tool_call') {
+    cursor.toolCallId = event.toolCallId;
+    if (event.toolName === 'memory') {
+      cursor.memoryArguments = asRecord(event.arguments);
+    }
+  }
+  if (event.type === 'tool_result' && event.toolCallId === cursor.toolCallId) {
+    cursor.toolCallId = null;
   }
 }
 
@@ -100,7 +112,12 @@ function momentOf(cursor: Cursor, event: HarnessEvent, index: number): Moment {
     cursor.turn === 0
       ? 'старт'
       : `в${String(cursor.turn)}${cursor.step === null ? '' : ` ш${String(cursor.step)}`}`;
-  return { index, at: Date.parse(event.timestamp) - cursor.startedAt, place };
+  return {
+    index,
+    at: Date.parse(event.timestamp) - cursor.startedAt,
+    place,
+    toolCallId: cursor.toolCallId,
+  };
 }
 
 function collect(

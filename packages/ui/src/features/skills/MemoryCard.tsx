@@ -2,6 +2,7 @@
 
 import type { ReactElement } from 'react';
 import type { Moment, SkillsMemoryView } from '../../projections/projectSkillsMemory';
+import { CallLink } from './CallLink';
 import styles from './SkillsMemory.module.css';
 
 interface CardProps {
@@ -48,6 +49,7 @@ export function MemoryCard({ view, shown, onSeek }: CardProps): ReactElement | n
                 </span>
                 {change.detail !== '' && <span className={styles.detail}>{change.detail}</span>}
               </button>
+              {change.index < shown && <CallLink moment={change} />}
             </li>
           ))}
         </ol>

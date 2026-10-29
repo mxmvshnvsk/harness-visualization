@@ -2,6 +2,7 @@
 
 import type { ReactElement } from 'react';
 import type { Moment, PlanVersion, SkillsMemoryView } from '../../projections/projectSkillsMemory';
+import { CallLink } from './CallLink';
 import styles from './SkillsMemory.module.css';
 
 interface CardProps {
@@ -46,7 +47,10 @@ export function PlanCard({ view, shown, onSeek }: CardProps): ReactElement | nul
       {current === null ? (
         <p className={styles.muted}>Повтор ещё не дошёл до первого плана.</p>
       ) : (
-        <Plan plan={current} />
+        <>
+          <CallLink moment={current} />
+          <Plan plan={current} />
+        </>
       )}
     </section>
   );
