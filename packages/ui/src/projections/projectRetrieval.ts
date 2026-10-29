@@ -54,6 +54,8 @@ export interface SearchAction extends ActionBase {
 export interface ReadAction extends ActionBase {
   kind: 'read';
   documentId: string;
+  // Вызов модели kedr__read_document — для ссылок в инспектор и журнал MCP.
+  toolCallId: string;
 }
 
 export type RetrievalAction = SearchAction | ReadAction;
@@ -165,7 +167,12 @@ function modelAction(
   const name = serverToolName(event.toolName);
   const common = { ...base(), chars: event.content.length, failed: event.status !== 'success' };
   if (name === READ_TOOL) {
-    return { ...common, kind: 'read', documentId: stringOf(call?.arguments.id) ?? '' };
+    return {
+      ...common,
+      kind: 'read',
+      documentId: stringOf(call?.arguments.id) ?? '',
+      toolCallId: event.toolCallId,
+    };
   }
   const search = SEARCH_TOOLS[name];
   if (search === undefined) {

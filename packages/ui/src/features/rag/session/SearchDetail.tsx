@@ -47,6 +47,7 @@ function ReadDetail(props: { action: ReadAction } & Omit<DetailProps, 'action'>)
   return (
     <div className={styles.detail}>
       <h3 className={styles.detailTitle}>Модель читает документ целиком</h3>
+      <ChainLinks link={{ toolCallId: action.toolCallId, query: '' }} inspector mcp />
       <div className={styles.meta}>
         <span>
           документ <b className={styles.mono}>{action.documentId}</b>

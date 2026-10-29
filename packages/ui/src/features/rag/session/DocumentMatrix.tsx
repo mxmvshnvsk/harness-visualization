@@ -2,7 +2,12 @@
 // Видно, что одно и то же находят снова и снова, а что всплыло случайно.
 
 import type { CSSProperties, ReactElement } from 'react';
-import type { RetrievalAction, SearchAction } from '../../../projections/projectRetrieval';
+import { useViewLinks } from '../../../app/viewLinks';
+import type {
+  ReadAction,
+  RetrievalAction,
+  SearchAction,
+} from '../../../projections/projectRetrieval';
 import { kindColor, placeOf, SEARCH_LABELS } from './retrievalLabels';
 import styles from './Retrieval.module.css';
 
@@ -23,9 +28,13 @@ const LEGEND = [
 export function DocumentMatrix(props: DocumentMatrixProps): ReactElement {
   const { actions, cited, turns } = props;
   const searches = actions.filter((action): action is SearchAction => action.kind === 'search');
-  const read = new Set(
-    actions.flatMap((action) => (action.kind === 'read' ? [action.documentId] : [])),
-  );
+  // Документ → первое чтение целиком: «да» в колонке «прочитан» ведёт к этому вызову в инспекторе.
+  const read = new Map<string, ReadAction>();
+  for (const action of actions) {
+    if (action.kind === 'read' && !read.has(action.documentId)) {
+      read.set(action.documentId, action);
+    }
+  }
   // Сверху — то, что пригодилось: названо в ответе, прочитано; дальше — по первой находке.
   const order = [...props.documents].sort(
     (left, right) =>
@@ -56,7 +65,7 @@ export function DocumentMatrix(props: DocumentMatrixProps): ReactElement {
                 key={document.documentId}
                 document={document}
                 searches={searches}
-                read={read.has(document.documentId)}
+                read={read.get(document.documentId) ?? null}
                 cited={cited.has(document.documentId)}
               />
             ))}
@@ -89,7 +98,7 @@ function MatrixHead(props: { searches: readonly SearchAction[]; turns: number })
 interface DocumentRowProps {
   document: { documentId: string; documentType: string };
   searches: readonly SearchAction[];
-  read: boolean;
+  read: ReadAction | null;
   cited: boolean;
 }
 
@@ -103,9 +112,32 @@ function DocumentRow({ document, searches, read, cited }: DocumentRowProps): Rea
       {searches.map((search) => (
         <PlaceCell key={search.index} search={search} documentId={document.documentId} />
       ))}
-      <YesCell yes={read} />
+      <ReadCell read={read} />
       <YesCell yes={cited} />
     </tr>
+  );
+}
+
+// «Прочитан» — кнопка: открывает чтение в инспекторе. Без инспектора (вне трейса) — просто «да».
+function ReadCell({ read }: { read: ReadAction | null }): ReactElement {
+  const links = useViewLinks();
+  if (read === null || links === null) {
+    return <YesCell yes={read !== null} />;
+  }
+  return (
+    <td>
+      <button
+        type="button"
+        className={styles.cell}
+        data-state="yes"
+        title={`шаг ${String(read.step ?? '—')} · открыть чтение в инспекторе`}
+        onClick={() => {
+          links.toInspector({ toolCallId: read.toolCallId, query: '' });
+        }}
+      >
+        да →
+      </button>
+    </td>
   );
 }
 
