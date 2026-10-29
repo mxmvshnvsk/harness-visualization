@@ -2,6 +2,7 @@
 // на шаг — начинаем с него; листаем шаги — адрес идёт следом, не плодя записей в истории.
 
 import { useState } from 'react';
+import { markRouteStep } from '../app/start/route';
 
 export function useCourseStep(
   steps: readonly { id: string }[],
@@ -16,6 +17,10 @@ export function useCourseStep(
   );
   const go = (next: number): void => {
     setIndex(next);
+    // Дошли до последнего шага урока — шаг «Одна лаборатория» маршрута новичка пройден.
+    if (next === steps.length - 1) {
+      markRouteStep('lab');
+    }
     window.scrollTo({ top: 0 });
     const id = steps[next]?.id;
     if (id !== undefined) {

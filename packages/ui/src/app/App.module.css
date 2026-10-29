@@ -119,6 +119,26 @@
   align-self: stretch;
 }
 
+/* Сам открытый вид: обёртка — цель подсветки экскурсии. */
+.viewBody {
+  min-width: 0;
+}
+
+/* Трейс примера открыт без экскурсии — предложить её над видами. */
+.tourStart {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 16px;
+  padding: 10px 12px 10px 16px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-inner);
+  background: var(--accent-soft);
+  font-size: 14px;
+}
+
 /* Док плеера: на всю ширину, стекло — содержимое видно под ним размытым. */
 .dock {
   position: fixed;

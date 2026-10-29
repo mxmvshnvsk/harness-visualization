@@ -14,6 +14,7 @@ export function BranchButton({ requestId }: { requestId: string | null }): React
     <button
       type="button"
       className={styles.fork}
+      data-branch-request={requestId}
       title="Шаги до этого — replay из трейса, с этого — новый прогон"
       onClick={(event) => {
         event.stopPropagation();

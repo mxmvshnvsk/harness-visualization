@@ -5,6 +5,7 @@
 import type { BranchStep } from '@harness-visualization/harness/branch';
 import { useContext, useState, type ReactElement } from 'react';
 import { startBranch } from '../../api/serverApi';
+import { markRouteStep } from '../../app/start/route';
 import { Button } from '../../components/Button';
 import { Drawer } from '../../components/Drawer';
 import { Segmented } from '../../components/Segmented';
@@ -56,6 +57,7 @@ function BranchForm({ traceFile, step }: { traceFile: string; step: BranchStep }
           ? ({ kind: 'replay' } as const)
           : ({ kind: 'toolResult', toolCallId, content: content[toolCallId] ?? original } as const);
       const { sessionId } = await startBranch({ traceFile, step: step.step, edit });
+      markRouteStep('branch');
       navigation?.openSession(sessionId);
     } catch (error) {
       setState({ busy: false, error: error instanceof Error ? error.message : String(error) });

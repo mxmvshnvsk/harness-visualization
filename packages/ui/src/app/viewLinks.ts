@@ -8,6 +8,8 @@ import { createContext, useContext } from 'react';
 export interface SearchLink {
   toolCallId: string | null;
   query: string;
+  // Запрос к модели, который раскрыть в инспекторе (экскурсия: «Подробнее» на шаге).
+  requestId?: string;
 }
 
 export interface ViewLinks {

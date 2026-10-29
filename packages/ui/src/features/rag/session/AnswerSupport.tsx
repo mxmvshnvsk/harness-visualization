@@ -27,7 +27,7 @@ const VERDICT_TEXT: Record<string, string> = {
 export function AnswerSupport({ file }: { file: string }): ReactElement {
   const report = useGrounding(file);
   return (
-    <section className={styles.card}>
+    <section className={styles.card} data-tour="grounding">
       <h2 className={styles.title}>На что опирается ответ</h2>
       {report.status === 'ready' ? (
         <>

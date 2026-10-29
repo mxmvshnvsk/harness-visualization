@@ -5,6 +5,7 @@
 // пошаговый разбор одной задачи у LLM Visualization Брендана Байкрофта.
 
 import { useState, type ReactElement } from 'react';
+import { RouteRow, useRouteProgress } from './RouteRow';
 import { TermPhrase } from '../../help/HelpLinks';
 import styles from './Start.module.css';
 
@@ -13,12 +14,15 @@ interface StartIntroProps {
   onOpenExample: (() => void) | null;
   onAsk: () => void;
   onOpenLabs: () => void;
+  // Пример сразу на остановке «ветка от шага» — для шага маршрута новичка.
+  onOpenBranch: (() => void) | null;
 }
 
 // Введение на старте или, если его скрыли, одна строка со ссылками (мокап, одобренный 29.10.2026:
 // старт был перегружен — заголовок экрана дублировал введение, у введения была своя рамка).
 export function StartIntro(props: StartIntroProps): ReactElement {
   const [hidden, setHidden] = useIntroHidden();
+  const progress = useRouteProgress();
   if (hidden) {
     return (
       <div className={styles.strip}>
@@ -26,6 +30,7 @@ export function StartIntro(props: StartIntroProps): ReactElement {
         <span className={styles.stripLinks}>
           <StripLink onClick={props.onOpenExample}>Как работает тренажёр</StripLink>
           <StripLink onClick={props.onOpenLabs}>Все лаборатории</StripLink>
+          {progress !== null && <StripLink onClick={() => setHidden(false)}>{progress}</StripLink>}
           <StripLink onClick={() => setHidden(false)}>Показать введение</StripLink>
         </span>
       </div>
@@ -41,6 +46,7 @@ export function StartIntro(props: StartIntroProps): ReactElement {
         <LoopDiagram />
       </section>
       <Entries {...props} />
+      <RouteRow {...props} />
     </div>
   );
 }
@@ -80,8 +86,8 @@ function Entries(props: StartIntroProps): ReactElement {
         main
         title="Как работает тренажёр"
         mark="→"
-        text="Готовая запись по шагам: что где на экране и куда смотреть."
-        meta="3 минуты · без ключа"
+        text="Экскурсия по готовой записи: что где на экране и куда смотреть."
+        meta="6 минут · без ключа"
         onClick={props.onOpenExample}
       />
       <Entry

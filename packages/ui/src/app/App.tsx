@@ -75,6 +75,9 @@ import { LabsScreen } from './start/LabsScreen';
 import { QUESTION_FIELD_ID } from '../features/SessionForm';
 import { StartIntro } from './start/StartIntro';
 import { ViewLinksContext, type SearchLink, type ViewLinks } from './viewLinks';
+import { Tour } from '../features/tour/Tour';
+import { BRANCH_STOP, TOUR_STOPS, TOUR_TRACE, type TourStop } from '../features/tour/tourStops';
+import { markRouteStep } from './start/route';
 
 export function App(): ReactElement {
   const [selection, select, replace] = useSelection();
@@ -85,10 +88,6 @@ export function App(): ReactElement {
   const { opened, stream, sessionId, pending } = useOpenedStream(selection);
   const { openLab, closeLab } = useLabNavigation(select, pick, selection);
   useReloadOnEnd(stream.state, sessions.reload, traces.reload);
-
-  const sources = (
-    <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} />
-  );
   const lab = labScreenOf(selection, { onBack: closeLab, onSelect: pick, replace });
   if (opened === null) {
     return (
@@ -115,6 +114,7 @@ export function App(): ReactElement {
                 sessionId={sessionId}
                 traceFile={opened.kind === 'trace' ? opened.file : null}
                 live={opened.kind === 'session' && stream.state !== 'ended'}
+                tour={tourOf(lab === null ? opened : null, replace, pick)}
                 header={
                   <Topbar
                     {...describeSelection(opened, stream.events, traces.items)}
@@ -131,7 +131,7 @@ export function App(): ReactElement {
           </NavigationContext.Provider>
         </LiveDeltasContext.Provider>
         <Drawer open={drawerOpen} label="Сессии и трейсы" onClose={closeDrawer}>
-          {sources}
+          <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} />
         </Drawer>
       </div>
     </>
@@ -159,6 +159,7 @@ function startScreenOf(
       onOpenLab={route.openLab}
       onOpenLabs={() => route.select({ kind: 'labs' })}
       onOpenExample={exampleOpener(route.traces, route.pick)}
+      onOpenBranch={exampleOpener(route.traces, route.pick, BRANCH_STOP)}
     >
       {sources}
     </StartScreen>
@@ -266,6 +267,7 @@ function LabScreen(props: {
   onSelect: (next: Selection) => void;
 }): ReactElement {
   const backLabel = BACK_LABELS[props.back];
+  useMarkToolLab(props.lab);
   const openTrace = (file: string): void => {
     props.onSelect({ kind: 'trace', file });
   };
@@ -306,6 +308,16 @@ function LabScreen(props: {
 }
 
 type BackKind = OpenedSelection['kind'] | LabOrigin;
+
+// У лабораторий без урока (выбор токена, Evals, код-арена) шаг маршрута «Одна лаборатория»
+// отмечается, когда её открыли; у RAG и MCP — на последнем шаге урока.
+function useMarkToolLab(lab: LabName): void {
+  useEffect(() => {
+    if (lab !== 'rag' && lab !== 'mcp') {
+      markRouteStep('lab');
+    }
+  }, [lab]);
+}
 
 const BACK_LABELS: Record<BackKind, string> = {
   session: '← К сессии',
@@ -490,6 +502,7 @@ function StartScreen(props: {
   onOpenLab: (lab: LabName) => void;
   onOpenLabs: () => void;
   onOpenExample: (() => void) | null;
+  onOpenBranch: (() => void) | null;
 }): ReactElement {
   const mode = useMode();
   return (
@@ -515,6 +528,7 @@ function StartScreen(props: {
       </div>
       {mode === 'learn' && (
         <StartIntro
+          onOpenBranch={props.onOpenBranch}
           onOpenExample={props.onOpenExample}
           onAsk={focusQuestion}
           onOpenLabs={props.onOpenLabs}
@@ -565,17 +579,16 @@ function StartLabs(props: {
   );
 }
 
-// Пример для первого знакомства: «удалёнка» — короткая сессия с поиском по документам и тулами.
-const FIRST_EXAMPLE = '2026-10-26T08-03-22_040414ea.jsonl';
-
-// Открыть пример; null — его нет в списке (папку примеров убрали или список ещё грузится).
+// Открыть пример с экскурсией на остановке stop; null — примера нет в списке (папку примеров
+// убрали или список ещё грузится).
 // Тот же файл может лежать и в traces/ — тогда сервер отдаёт его как свой трейс: годится и он.
 function exampleOpener(
   traces: readonly TraceSummary[],
   pick: (next: Selection | null) => void,
+  stop = 0,
 ): (() => void) | null {
-  const found = traces.some((trace) => trace.file === FIRST_EXAMPLE);
-  return found ? () => pick({ kind: 'trace', file: FIRST_EXAMPLE }) : null;
+  const found = traces.some((trace) => trace.file === TOUR_TRACE);
+  return found ? () => pick({ kind: 'trace', file: TOUR_TRACE, tour: stop }) : null;
 }
 
 // «Спросить агента самому»: прокрутить к полю вопроса и поставить в него курсор.
@@ -600,6 +613,38 @@ const VIEWS = [
 
 type ViewName = (typeof VIEWS)[number]['value'];
 
+// Экскурсия по примеру «удалёнка»: на какой остановке (null — экскурсия не идёт) и переходы.
+interface TourControl {
+  stop: number | null;
+  go: (stop: number | null) => void;
+  finish: () => void;
+}
+
+// Экскурсия есть только у трейса примера и только пока не открыта лаборатория поверх.
+function tourOf(
+  opened: OpenedSelection | null,
+  replace: (next: Selection | null) => void,
+  pick: (next: Selection | null) => void,
+): TourControl | null {
+  if (opened?.kind !== 'trace' || opened.file !== TOUR_TRACE) {
+    return null;
+  }
+  const { file } = opened;
+  return {
+    stop: opened.tour ?? null,
+    go: (stop) => {
+      if (stop === TOUR_STOPS.length - 1) {
+        markRouteStep('tour');
+      }
+      replace(stop === null ? { kind: 'trace', file } : { kind: 'trace', file, tour: stop });
+    },
+    finish: () => {
+      markRouteStep('tour');
+      pick(null);
+    },
+  };
+}
+
 interface OpenStreamProps {
   events: HarnessEvent[];
   // Сессия сервера — у неё есть диалог; null — трейс.
@@ -610,23 +655,22 @@ interface OpenStreamProps {
   header: ReactNode;
   // Чего сессия ждёт от человека прямо сейчас: разрешения на действие.
   prompt: ReactNode;
+  tour: TourControl | null;
 }
 
-// Открытая сессия или трейс: слева шапка, виды и плеер, справа колонка «Диалог».
+// Открытая сессия или трейс: слева шапка, виды и плеер, справа колонка «Диалог». Колонка
+// свёрнута — вопрос о разрешении встаёт над видами, чтобы его не пропустить.
 // Все виды показывают события до курсора повтора — повтор и перемотка работают в каждом.
 function OpenStream(props: OpenStreamProps): ReactElement {
   const { events, sessionId, live, header, prompt } = props;
-  // На узком экране колонка диалога ложится поверх — там она по умолчанию свёрнута.
-  const [dialogOpen, setDialogOpen] = useState(() => window.innerWidth > 1000);
+  const [dialogOpen, setDialogOpen, openDialog] = useDialogOpen();
   const replay = useReplay(events, live);
   const { clock, cursor, schedule, view } = replay;
   const [playerCollapsed, togglePlayer] = usePlayerCollapsed();
   const liveStartedAt = live && events[0] !== undefined ? Date.parse(events[0].timestamp) : null;
-  const openDialog = useCallback(() => {
-    setDialogOpen(true);
-  }, []);
   const dialog = { events, shown: cursor, sessionId, live };
   const agentLabels = useAgentLabelsOf(events);
+  const views = useViews(props.tour?.stop ?? null);
   return (
     <AgentLabelsContext.Provider value={agentLabels}>
       <OpenDialogContext.Provider value={dialogOpen ? null : openDialog}>
@@ -637,19 +681,20 @@ function OpenStream(props: OpenStreamProps): ReactElement {
         >
           <div className={styles.page}>
             {header}
-            {/* Колонка свёрнута — вопрос о разрешении над видами, чтобы его не пропустить. */}
             {!dialogOpen && prompt}
+            <TourStart tour={props.tour} onStart={views.showStop} />
             <ViewSwitch
               events={events}
               replay={replay}
               liveStartedAt={liveStartedAt}
               traceFile={props.traceFile}
               sessionId={sessionId}
+              views={views}
             />
           </div>
           {/* Колонка и полоса живут обе: колонка раздвигается и сдвигается плавно, а текст в ней
             остаётся на месте и не прокручивается заново при каждом открытии. */}
-          <div className={styles.dialogSlot}>
+          <div className={styles.dialogSlot} data-tour="dialog">
             <DialogPanel
               {...dialog}
               open={dialogOpen}
@@ -670,10 +715,20 @@ function OpenStream(props: OpenStreamProps): ReactElement {
             collapsed={playerCollapsed}
             onToggle={togglePlayer}
           />
+          <TourLayer tour={props.tour} replay={replay} events={events} views={views} />
         </div>
       </OpenDialogContext.Provider>
     </AgentLabelsContext.Provider>
   );
+}
+
+// Колонка «Диалог»: на узком экране ложится поверх — там по умолчанию свёрнута.
+function useDialogOpen(): [boolean, (open: boolean) => void, () => void] {
+  const [open, setOpen] = useState(() => window.innerWidth > 1000);
+  const expand = useCallback(() => {
+    setOpen(true);
+  }, []);
+  return [open, setOpen, expand];
 }
 
 interface ViewSwitchProps {
@@ -682,19 +737,119 @@ interface ViewSwitchProps {
   liveStartedAt: number | null;
   traceFile: string | null;
   sessionId: string | null;
+  views: Views;
 }
 
-// Переключатель видов и сам выбранный вид.
+// Переключатель видов и сам выбранный вид. Выбор вида живёт выше — его переключает и экскурсия.
 function ViewSwitch(props: ViewSwitchProps): ReactElement {
-  const [viewName, setViewName] = useState<ViewName>('flow');
-  const { links, link } = useLinkedViews(setViewName);
+  const { viewName, setViewName, links, link } = props.views;
   return (
     <ViewLinksContext.Provider value={links}>
       <div className={styles.views}>
         <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
-        {VIEW_RENDERERS[viewName]({ ...props, link })}
+        <div className={styles.viewBody} data-tour="view">
+          {VIEW_RENDERERS[viewName]({ ...props, link })}
+        </div>
       </div>
     </ViewLinksContext.Provider>
+  );
+}
+
+type Views = ReturnType<typeof useViews>;
+
+// Какой вид открыт и переходы между видами; showStop — вид и раскрытие остановки экскурсии.
+function useViews(initialStop: number | null) {
+  const initial = initialStop === null ? undefined : TOUR_STOPS[initialStop];
+  const [viewName, setViewName] = useState<ViewName>(initial?.view ?? 'flow');
+  const { links, link, show } = useLinkedViews(setViewName, linkOfStop(initial));
+  const showStop = useCallback(
+    (stop: number) => {
+      const data = TOUR_STOPS[stop];
+      if (data !== undefined) {
+        show(data.view, linkOfStop(data));
+      }
+    },
+    [show],
+  );
+  return { viewName, setViewName, links, link, showStop };
+}
+
+// Что раскрыть на остановке: запрос к модели или вызов тула; null — ничего.
+function linkOfStop(stop: TourStop | undefined): SearchLink | null {
+  if (stop?.focus === undefined) {
+    return null;
+  }
+  return 'requestId' in stop.focus
+    ? { toolCallId: null, query: '', requestId: stop.focus.requestId }
+    : { toolCallId: stop.focus.toolCallId, query: '' };
+}
+
+// Кнопка начать экскурсию над видами — трейс примера открыт без неё (вышли или пришли из списка).
+function TourStart(props: {
+  tour: TourControl | null;
+  onStart: (stop: number) => void;
+}): ReactElement | null {
+  const mode = useMode();
+  const { tour } = props;
+  if (tour === null || tour.stop !== null || mode !== 'learn') {
+    return null;
+  }
+  return (
+    <div className={styles.tourStart}>
+      <span>Это пример для экскурсии: 14 остановок, около 6 минут.</span>
+      <Button
+        variant="ink"
+        onClick={() => {
+          props.onStart(0);
+          tour.go(0);
+        }}
+      >
+        Начать экскурсию
+      </Button>
+    </div>
+  );
+}
+
+// Экскурсия поверх трейса — только в «Обучении»: в «Исследовании» инспектор другой.
+function TourLayer(props: {
+  tour: TourControl | null;
+  replay: ReturnType<typeof useReplay>;
+  events: HarnessEvent[];
+  views: Views;
+}): ReactElement | null {
+  const mode = useMode();
+  const { tour, views } = props;
+  // Трейс открыт в «Исследовании» — шаг маршрута новичка пройден.
+  useEffect(() => {
+    if (mode === 'research') {
+      markRouteStep('research');
+    }
+  }, [mode]);
+  const { showStop } = views;
+  const go = useCallback(
+    (stop: number) => {
+      showStop(stop);
+      tour?.go(stop);
+    },
+    [showStop, tour],
+  );
+  // Выход оставляет человека там, где он есть: та же вкладка, тот же момент плеера.
+  const exit = useCallback(() => {
+    tour?.go(null);
+  }, [tour]);
+  if (tour === null || tour.stop === null || mode !== 'learn') {
+    return null;
+  }
+  return (
+    <Tour
+      stop={tour.stop}
+      events={props.events}
+      clock={props.replay.clock}
+      schedule={props.replay.schedule}
+      onGo={go}
+      onExit={exit}
+      onFinish={tour.finish}
+    />
   );
 }
 
@@ -778,12 +933,12 @@ type LinkedView = 'rag' | 'mcp' | 'inspector';
 
 // Переход из одного вида в другой с целью: какой поиск показать. nonce — новый переход,
 // даже к той же цели: вид открывается заново и раскрывает нужное.
-function useLinkedViews(setViewName: (view: ViewName) => void) {
+function useLinkedViews(setViewName: (view: ViewName) => void, initial: SearchLink | null) {
   const [link, setLink] = useState<{
-    view: LinkedView | null;
+    view: ViewName | null;
     target: SearchLink | null;
     nonce: number;
-  }>({ view: null, target: null, nonce: 0 });
+  }>(() => ({ view: initial === null ? null : 'inspector', target: initial, nonce: 0 }));
   const links = useMemo<ViewLinks>(() => {
     const go = (view: LinkedView, target: SearchLink): void => {
       setLink((current) => ({ view, target, nonce: current.nonce + 1 }));
@@ -801,9 +956,17 @@ function useLinkedViews(setViewName: (view: ViewName) => void) {
       },
     };
   }, [setViewName]);
+  // Открыть вид с целью или без неё — вид открывается заново (экскурсия).
+  const show = useCallback(
+    (view: ViewName, target: SearchLink | null) => {
+      setLink((current) => ({ view, target, nonce: current.nonce + 1 }));
+      setViewName(view);
+    },
+    [setViewName],
+  );
   const focusFor = (view: LinkedView): SearchLink | null =>
     link.view === view ? link.target : null;
-  return { links, link: { nonce: link.nonce, focusFor } };
+  return { links, link: { nonce: link.nonce, focusFor }, show };
 }
 
 interface PlayerDockProps {
@@ -820,7 +983,7 @@ function PlayerDock(props: PlayerDockProps): ReactElement {
   const { view, collapsed } = props;
   return (
     <div className={styles.dock}>
-      <div className={styles.dockInner}>
+      <div className={styles.dockInner} data-tour="player">
         {!collapsed && <TokenomicsLine totals={view.totals} />}
         <PlayerBar
           clock={props.clock}

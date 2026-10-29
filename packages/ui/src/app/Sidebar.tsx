@@ -5,6 +5,7 @@ import type { SessionSummary, TraceSummary } from '@harness-visualization/server
 import type { ReactElement } from 'react';
 import type { ServerList } from '../api/useServerList';
 import { SessionForm } from '../features/SessionForm';
+import { markRouteStep } from './start/route';
 import { SessionList, TraceList } from '../features/SourceList';
 import styles from './App.module.css';
 import type { Selection } from './useSelection';
@@ -30,6 +31,7 @@ export function Sidebar({
       <section className={`${styles.card} ${styles.formCard}`}>
         <SessionForm
           onStarted={(sessionId) => {
+            markRouteStep('question');
             onSelect({ kind: 'session', sessionId });
             sessions.reload();
           }}

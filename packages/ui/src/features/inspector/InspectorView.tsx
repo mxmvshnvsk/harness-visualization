@@ -125,6 +125,13 @@ function focusTarget(events: readonly HarnessEvent[], link: SearchLink | null): 
   if (link === null) {
     return null;
   }
+  if (link.requestId !== undefined) {
+    const { requestId } = link;
+    const at = events.findIndex(
+      (event) => event.type === 'model_request' && event.requestId === requestId,
+    );
+    return at < 0 ? null : { index: at, focus: { kind: 'model', requestId } };
+  }
   const { toolCallId } = link;
   const index =
     toolCallId === null

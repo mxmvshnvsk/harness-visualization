@@ -14,8 +14,9 @@ export type LabName = 'rag' | 'mcp' | 'evals' | 'arena' | 'tokens';
 const LABS: readonly LabName[] = ['rag', 'mcp', 'evals', 'arena', 'tokens'];
 
 // Открытый поток событий: живая сессия или записанный трейс.
+// tour — остановка экскурсии по примеру (с нуля, ?tour=1 — первая); нет — без экскурсии.
 export type OpenedSelection =
-  { kind: 'session'; sessionId: string } | { kind: 'trace'; file: string };
+  { kind: 'session'; sessionId: string } | { kind: 'trace'; file: string; tour?: number };
 
 // Откуда открыли лабораторию, если не из сессии или трейса: со старта или с экрана «Лаборатории».
 export type LabOrigin = 'start' | 'labs';
@@ -107,12 +108,27 @@ function queryOf(selection: Selection): string {
       params.set('from', 'labs');
     }
   }
-  if (opened?.kind === 'session') {
-    params.set('session', opened.sessionId);
-  } else if (opened?.kind === 'trace') {
-    params.set('trace', opened.file);
+  if (opened !== null) {
+    setOpenedParams(params, opened, selection.kind === 'trace');
   }
   return params.toString();
+}
+
+// Сессия или трейс в адресе; остановку экскурсии — только когда открыт сам трейс, а не
+// лаборатория поверх него.
+function setOpenedParams(
+  params: URLSearchParams,
+  opened: OpenedSelection,
+  withTour: boolean,
+): void {
+  if (opened.kind === 'session') {
+    params.set('session', opened.sessionId);
+    return;
+  }
+  params.set('trace', opened.file);
+  if (withTour && opened.tour !== undefined) {
+    params.set('tour', String(opened.tour + 1));
+  }
 }
 
 function readSelection(): Selection | null {
@@ -139,5 +155,11 @@ function readOpened(params: URLSearchParams): OpenedSelection | null {
     return { kind: 'session', sessionId };
   }
   const file = params.get('trace');
-  return file === null ? null : { kind: 'trace', file };
+  if (file === null) {
+    return null;
+  }
+  const tour = Number(params.get('tour') ?? '');
+  return Number.isInteger(tour) && tour >= 1
+    ? { kind: 'trace', file, tour: tour - 1 }
+    : { kind: 'trace', file };
 }

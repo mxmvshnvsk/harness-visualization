@@ -34,7 +34,7 @@ export function DocumentMatrix(props: DocumentMatrixProps): ReactElement {
       left.firstIndex - right.firstIndex,
   );
   return (
-    <section className={styles.card}>
+    <section className={styles.card} data-tour="documents">
       <h2 className={styles.title}>Документы сессии</h2>
       <p className={styles.sub}>
         Строка — документ, колонка — поиск, число — место документа в выдаче.
