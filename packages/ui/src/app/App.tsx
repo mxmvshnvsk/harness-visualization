@@ -11,6 +11,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactElement,
   type ReactNode,
@@ -62,6 +63,7 @@ import { setMode, useMode, type UiMode } from './mode';
 import { ModeToggle } from '../components/ModeToggle';
 import {
   cameFrom,
+  rewriteAddress,
   labBackOf,
   openedOf,
   type LabOrigin,
@@ -632,11 +634,17 @@ function tourOf(
   const { file } = opened;
   return {
     stop: opened.tour ?? null,
+    // Листание внутри экскурсии — только адрес (остановку держит сама экскурсия); начало и выход —
+    // через состояние: экскурсия появляется и пропадает.
     go: (stop) => {
       if (stop === TOUR_STOPS.length - 1) {
         markRouteStep('tour');
       }
-      replace(stop === null ? { kind: 'trace', file } : { kind: 'trace', file, tour: stop });
+      if (stop === null || opened.tour === undefined) {
+        replace(stop === null ? { kind: 'trace', file } : { kind: 'trace', file, tour: stop });
+      } else {
+        rewriteAddress({ kind: 'trace', file, tour: stop });
+      }
     },
     finish: () => {
       markRouteStep('tour');
@@ -743,16 +751,40 @@ interface ViewSwitchProps {
 // Переключатель видов и сам выбранный вид. Выбор вида живёт выше — его переключает и экскурсия.
 function ViewSwitch(props: ViewSwitchProps): ReactElement {
   const { viewName, setViewName, links, link } = props.views;
+  const bodyRef = useViewFade(viewName);
   return (
     <ViewLinksContext.Provider value={links}>
       <div className={styles.views}>
         <Segmented label="Вид" options={VIEWS} value={viewName} onChange={setViewName} />
-        <div className={styles.viewBody} data-tour="view">
+        <div ref={bodyRef} className={styles.viewBody} data-tour="view">
           {VIEW_RENDERERS[viewName]({ ...props, link })}
         </div>
       </div>
     </ViewLinksContext.Provider>
   );
+}
+
+// Сменили вкладку — новая мягко проявляется (Web Animations: без лишнего состояния и без
+// пересоздания вида). Первую отрисовку и «уменьшить движение» не трогаем.
+function useViewFade(viewName: ViewName) {
+  const ref = useRef<HTMLDivElement>(null);
+  const shown = useRef(viewName);
+  useEffect(() => {
+    const element = ref.current;
+    if (element === null || shown.current === viewName) {
+      return;
+    }
+    shown.current = viewName;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return;
+    }
+    // Только прозрачность, без сдвига: сдвиг двигал бы цель подсветки экскурсии каждый кадр.
+    element.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: 220,
+      easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)',
+    });
+  }, [viewName]);
+  return ref;
 }
 
 type Views = ReturnType<typeof useViews>;
@@ -826,7 +858,7 @@ function TourLayer(props: {
     }
   }, [mode]);
   const { showStop } = views;
-  const go = useCallback(
+  const apply = useCallback(
     (stop: number) => {
       showStop(stop);
       tour?.go(stop);
@@ -837,16 +869,16 @@ function TourLayer(props: {
   const exit = useCallback(() => {
     tour?.go(null);
   }, [tour]);
-  if (tour === null || tour.stop === null || mode !== 'learn') {
+  if (tour?.stop === undefined || tour.stop === null || mode !== 'learn') {
     return null;
   }
   return (
     <Tour
-      stop={tour.stop}
+      initial={tour.stop}
       events={props.events}
       clock={props.replay.clock}
       schedule={props.replay.schedule}
-      onGo={go}
+      onApply={apply}
       onExit={exit}
       onFinish={tour.finish}
     />
@@ -956,10 +988,15 @@ function useLinkedViews(setViewName: (view: ViewName) => void, initial: SearchLi
       },
     };
   }, [setViewName]);
-  // Открыть вид с целью или без неё — вид открывается заново (экскурсия).
+  // Открыть вид с целью или без неё (экскурсия). Заново — только когда цель другая: пересоздать
+  // тяжёлый вид без нужды — заметная задержка при листании остановок.
   const show = useCallback(
     (view: ViewName, target: SearchLink | null) => {
-      setLink((current) => ({ view, target, nonce: current.nonce + 1 }));
+      setLink((current) =>
+        JSON.stringify(current.target) === JSON.stringify(target)
+          ? current
+          : { view, target, nonce: current.nonce + 1 },
+      );
       setViewName(view);
     },
     [setViewName],

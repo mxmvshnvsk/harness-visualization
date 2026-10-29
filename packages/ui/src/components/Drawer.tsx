@@ -1,7 +1,7 @@
 // Выезжающая панель поверх экрана: закрывается фоном, кнопкой и Escape. Слева — «Сессии
 // и трейсы»; справа — панель ветки (этап 9): трейс под ней остаётся виден.
 
-import { useEffect, useRef, type ReactElement, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react';
 import styles from './Drawer.module.css';
 
 interface DrawerProps {
@@ -20,6 +20,13 @@ export function Drawer({
   children,
 }: DrawerProps): ReactElement {
   const panelRef = useRef<HTMLDivElement>(null);
+  // Содержимое рисуем с первого открытия и дальше держим (сохраняется набранное), а до него —
+  // нет: закрытая панель иначе перерисовывала бы, например, весь список трейсов при каждом
+  // обновлении экрана под ней.
+  const [opened, setOpened] = useState(open);
+  if (open && !opened) {
+    setOpened(true);
+  }
   useEffect(() => {
     if (!open) {
       return undefined;
@@ -55,7 +62,7 @@ export function Drawer({
             Закрыть
           </button>
         </div>
-        {children}
+        {opened && children}
       </div>
     </>
   );

@@ -88,6 +88,12 @@ export function useSelection(): [Selection | null, SetSelection, SetSelection] {
   return [selection, select, replace];
 }
 
+// Переписать адрес, не трогая состояние приложения: экскурсия при листании сама держит, где она, —
+// перерисовывать ради адреса всё приложение (шапку, списки) незачем.
+export function rewriteAddress(next: Selection | null): void {
+  window.history.replaceState(window.history.state, '', urlOf(next));
+}
+
 function urlOf(selection: Selection | null): string {
   const query = selection === null ? '' : queryOf(selection);
   return query === '' ? window.location.pathname : `?${query}`;

@@ -6,17 +6,113 @@
   border-radius: var(--radius-inner);
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  box-shadow: 0 0 0 200vmax rgb(10 10 30 / 38%);
+  box-shadow: 0 0 0 200vmax var(--tour-scrim);
   pointer-events: none;
+}
+
+/* Смена остановки: подсветка переезжает к новой цели. Начинается в том же кадре, что и клик, —
+   плавно, но без ощущения задержки. */
+.spot[data-glide='true'] {
   transition:
-    left 0.35s ease,
-    top 0.35s ease,
-    width 0.35s ease,
-    height 0.35s ease;
+    left 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    top 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.card[data-pending='true'] .cardBody {
+  opacity: 0.7;
+  transition: opacity 0.1s ease-out;
+}
+
+/* Первый вход в экскурсию: затемнение и плашка, пока идёт запись. */
+.loader {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--tour-scrim);
+  animation: fade-in 0.2s ease-out;
+}
+
+.loader[data-still='true'] {
+  animation: none;
+}
+
+.loaderCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 18px 40px -16px rgb(0 0 0 / 45%);
+  font-size: 15px;
+}
+
+.loaderCard b {
+  display: block;
+  font-weight: 600;
+}
+
+.loaderText {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: var(--radius-pill);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: card-in 0.22s ease-out;
+}
+
+/* Не с нуля: пустая на кадр карточка читается как мигание. */
+@keyframes card-in {
+  from {
+    opacity: 0.3;
+    transform: translateY(3px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .spot {
+  .cardBody,
+  .loader {
+    animation: none;
+  }
+
+  .spinner {
+    animation-duration: 2s;
+  }
+
+  .spot[data-glide='true'],
+  .card[data-animate='true'] {
     transition: none;
   }
 }
@@ -36,6 +132,12 @@
   background: var(--surface);
   color: var(--text);
   box-shadow: 0 18px 40px -16px rgb(0 0 0 / 45%);
+}
+
+.card[data-animate='true'] {
+  transition:
+    right 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    bottom 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 @media (width <= 760px) {

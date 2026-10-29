@@ -7,6 +7,7 @@
 import { useState, type ReactElement } from 'react';
 import { RouteRow, useRouteProgress } from './RouteRow';
 import { TermPhrase } from '../../help/HelpLinks';
+import { TourLoader } from '../../features/tour/Tour';
 import styles from './Start.module.css';
 
 interface StartIntroProps {
@@ -20,12 +21,14 @@ interface StartIntroProps {
 
 // Введение на старте или, если его скрыли, одна строка со ссылками (мокап, одобренный 29.10.2026:
 // старт был перегружен — заголовок экрана дублировал введение, у введения была своя рамка).
-export function StartIntro(props: StartIntroProps): ReactElement {
+export function StartIntro(outer: StartIntroProps): ReactElement {
   const [hidden, setHidden] = useIntroHidden();
   const progress = useRouteProgress();
+  const [entering, props] = useTourEntry(outer);
   if (hidden) {
     return (
       <div className={styles.strip}>
+        {entering && <TourLoader />}
         <b>Тренажёр по AI-агентам</b>
         <span className={styles.stripLinks}>
           <StripLink onClick={props.onOpenExample}>Как работает тренажёр</StripLink>
@@ -38,6 +41,7 @@ export function StartIntro(props: StartIntroProps): ReactElement {
   }
   return (
     <div className={styles.introBlock}>
+      {entering && <TourLoader />}
       <section className={styles.hero}>
         <button type="button" className={styles.dismiss} onClick={() => setHidden(true)}>
           Скрыть введение ×
@@ -147,6 +151,26 @@ function StripLink(props: { onClick: (() => void) | null; children: string }): R
       {props.children}
     </button>
   );
+}
+
+// Вход в экскурсию: экран трейса рисуется не мгновенно (в дев-сборке — до полсекунды), и без
+// отклика клик казался бы потерянным. Сразу показываем ту же плашку загрузки, что встретит на
+// экране трейса, и переходим через два кадра — чтобы она успела отрисоваться.
+function useTourEntry(props: StartIntroProps): [boolean, StartIntroProps] {
+  const [entering, setEntering] = useState(false);
+  const wrap = (open: (() => void) | null): (() => void) | null =>
+    open === null
+      ? null
+      : () => {
+          setEntering(true);
+          requestAnimationFrame(() => {
+            requestAnimationFrame(open);
+          });
+        };
+  return [
+    entering,
+    { ...props, onOpenExample: wrap(props.onOpenExample), onOpenBranch: wrap(props.onOpenBranch) },
+  ];
 }
 
 const HIDDEN_KEY = 'hv-intro-hidden';
