@@ -1043,7 +1043,7 @@ interface PlayerDockProps {
 function PlayerDock(props: PlayerDockProps): ReactElement {
   const { view, collapsed } = props;
   return (
-    <div className={styles.dock}>
+    <div className={styles.dock} data-tour-dock>
       <div className={styles.dockInner} data-tour="player">
         {!collapsed && <TokenomicsLine totals={view.totals} />}
         <PlayerBar

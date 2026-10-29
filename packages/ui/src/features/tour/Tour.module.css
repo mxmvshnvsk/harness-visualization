@@ -119,7 +119,7 @@
 
 .card {
   position: fixed;
-  z-index: 41;
+  z-index: 42;
   width: min(360px, calc(100vw - 32px));
   max-height: calc(100vh - 140px);
   overflow-y: auto;
@@ -229,4 +229,38 @@
 .exit:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+/* «Попробуйте» про плеер: плеер — над затемнением, нужный элемент пульсирует рамкой. */
+:global(html[data-tour-also]) :global([data-tour-dock]) {
+  z-index: 41;
+}
+
+:global(html[data-tour-also='play']) :global([data-tour-control='play']),
+:global(html[data-tour-also='strip']) :global([data-tour-control='strip']) {
+  border-radius: var(--radius-small);
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  animation: tour-pulse 1.6s ease-in-out infinite;
+}
+
+:global(html[data-tour-also='play']) :global([data-tour-control='play']) {
+  border-radius: 50%;
+}
+
+@keyframes tour-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--accent-soft);
+  }
+
+  50% {
+    box-shadow: 0 0 0 8px var(--accent-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(html[data-tour-also]) :global([data-tour-control]) {
+    animation: none;
+  }
 }

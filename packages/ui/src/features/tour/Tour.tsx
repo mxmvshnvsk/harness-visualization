@@ -34,6 +34,7 @@ export function Tour(props: TourProps): ReactElement {
   useScrollLock();
   useTourKeys(pending ?? ready, go, props.onExit);
   const stop = ready === null ? null : (TOUR_STOPS[ready] ?? null);
+  useLiftedControl(stop?.also ?? null);
   if (ready === null || stop === null) {
     return <TourLoader still />;
   }
@@ -52,6 +53,20 @@ export function Tour(props: TourProps): ReactElement {
       />
     </>
   );
+}
+
+// «Попробуйте» про плеер: метка на корне документа поднимает плеер над затемнением и включает
+// пульсирующую рамку на нужном элементе (стили — в Tour.module.css).
+function useLiftedControl(control: string | null): void {
+  useEffect(() => {
+    if (control === null) {
+      return undefined;
+    }
+    document.documentElement.dataset.tourAlso = control;
+    return () => {
+      delete document.documentElement.dataset.tourAlso;
+    };
+  }, [control]);
 }
 
 function Spot({ stop, index }: { stop: TourStop; index: number }): ReactElement | null {

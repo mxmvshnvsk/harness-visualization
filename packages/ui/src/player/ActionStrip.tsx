@@ -36,6 +36,7 @@ export function ActionStrip({ clock, schedule, view }: ActionStripProps): ReactE
     <div
       ref={stripRef}
       className={styles.strip}
+      data-tour-control="strip"
       role="slider"
       tabIndex={0}
       aria-label="Позиция в сессии"

@@ -8,6 +8,8 @@ interface IconButtonProps {
   path: string;
   onClick: () => void;
   primary?: boolean;
+  // Метка для экскурсии: её «Попробуйте» подсвечивает этот элемент.
+  tour?: string;
 }
 
 export function IconButton({
@@ -15,6 +17,7 @@ export function IconButton({
   path,
   onClick,
   primary = false,
+  tour,
 }: IconButtonProps): ReactElement {
   return (
     <button
@@ -22,6 +25,7 @@ export function IconButton({
       className={primary ? `${styles.icon} ${styles.primary}` : styles.icon}
       aria-label={label}
       title={label}
+      data-tour-control={tour}
       onClick={onClick}
     >
       <svg

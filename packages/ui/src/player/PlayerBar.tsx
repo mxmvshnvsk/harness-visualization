@@ -85,6 +85,7 @@ function PlayButton({ clock }: { clock: TimelineClock }): ReactElement {
       label={playing ? 'Пауза' : 'Воспроизвести'}
       path={playing ? 'M9 6v12M15 6v12' : 'M8 5v14l11-7L8 5Z'}
       primary
+      tour="play"
       onClick={() => {
         if (playing) {
           clock.pause();
