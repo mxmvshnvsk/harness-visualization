@@ -55,7 +55,7 @@ export function StepsView(props: StepsViewProps): ReactElement {
         selected={selected}
         onSelect={setPicked}
         onSeek={(index) => {
-          clock.seek(timeAt(schedule, index));
+          clock.seek(timeAt(schedule, offsetOf(events, index)));
         }}
       />
       <section className={styles.panel}>
@@ -75,6 +75,15 @@ export function StepsView(props: StepsViewProps): ReactElement {
       </section>
     </div>
   );
+}
+
+// timeAt ждёт мс от начала сессии, а таблица отдаёт номер события — переводим по его времени.
+function offsetOf(events: readonly HarnessEvent[], index: number): number {
+  const first = events[0];
+  const event = events[index];
+  return first === undefined || event === undefined
+    ? 0
+    : Date.parse(event.timestamp) - Date.parse(first.timestamp);
 }
 
 // Номер шага, к которому ведёт ссылка; null — ссылки нет или шаг ещё не показан.
