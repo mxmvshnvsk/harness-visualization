@@ -16,7 +16,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseArgs, styleText } from 'node:util';
-import { formatNumber } from '../events/formatForConsole.js';
+import { formatNumber, formatFixed } from '../events/formatForConsole.js';
 import { readTrace } from '../grounding/readTrace.js';
 import { aggregateRuns, type RunsAggregate, type Spread } from '../runComparison/aggregateRuns.js';
 import {
@@ -234,8 +234,8 @@ function describeProgress(
     return `${head}: ошибка — ${tracePath}`;
   }
   const cost =
-    summary.costUsd === null ? 'стоимость неизвестна' : `${summary.costUsd.toFixed(6)} USD`;
-  const seconds = (summary.durationMs / 1000).toFixed(1);
+    summary.costUsd === null ? 'стоимость неизвестна' : `${formatFixed(summary.costUsd, 6)} USD`;
+  const seconds = formatFixed(summary.durationMs / 1000, 1);
   const cache = summary.firstRequestCache === 'warm' ? 'cache warm' : 'cache cold';
   const query = summary.harnessQuery === null ? '' : `, query харнесса «${summary.harnessQuery}»`;
   return (
@@ -261,7 +261,7 @@ function describeAggregate(name: string, aggregate: RunsAggregate): string[] {
     describeSpread(aggregate.inputTokens, formatTokens),
     describeSpread(aggregate.cacheHitShare, formatPercent),
     ofRuns(aggregate.firstRequestWarm),
-    aggregate.costUsd === null ? '?' : aggregate.costUsd.median.toFixed(6),
+    aggregate.costUsd === null ? '?' : formatFixed(aggregate.costUsd.median, 6),
     ofRuns(aggregate.expectedReadFully),
     ofRuns(aggregate.expectedCited),
     aggregate.mentionsContradiction === null
@@ -305,7 +305,7 @@ function printDocumentsRead(runs: RunsByVariant): void {
 function printTotalCost(runs: RunsByVariant): void {
   const parts = [...runs].map(([name, summaries]) => {
     const total = aggregateRuns(summaries).costUsdTotal;
-    return `${name} ${total === null ? '?' : total.toFixed(6)} USD`;
+    return `${name} ${total === null ? '?' : formatFixed(total, 6)} USD`;
   });
   console.log(`   всего потрачено: ${parts.join(' · ')}`);
 }

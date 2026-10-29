@@ -46,6 +46,7 @@ import { startEvalJudge, type EvalJudge } from '../evals/judgeAnswers.js';
 import type { HarnessEvent } from '../events/harnessEvents.js';
 import { loadSettings, type LoadedSettings } from '../settings/loadSettings.js';
 import { runCliSession } from './runCliSession.js';
+import { formatFixed } from '../events/formatForConsole.js';
 
 const DEFAULT_SET = 'evals/kedr.json';
 const DEFAULT_CONFIGS = ['tool', 'auto'];
@@ -415,7 +416,7 @@ function describeProgress(result: TrialResult, number: number, total: number): s
   const failedChecks = result.checks
     .filter((check) => check.passed !== true)
     .map((check) => `${markOf(check.passed)} ${check.label} — ${check.detail}`);
-  const cost = result.costUsd === null ? '?' : result.costUsd.toFixed(6);
+  const cost = result.costUsd === null ? '?' : formatFixed(result.costUsd, 6);
   const head =
     `  [${String(number)}/${String(total)}] ${mark} ${result.taskId} · ${result.config} · ` +
     `попытка ${String(result.trial)}: ${String(result.modelRequests)} запр., ${cost} USD`;

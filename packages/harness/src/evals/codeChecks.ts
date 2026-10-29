@@ -7,6 +7,7 @@ import { checkGrounding } from '../grounding/checkGrounding.js';
 import { collectSeenSources, normalizeReference } from '../grounding/collectSeenSources.js';
 import { workMs } from '../events/workTime.js';
 import { describeCheck, type EvalCheck } from './evalSet.js';
+import { formatFixed } from '../events/formatForConsole.js';
 
 export interface CheckResult {
   kind: EvalCheck['kind'];
@@ -167,7 +168,7 @@ function checkLimit(check: EvalCheck, facts: TrialFacts): Outcome {
     case 'maxCostUsd':
       return facts.costUsd === null
         ? [null, 'цена неизвестна']
-        : [facts.costUsd <= check.value, `${facts.costUsd.toFixed(6)} USD`];
+        : [facts.costUsd <= check.value, `${formatFixed(facts.costUsd, 6)} USD`];
     default:
       return [null, ''];
   }

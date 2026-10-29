@@ -19,6 +19,7 @@ import {
   formatNumber,
   formatUsage,
   shortenForPreview,
+  formatFixed,
 } from './formatForConsole.js';
 
 type EventOfType<Type extends HarnessEventType> = Extract<HarnessEvent, { type: Type }>;
@@ -599,7 +600,7 @@ function describeDetailValue(value: unknown): string {
 }
 
 function describeSessionFinished(event: EventOfType<'session_finished'>): string[] {
-  const seconds = (event.durationMs / 1000).toFixed(1);
+  const seconds = formatFixed(event.durationMs / 1000, 1);
   // Валюты не складываем: каждая сумма — отдельно, со своим источником.
   const costs = [
     `модель ${formatMoney(event.modelCost)}`,

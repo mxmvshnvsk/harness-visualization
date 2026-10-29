@@ -4,6 +4,7 @@
 import { styleText } from 'node:util';
 import { summarizeCell, summarizeConfig, type EvalReport } from './evalReport.js';
 import { EVAL_SUITES } from './evalSet.js';
+import { formatFixed } from '../events/formatForConsole.js';
 
 const TASK_WIDTH = 24;
 
@@ -63,13 +64,13 @@ export function markOf(passed: boolean | null): string {
 function describeConfig(report: EvalReport, config: string): string {
   const summary = summarizeConfig(report, config);
   const percent = (share: number): string => `${String(Math.round(share * 100))} %`;
-  const cost = summary.costUsd === null ? '?' : summary.costUsd.toFixed(4);
+  const cost = summary.costUsd === null ? '?' : formatFixed(summary.costUsd, 4);
   return [
     config.padEnd(10),
     `pass@k ${percent(summary.passAtK)}`,
     `pass^k ${percent(summary.passHatK)}`,
     `попыток удачных ${percent(summary.trialPassRate)}`,
     `${cost} USD всего`,
-    `медиана ${(summary.medianDurationMs / 1000).toFixed(1)} с, ${String(summary.medianModelRequests)} запр.`,
+    `медиана ${formatFixed(summary.medianDurationMs / 1000, 1)} с, ${String(summary.medianModelRequests)} запр.`,
   ].join(' · ');
 }

@@ -17,6 +17,7 @@ import type {
   SeenText,
   SimilarityMatch,
 } from './claimTypes.js';
+import { formatFixed } from '../events/formatForConsole.js';
 
 const CLAIM_PREVIEW_LENGTH = 110;
 const PASSAGE_PREVIEW_LENGTH = 80;
@@ -126,7 +127,7 @@ function describeSimilarity(match: SimilarityMatch, threshold: number): string {
   const passage = shorten(match.passage, PASSAGE_PREVIEW_LENGTH);
   return styleText(
     isClose ? 'green' : 'yellow',
-    `     ≈ ${match.score.toFixed(SCORE_DIGITS)} ${verdict}: ${where}${document} — «${passage}»`,
+    `     ≈ ${formatFixed(match.score, SCORE_DIGITS)} ${verdict}: ${where}${document} — «${passage}»`,
   );
 }
 

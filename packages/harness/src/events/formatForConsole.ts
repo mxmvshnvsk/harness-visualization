@@ -9,6 +9,14 @@ export function formatNumber(value: number): string {
   return value.toLocaleString('ru-RU');
 }
 
+// Дробное с фиксированным числом знаков, по-русски — с запятой: «2,7 с», «0,000397 USD».
+export function formatFixed(value: number, digits: number): string {
+  return value.toLocaleString('ru-RU', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
 export function formatMoney(cost: RequestCost | SessionCost | ToolCostTotal | null): string {
   if (cost === null) {
     return 'стоимость неизвестна';
@@ -19,7 +27,7 @@ export function formatMoney(cost: RequestCost | SessionCost | ToolCostTotal | nu
 export function formatAmount(amount: number, currency: string): string {
   // Запросы стоят доли цента, поэтому для маленьких сумм показываем больше знаков.
   const digits = amount < 0.01 ? 6 : 4;
-  return `${amount.toFixed(digits)} ${currency}`;
+  return `${formatFixed(amount, digits)} ${currency}`;
 }
 
 // 1 вызов, 2 вызова, 5 вызовов, 21 вызов.
