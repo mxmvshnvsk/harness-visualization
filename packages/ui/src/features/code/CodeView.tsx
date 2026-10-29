@@ -6,7 +6,13 @@ import type { HarnessEvent } from '@harness-visualization/harness';
 import { useMemo, useState, type ReactElement } from 'react';
 import type { SearchLink } from '../../app/viewLinks';
 import { HelpButton } from '../../help/HelpLinks';
-import { projectCode, type CodeFile, type CodeView as View } from '../../projections/projectCode';
+import {
+  projectCode,
+  type CodeFile,
+  type CodeView as View,
+  type FileTouch,
+} from '../../projections/projectCode';
+import { ChainLinks } from '../ChainLinks';
 import { countChanges, diffHunks, lineDiff, type DiffHunk } from '../../projections/lineDiff';
 import { AcceptanceCard } from './AcceptanceCard';
 import { describeArena, describeFileNote, describeNoCode, STATUS_LABELS } from './codeLabels';
@@ -73,6 +79,7 @@ function ProgramRunsCard({ view }: { view: View }): ReactElement {
               <span className={run.exitCode === 0 ? styles.add : styles.del}>
                 {describeProgramRun(run)}
               </span>
+              <ChainLinks link={{ toolCallId: run.toolCallId, query: '' }} inspector />
             </span>
             {run.output !== null && run.output !== '' && (
               <pre className={styles.diff}>{run.output}</pre>
@@ -191,7 +198,38 @@ function FileDiff({ file }: { file: CodeFile }): ReactElement {
           hunks={[{ kind: 'lines', lines: lineDiff(fragment.oldText, fragment.newText) }]}
         />
       ))}
+      <FileHistory history={file.history} />
     </div>
+  );
+}
+
+const TOUCH_LABELS: Record<FileTouch['kind'], string> = {
+  read: 'прочитан',
+  write: 'записан',
+  edit: 'правка фрагментом',
+  delete: 'удалён',
+};
+
+// История файла: каждый вызов, который его читал или менял, — со ссылкой на вызов в инспекторе.
+function FileHistory({ history }: { history: readonly FileTouch[] }): ReactElement | null {
+  if (history.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      <h4 className={styles.historyTitle}>История файла</h4>
+      <ul className={styles.history}>
+        {history.map((touch) => (
+          <li key={touch.toolCallId}>
+            <span className={styles.historyStep}>шаг {touch.step}</span>
+            <span>
+              <code>{touch.toolName}</code> — {TOUCH_LABELS[touch.kind]}
+            </span>
+            <ChainLinks link={{ toolCallId: touch.toolCallId, query: '' }} inspector />
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 
@@ -242,6 +280,7 @@ function TestRunsCard({ view }: { view: View }): ReactElement {
                   ? 'не уложились во время'
                   : `прошло ${String(run.passed)}, упало ${String(run.failed)}`}
               </span>
+              <ChainLinks link={{ toolCallId: run.toolCallId, query: '' }} inspector />
             </span>
             {run.failedTests.length > 0 && (
               <ul className={styles.failed}>

@@ -94,6 +94,15 @@ describe('projectCode', () => {
     ]);
   });
 
+  it('история файла: каким вызовом и на каком шаге читали и меняли', () => {
+    const view = projectCode(log.events, log.length);
+    const file = view.files.find((item) => item.path === 'src/tripReport.js');
+    expect(file?.history).toEqual([
+      { step: 1, toolCallId: 'c1', toolName: 'read_file', kind: 'read' },
+      { step: 2, toolCallId: 'c2', toolName: 'write_file', kind: 'write' },
+    ]);
+  });
+
   it('идёт за курсором: до записи файл только прочитан', () => {
     const view = projectCode(log.events, 4);
     expect(view.files[0]?.status).toBe('read');
@@ -105,6 +114,7 @@ describe('projectCode', () => {
     expect(view.testRuns).toEqual([
       {
         step: 3,
+        toolCallId: 'c4',
         passed: 2,
         failed: 1,
         failedTests: [

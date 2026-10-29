@@ -27,10 +27,20 @@ export interface CodeFile {
   partial: boolean;
   // Правки фрагментом, когда текста файла в трейсе нет: показываем их сами по себе.
   fragments: { oldText: string; newText: string }[];
+  // История файла: каким вызовом и на каком шаге его читали и меняли — для ссылок в инспектор.
+  history: FileTouch[];
+}
+
+export interface FileTouch {
+  step: number;
+  toolCallId: string;
+  toolName: string;
+  kind: 'read' | 'write' | 'edit' | 'delete';
 }
 
 export interface TestRun {
   step: number;
+  toolCallId: string;
   passed: number;
   failed: number;
   failedTests: { name: string; file: string | null; error: string | null }[];
@@ -41,6 +51,7 @@ export interface TestRun {
 // Запуск программы агентом — run_node (этап 10.4).
 export interface ProgramRun {
   step: number;
+  toolCallId: string;
   command: string;
   exitCode: number | null;
   timedOut: boolean;
@@ -63,6 +74,7 @@ interface Builder {
   files: Map<string, CodeFile>;
   testRuns: TestRun[];
   programRuns: ProgramRun[];
+  history: Map<string, FileTouch[]>;
 }
 
 export function projectCode(events: readonly HarnessEvent[], shown: number): CodeView {
@@ -72,6 +84,7 @@ export function projectCode(events: readonly HarnessEvent[], shown: number): Cod
     files: new Map(),
     testRuns: [],
     programRuns: [],
+    history: new Map(),
   };
   let arena: ArenaRun | null = null;
   let acceptance: CodeView['acceptance'] = null;
@@ -89,7 +102,12 @@ export function projectCode(events: readonly HarnessEvent[], shown: number): Cod
   }
   return {
     arena,
-    files: sortFiles([...builder.files.values()]),
+    files: sortFiles(
+      [...builder.files.values()].map((file) => ({
+        ...file,
+        history: builder.history.get(file.path) ?? [],
+      })),
+    ),
     testRuns: builder.testRuns,
     programRuns: builder.programRuns,
     acceptance,
@@ -114,13 +132,45 @@ function apply(builder: Builder, event: HarnessEvent): void {
     const effect = fileEffectOf(event.details);
     if (effect !== null) {
       applyEffect(builder, effect);
+      touch(builder, event, { path: effect.path, kind: effect.kind });
       return;
     }
     const call = builder.calls.get(event.toolCallId);
     if (call !== undefined) {
       applyResult(builder, call, event);
+      touch(builder, event, touchOf(call));
     }
   }
+}
+
+const TOUCH_KINDS: Record<string, FileTouch['kind']> = {
+  read_file: 'read',
+  write_file: 'write',
+  delete_file: 'delete',
+};
+
+function touchOf(call: Call): { path: string; kind: FileTouch['kind'] } | null {
+  const kind = TOUCH_KINDS[call.name];
+  return kind === undefined || call.path === null ? null : { path: normalizePath(call.path), kind };
+}
+
+// Запись в историю файла: шаг и вызов, который его прочитал или изменил.
+function touch(
+  builder: Builder,
+  result: ToolResult,
+  target: { path: string; kind: FileTouch['kind'] } | null,
+): void {
+  if (target === null) {
+    return;
+  }
+  const list = builder.history.get(target.path) ?? [];
+  list.push({
+    step: builder.step,
+    toolCallId: result.toolCallId,
+    toolName: result.toolName,
+    kind: target.kind,
+  });
+  builder.history.set(target.path, list);
 }
 
 type Call = { name: string; path: string | null; content: string | null; arguments: unknown };
@@ -183,6 +233,7 @@ function newFile(path: string, step: number): CodeFile {
     step,
     partial: false,
     fragments: [],
+    history: [],
   };
 }
 
@@ -266,6 +317,7 @@ function testRunOf(step: number, result: Extract<HarnessEvent, { type: 'tool_res
   const tests = Array.isArray(details.tests) ? (details.tests as unknown[]) : [];
   return {
     step,
+    toolCallId: result.toolCallId,
     passed: numberField(details, 'passed'),
     failed: numberField(details, 'failed'),
     failedTests: tests.filter(isFailedTest).map((test) => ({
@@ -287,6 +339,7 @@ function programRunOf(step: number, call: Call | undefined, result: ToolResult):
   const output = stringField(details, 'output');
   return {
     step,
+    toolCallId: result.toolCallId,
     command: file === null ? 'node …' : ['node', file, ...args].join(' '),
     exitCode: typeof details.exitCode === 'number' ? details.exitCode : null,
     timedOut: details.timedOut === true,
