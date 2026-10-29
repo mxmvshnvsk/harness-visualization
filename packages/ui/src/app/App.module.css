@@ -242,14 +242,30 @@
   order: 1;
 }
 
-/* Лаборатории — во всю ширину, плитками. */
+/* Лаборатории — во всю ширину, плитками, в своей подложке: это каталог, а не ваши данные. */
 .startGrid > .labs {
   order: 2;
   grid-column: 1 / -1;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  background: var(--surface);
+}
+
+.startGrid > .labs .labTile {
+  background: var(--canvas);
+}
+
+/* Заголовок «Ваши сессии» — того же уровня, что «Лаборатории», с отступом от подложки. */
+.sessionsTitle {
+  order: 3;
+  grid-column: 1 / -1;
+  margin: 12px 0 -6px;
+  font-size: 15px;
 }
 
 .startGrid .sourcesWide > section:not(.formCard) {
-  order: 3;
+  order: 4;
 }
 
 @media (max-width: 760px) {

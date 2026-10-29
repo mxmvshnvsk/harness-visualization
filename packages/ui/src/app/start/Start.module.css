@@ -103,9 +103,41 @@
   fill: var(--muted);
 }
 
-.diagramBox {
-  fill: var(--raised);
-  stroke: var(--line);
+.faceTop {
+  stop-color: var(--diagram-face-top);
+}
+
+.faceBottom {
+  stop-color: var(--diagram-face-bottom);
+}
+
+.rimTop {
+  stop-color: var(--diagram-rim);
+}
+
+.rimBottom {
+  stop-color: var(--diagram-rim);
+  stop-opacity: 0.15;
+}
+
+.shadow {
+  flood-color: var(--diagram-shadow);
+}
+
+.glow {
+  flood-color: var(--accent);
+  flood-opacity: var(--diagram-glow);
+}
+
+.boxEdge {
+  fill: none;
+  stroke: url(#loop-rim);
+}
+
+.hubEdge {
+  fill: none;
+  stroke: var(--accent);
+  stroke-opacity: 0.4;
 }
 
 .diagramLine {

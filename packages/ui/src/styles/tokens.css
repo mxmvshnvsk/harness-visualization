@@ -36,6 +36,13 @@
   --shadow: 0 1px 2px rgb(20 20 60 / 6%), 0 10px 30px -12px rgb(20 20 60 / 18%);
   --glow: 0;
 
+  /* Схема цикла на старте: свет сверху, тень вниз, свечение харнесса. */
+  --diagram-face-top: #fff;
+  --diagram-face-bottom: #f1f1f8;
+  --diagram-rim: #fff;
+  --diagram-shadow: rgb(20 20 60 / 22%);
+  --diagram-glow: 0.12;
+
   /* Состав prompt (экран «Контекст», бюджет): категориальная палитра, проверена
      validate_palette.js из скилла dataviz — различимы и при дальтонизме, в том числе
      соседние в стопке: system, скиллы, память, тулы, диалог, результаты. */
@@ -125,6 +132,12 @@
   --edge-hi: rgb(230 255 77 / 8%);
   --shadow: 0 1px 0 rgb(255 255 255 / 3%), 0 18px 40px -18px rgb(0 0 0 / 90%);
   --glow: 1;
+
+  --diagram-face-top: #272a20;
+  --diagram-face-bottom: #141611;
+  --diagram-rim: rgb(255 255 255 / 22%);
+  --diagram-shadow: rgb(0 0 0 / 90%);
+  --diagram-glow: 0.18;
 
   --part-system: #3987e5;
   --part-tools: #d95926;

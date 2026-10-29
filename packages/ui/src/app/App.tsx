@@ -539,6 +539,8 @@ function StartScreen(props: {
       <div className={styles.startGrid}>
         {props.children}
         <StartLabs mode={mode} onOpenLab={props.onOpenLab} onOpenLabs={props.onOpenLabs} />
+        {/* Свой заголовок у сессий — чтобы не читались частью лабораторий (мокап 29.10.2026). */}
+        <h2 className={styles.sessionsTitle}>Ваши сессии</h2>
       </div>
     </div>
   );

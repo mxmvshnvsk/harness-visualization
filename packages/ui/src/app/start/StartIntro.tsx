@@ -204,14 +204,15 @@ function LoopDiagram(): ReactElement {
       role="img"
       aria-label="Агент — это модель плюс цикл харнесса: харнесс отправляет запрос модели, модель просит вызвать тул, харнесс выполняет его и спрашивает снова, пока модель не ответит"
     >
-      <rect className={styles.diagramBox} x="4" y="46" width="88" height="58" rx="12" />
+      <DiagramDefs />
+      <DiagramBox x={4} y={46} width={88} height={58} radius={12} />
       <text x="48" y="72" textAnchor="middle">
         Вопрос
       </text>
       <text className={styles.diagramNote} x="48" y="90" textAnchor="middle">
         пользователь
       </text>
-      <rect className={styles.diagramBox} x="134" y="18" width="106" height="114" rx="14" />
+      <DiagramBox x={134} y={18} width={106} height={114} radius={14} hub />
       <text x="187" y="60" textAnchor="middle">
         Харнесс
       </text>
@@ -221,7 +222,7 @@ function LoopDiagram(): ReactElement {
       <text className={styles.diagramNote} x="187" y="96" textAnchor="middle">
         политика
       </text>
-      <rect className={styles.diagramBox} x="328" y="46" width="88" height="58" rx="12" />
+      <DiagramBox x={328} y={46} width={88} height={58} radius={12} />
       <text x="372" y="72" textAnchor="middle">
         Модель
       </text>
@@ -247,4 +248,54 @@ function LoopDiagram(): ReactElement {
       </text>
     </svg>
   );
+}
+
+// Объём схемы (мокап, одобренный 29.10.2026): свет сверху — заливка градиентом и блик по верхней
+// кромке, мягкая тень вниз; харнесс — главный герой — с акцентной обводкой и слабым свечением.
+// id статичные: схема на странице одна.
+function DiagramDefs(): ReactElement {
+  return (
+    <defs>
+      <linearGradient id="loop-face" x1="0" y1="0" x2="0" y2="1">
+        <stop className={styles.faceTop} offset="0" />
+        <stop className={styles.faceBottom} offset="1" />
+      </linearGradient>
+      <linearGradient id="loop-rim" x1="0" y1="0" x2="0" y2="1">
+        <stop className={styles.rimTop} offset="0" />
+        <stop className={styles.rimBottom} offset="0.5" />
+      </linearGradient>
+      <filter id="loop-shadow" x="-30%" y="-30%" width="160%" height="170%">
+        <feDropShadow className={styles.shadow} dx="0" dy="8" stdDeviation="8" />
+      </filter>
+      <filter id="loop-glow" x="-40%" y="-40%" width="180%" height="180%">
+        <feDropShadow className={styles.glow} dx="0" dy="0" stdDeviation="12" />
+      </filter>
+    </defs>
+  );
+}
+
+interface DiagramBoxProps {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  radius: number;
+  hub?: boolean;
+}
+
+function DiagramBox({ x, y, width, height, radius, hub = false }: DiagramBoxProps): ReactElement {
+  const box = (
+    <g filter="url(#loop-shadow)">
+      <rect x={x} y={y} width={width} height={height} rx={radius} fill="url(#loop-face)" />
+      <rect
+        className={hub ? styles.hubEdge : styles.boxEdge}
+        x={x + 0.5}
+        y={y + 0.5}
+        width={width - 1}
+        height={height - 1}
+        rx={radius - 0.5}
+      />
+    </g>
+  );
+  return hub ? <g filter="url(#loop-glow)">{box}</g> : box;
 }
