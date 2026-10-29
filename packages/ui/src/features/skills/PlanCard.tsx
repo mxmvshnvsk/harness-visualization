@@ -8,6 +8,7 @@ import styles from './SkillsMemory.module.css';
 interface CardProps {
   view: SkillsMemoryView;
   shown: number;
+  focused: string | null;
   onSeek: (moment: Moment) => void;
 }
 
@@ -18,13 +19,22 @@ const MARKS: Record<PlanVersion['steps'][number]['status'], string> = {
   blocked: 'не выходит',
 };
 
-export function PlanCard({ view, shown, onSeek }: CardProps): ReactElement | null {
+export function PlanCard({ view, shown, focused, onSeek }: CardProps): ReactElement | null {
   if (view.plans.length === 0) {
     return null;
   }
-  const current = view.plans.filter((plan) => plan.index < shown).at(-1) ?? null;
+  const reached = view.plans.filter((plan) => plan.index < shown);
+  // Пришли по ссылке на версию плана — показываем её, а не последнюю.
+  const current =
+    reached.find((plan) => focused !== null && plan.toolCallId === focused) ??
+    reached.at(-1) ??
+    null;
   return (
-    <section className={styles.card} aria-label="План">
+    <section
+      className={styles.card}
+      aria-label="План"
+      data-focused={focused !== null && current?.toolCallId === focused}
+    >
       <header className={styles.head}>
         <h2 className={styles.title}>План</h2>
         <div className={styles.versions}>

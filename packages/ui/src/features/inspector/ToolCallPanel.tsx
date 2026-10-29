@@ -7,6 +7,7 @@ import type { ToolCallView } from '../../projections/sessionView';
 import styles from './Inspector.module.css';
 import { isMcpTool } from '../../timeline/actions';
 import { HelpButton, Term } from '../../help/HelpLinks';
+import { ChainLinks } from '../ChainLinks';
 import { McpCallBlock } from './McpCallBlock';
 import { WriteFileDiff } from '../code/WriteFileDiff';
 import { formatRu } from '../../text/formatNumber';
@@ -21,6 +22,7 @@ export function ToolCallPanel({ tool }: { tool: ToolCallView }): ReactElement {
         <h2 className={styles.panelTitle}>{tool.toolName}</h2>
         <Badge tone={STATUS_TONES[tool.status]}>{tool.status}</Badge>
         <span className={styles.headerHelp}>
+          <ToolLinks tool={tool} />
           {isMcpTool(tool.toolName) && <Term topic="mcp">это tool MCP-сервера</Term>}
           <Term topic="model-vs-harness">кто его выполняет</Term>
           <HelpButton topic="tool-calls" />
@@ -43,6 +45,23 @@ export function ToolCallPanel({ tool }: { tool: ToolCallView }): ReactElement {
       <ToolResult tool={tool} />
     </article>
   );
+}
+
+// Тулы, следы которых видны в «Скиллах и памяти»: скилл, память, план.
+const SKILL_MEMORY_TOOLS = new Set(['load_skill', 'memory', 'update_progress']);
+
+// Обратные ссылки из вызова в другие виды: скилл и память — в «Скиллы и память», запись файла —
+// в «Код». Ссылки на MCP и «RAG» у вызовов kedr__… — ниже, в блоке MCP.
+function ToolLinks({ tool }: { tool: ToolCallView }): ReactElement | null {
+  const { arguments: args } = tool.call;
+  const path = typeof args === 'object' && args !== null && 'path' in args ? args.path : null;
+  if (SKILL_MEMORY_TOOLS.has(tool.toolName)) {
+    return <ChainLinks link={{ toolCallId: tool.toolCallId, query: '' }} skills />;
+  }
+  if (tool.toolName === 'write_file' && typeof path === 'string') {
+    return <ChainLinks link={{ toolCallId: tool.toolCallId, query: '', path }} code />;
+  }
+  return null;
 }
 
 function PermissionChain({ tool }: { tool: ToolCallView }): ReactElement {

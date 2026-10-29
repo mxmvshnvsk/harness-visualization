@@ -331,3 +331,10 @@
 .subTabs {
   padding: 12px 14px 0;
 }
+
+/* Пришли по ссылке — подсвечен вызов тула, к которому она вела. */
+.kv > div[data-focused='true'] {
+  border-radius: var(--radius-small);
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}

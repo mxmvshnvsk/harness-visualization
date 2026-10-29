@@ -13,7 +13,13 @@ const VIEWS = [
   { value: 'raw', label: 'сырой' },
 ] as const;
 
-export function StepResponse({ step }: { step: ResearchStep }): ReactElement {
+interface StepResponseProps {
+  step: ResearchStep;
+  // id вызова тула, который подсветить (пришли по ссылке); null — ничего.
+  highlight: string | null;
+}
+
+export function StepResponse({ step, highlight }: StepResponseProps): ReactElement {
   const [view, setView] = useState<'parsed' | 'raw'>('parsed');
   return (
     <>
@@ -26,7 +32,11 @@ export function StepResponse({ step }: { step: ResearchStep }): ReactElement {
           onChange={setView}
         />
       </div>
-      {view === 'parsed' ? <StepReply step={step} /> : <StepRaw step={step} side="response" />}
+      {view === 'parsed' ? (
+        <StepReply step={step} highlight={highlight} />
+      ) : (
+        <StepRaw step={step} side="response" />
+      )}
     </>
   );
 }

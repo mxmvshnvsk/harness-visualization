@@ -11,6 +11,8 @@ import { Term } from '../../help/HelpLinks';
 import { projectContext, type ContextRequest } from '../../projections/projectContext';
 import { timeAt, type Schedule } from '../../timeline/schedule';
 import type { TimelineClock } from '../../timeline/TimelineClock';
+import type { SearchLink } from '../../app/viewLinks';
+import { ChainLinks } from '../ChainLinks';
 import { CacheChart } from './CacheChart';
 import styles from './Context.module.css';
 import { ContextChart } from './ContextChart';
@@ -27,6 +29,8 @@ interface ContextViewProps {
   shown: number;
   clock: TimelineClock;
   schedule: Schedule;
+  // Пришли из инспектора: какой запрос выбрать (requestId).
+  focus?: SearchLink | null;
 }
 
 const MODES = [
@@ -34,10 +38,11 @@ const MODES = [
   { value: 'table', label: 'Таблица' },
 ] as const;
 
-export function ContextView({ events, shown, clock, schedule }: ContextViewProps): ReactElement {
+export function ContextView(props: ContextViewProps): ReactElement {
+  const { events, shown, clock, schedule } = props;
   const requests = useMemo(() => projectContext(events), [events]);
   const [mode, setMode] = useState<'chart' | 'table'>('chart');
-  const choice = useChosenRequest(requests, shown, (request) => {
+  const choice = useChosenRequest(requests, shown, props.focus?.requestId ?? null, (request) => {
     clock.seek(timeAt(schedule, request.at));
   });
   const first = requests[0];
@@ -79,7 +84,14 @@ export function ContextView({ events, shown, clock, schedule }: ContextViewProps
         />
       )}
       {choice.selected !== null && (
-        <PromptContents request={choice.selected} previous={choice.previous} />
+        <>
+          <ChainLinks
+            link={{ toolCallId: null, query: '', requestId: choice.selected.requestId }}
+            inspector
+            inspectorLabel="запрос в инспекторе →"
+          />
+          <PromptContents request={choice.selected} previous={choice.previous} />
+        </>
       )}
     </section>
   );
@@ -119,9 +131,10 @@ interface ChosenRequest {
 function useChosenRequest(
   requests: readonly ContextRequest[],
   shown: number,
+  focused: string | null,
   seek: (request: ContextRequest) => void,
 ): ChosenRequest {
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(focused);
   const current = requests.filter((request) => request.index < shown).at(-1) ?? null;
   const id = selectedId ?? current?.requestId;
   const position = requests.findIndex((request) => request.requestId === id);

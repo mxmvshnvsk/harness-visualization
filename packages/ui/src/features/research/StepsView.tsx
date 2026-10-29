@@ -6,6 +6,7 @@
 import type { HarnessEvent } from '@harness-visualization/harness';
 import { useEffect, useMemo, useState, type ReactElement } from 'react';
 import { Segmented } from '../../components/Segmented';
+import type { SearchLink } from '../../app/viewLinks';
 import { projectResearch, type ResearchStep } from '../../projections/projectResearch';
 import { timeAt, type Schedule } from '../../timeline/schedule';
 import type { TimelineClock } from '../../timeline/TimelineClock';
@@ -25,17 +26,22 @@ const TABS = [
 type Tab = (typeof TABS)[number]['value'];
 
 interface StepsViewProps {
+  // Пришли по ссылке «в инспекторе →»: открыть шаг с этим запросом или вызовом тула.
+  focus?: SearchLink | null;
   events: readonly HarnessEvent[];
   shown: number;
   clock: TimelineClock;
   schedule: Schedule;
 }
 
-export function StepsView({ events, shown, clock, schedule }: StepsViewProps): ReactElement {
+export function StepsView(props: StepsViewProps): ReactElement {
+  const { events, shown, clock, schedule } = props;
+  const focus = props.focus ?? null;
+  const highlight = focus?.toolCallId ?? null;
   const view = useMemo(() => projectResearch(events, shown), [events, shown]);
   // null — следовать за повтором: открыт последний показанный запрос.
-  const [picked, setPicked] = useState<number | null>(null);
-  const [tab, setTab] = useState<Tab>('context');
+  const [picked, setPicked] = useState<number | null>(() => stepOfFocus(view.steps, focus));
+  const [tab, setTab] = useState<Tab>(highlight === null ? 'context' : 'response');
   const selected = Math.min(picked ?? view.steps.length - 1, view.steps.length - 1);
   useStepKeys(view.steps.length, selected, setPicked, setTab);
   const step = view.steps[selected];
@@ -65,10 +71,23 @@ export function StepsView({ events, shown, clock, schedule }: StepsViewProps): R
         </div>
         {tab === 'context' && <StepContext step={step} steps={view.steps} />}
         {tab === 'request' && <StepRaw step={step} side="request" />}
-        {tab === 'response' && <StepResponse step={step} />}
+        {tab === 'response' && <StepResponse step={step} highlight={highlight} />}
       </section>
     </div>
   );
+}
+
+// Номер шага, к которому ведёт ссылка; null — ссылки нет или шаг ещё не показан.
+function stepOfFocus(steps: readonly ResearchStep[], focus: SearchLink | null): number | null {
+  if (focus === null) {
+    return null;
+  }
+  const index = steps.findIndex((step) =>
+    focus.toolCallId === null
+      ? step.request.requestId === focus.requestId
+      : step.response?.reply.toolCalls.some((call) => call.id === focus.toolCallId) === true,
+  );
+  return index < 0 ? null : index;
 }
 
 function StepHead({ step, total }: { step: ResearchStep; total: number }): ReactElement {

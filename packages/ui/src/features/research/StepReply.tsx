@@ -6,7 +6,12 @@ import { formatNumber, percent } from './StepsView';
 import { ReplyTokens } from '../tokens/ReplyTokens';
 import styles from './Research.module.css';
 
-export function StepReply({ step }: { step: ResearchStep }): ReactElement {
+interface StepReplyProps {
+  step: ResearchStep;
+  highlight: string | null;
+}
+
+export function StepReply({ step, highlight }: StepReplyProps): ReactElement {
   if (step.response === null) {
     return (
       <div className={styles.body}>
@@ -23,7 +28,7 @@ export function StepReply({ step }: { step: ResearchStep }): ReactElement {
           <h3 className={styles.subTitle}>Вызовы тулов · {reply.toolCalls.length}</h3>
           <dl className={styles.kv}>
             {reply.toolCalls.map((call) => (
-              <div key={call.id}>
+              <div key={call.id} data-focused={highlight !== null && call.id === highlight}>
                 <dt>{call.name}</dt>
                 <dd>{call.argumentsText}</dd>
               </div>

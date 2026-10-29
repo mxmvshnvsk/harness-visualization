@@ -242,3 +242,11 @@
   color: var(--text);
   font-weight: var(--weight-medium);
 }
+
+/* Пришли из инспектора — подсвечено то, что сделал этот вызов. */
+.skill[data-focused='true'],
+.timeline li[data-focused='true'],
+.card[data-focused='true'] {
+  border-radius: var(--radius-small);
+  background: var(--accent-soft);
+}

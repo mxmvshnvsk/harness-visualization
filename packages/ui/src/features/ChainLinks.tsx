@@ -1,6 +1,7 @@
 // Ссылки цепочки вызова: тот же вызов в других видах — шаг в инспекторе, пара сообщений
-// в журнале MCP и поиск в «RAG», где видно, как запрос стал вектором. Показываются только
-// нужные: из текущего вида в него же ссылки нет.
+// в журнале MCP, поиск в «RAG» (как запрос стал вектором), запрос в «Контексте», скилл или
+// память в «Скиллах и памяти», файл в «Коде». Показываются только нужные: из текущего вида
+// в него же ссылки нет.
 
 import type { ReactElement } from 'react';
 import { useViewLinks, type SearchLink } from '../app/viewLinks';
@@ -9,48 +10,56 @@ import styles from './ChainLinks.module.css';
 interface ChainLinksProps {
   link: SearchLink;
   inspector?: boolean;
+  // Подпись ссылки в инспектор: «в инспекторе →» или точнее — «запрос в инспекторе →».
+  inspectorLabel?: string;
   mcp?: boolean;
   // В «RAG» — только у поиска по смыслу и гибрида: у них есть вектор.
   rag?: boolean;
+  context?: boolean;
+  skills?: boolean;
+  code?: boolean;
 }
 
-export function ChainLinks({ link, inspector, mcp, rag }: ChainLinksProps): ReactElement | null {
+type Target = 'inspector' | 'mcp' | 'rag' | 'context' | 'skills' | 'code';
+
+const LABELS: Record<Target, string> = {
+  inspector: 'в инспекторе →',
+  mcp: 'в журнале MCP →',
+  rag: 'как запрос стал вектором — в «RAG» →',
+  context: 'рост prompt в «Контексте» →',
+  skills: 'в «Скиллы и память» →',
+  code: 'файл в «Коде» →',
+};
+
+const TARGETS: readonly Target[] = ['inspector', 'mcp', 'rag', 'context', 'skills', 'code'];
+
+export function ChainLinks(props: ChainLinksProps): ReactElement | null {
   const links = useViewLinks();
-  if (links === null || (inspector !== true && mcp !== true && rag !== true)) {
+  const shown = TARGETS.filter((target) => props[target] === true);
+  if (links === null || shown.length === 0) {
     return null;
   }
+  const go: Record<Target, (link: SearchLink) => void> = {
+    inspector: links.toInspector,
+    mcp: links.toMcp,
+    rag: links.toRag,
+    context: links.toContext,
+    skills: links.toSkills,
+    code: links.toCode,
+  };
   return (
     <span className={styles.links}>
-      {inspector === true && (
+      {shown.map((target) => (
         <button
+          key={target}
           type="button"
           onClick={() => {
-            links.toInspector(link);
+            go[target](props.link);
           }}
         >
-          в инспекторе →
+          {target === 'inspector' ? (props.inspectorLabel ?? LABELS.inspector) : LABELS[target]}
         </button>
-      )}
-      {mcp === true && (
-        <button
-          type="button"
-          onClick={() => {
-            links.toMcp(link);
-          }}
-        >
-          в журнале MCP →
-        </button>
-      )}
-      {rag === true && (
-        <button
-          type="button"
-          onClick={() => {
-            links.toRag(link);
-          }}
-        >
-          как запрос стал вектором — в «RAG» →
-        </button>
-      )}
+      ))}
     </span>
   );
 }

@@ -893,6 +893,8 @@ function InspectorOrSteps({ replay, events, traceFile, link }: ViewContext): Rea
   if (mode === 'research') {
     return (
       <StepsView
+        key={`steps-${String(link.nonce)}`}
+        focus={link.focusFor('inspector')}
         events={events}
         shown={replay.cursor}
         clock={replay.clock}
@@ -920,13 +922,22 @@ const VIEW_RENDERERS: Record<ViewName, (context: ViewContext) => ReactNode> = {
     <FlowView clock={replay.clock} schedule={replay.schedule} liveStartedAt={liveStartedAt} />
   ),
   inspector: (context) => <InspectorOrSteps {...context} />,
-  code: ({ events, replay }) => <CodeView events={events} shown={replay.cursor} />,
-  context: ({ events, replay }) => (
+  code: ({ events, replay, link }) => (
+    <CodeView
+      key={`code-${String(link.nonce)}`}
+      events={events}
+      shown={replay.cursor}
+      focus={link.focusFor('code')}
+    />
+  ),
+  context: ({ events, replay, link }) => (
     <ContextView
+      key={`context-${String(link.nonce)}`}
       events={events}
       shown={replay.cursor}
       clock={replay.clock}
       schedule={replay.schedule}
+      focus={link.focusFor('context')}
     />
   ),
   rag: ({ events, replay, traceFile, link }) => (
@@ -950,8 +961,10 @@ const VIEW_RENDERERS: Record<ViewName, (context: ViewContext) => ReactNode> = {
   branches: ({ events, traceFile, sessionId }) => (
     <BranchesView events={events} traceFile={traceFile} sessionId={sessionId} />
   ),
-  skills: ({ events, replay }) => (
+  skills: ({ events, replay, link }) => (
     <SkillsMemoryView
+      key={`skills-${String(link.nonce)}`}
+      focus={link.focusFor('skills')}
       events={events}
       shown={replay.cursor}
       clock={replay.clock}
@@ -961,7 +974,7 @@ const VIEW_RENDERERS: Record<ViewName, (context: ViewContext) => ReactNode> = {
   events: ({ replay }) => <EventList events={replay.shown} />,
 };
 
-type LinkedView = 'rag' | 'mcp' | 'inspector';
+type LinkedView = 'rag' | 'mcp' | 'inspector' | 'context' | 'skills' | 'code';
 
 // Переход из одного вида в другой с целью: какой поиск показать. nonce — новый переход,
 // даже к той же цели: вид открывается заново и раскрывает нужное.
@@ -985,6 +998,15 @@ function useLinkedViews(setViewName: (view: ViewName) => void, initial: SearchLi
       },
       toInspector: (target) => {
         go('inspector', target);
+      },
+      toContext: (target) => {
+        go('context', target);
+      },
+      toSkills: (target) => {
+        go('skills', target);
+      },
+      toCode: (target) => {
+        go('code', target);
       },
     };
   }, [setViewName]);

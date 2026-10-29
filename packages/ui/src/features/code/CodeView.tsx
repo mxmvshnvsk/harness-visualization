@@ -4,6 +4,7 @@
 
 import type { HarnessEvent } from '@harness-visualization/harness';
 import { useMemo, useState, type ReactElement } from 'react';
+import type { SearchLink } from '../../app/viewLinks';
 import { HelpButton } from '../../help/HelpLinks';
 import { projectCode, type CodeFile, type CodeView as View } from '../../projections/projectCode';
 import { countChanges, diffHunks, lineDiff, type DiffHunk } from '../../projections/lineDiff';
@@ -16,9 +17,11 @@ const MARKS = { add: '+', del: '−', same: ' ' } as const;
 interface CodeViewProps {
   events: readonly HarnessEvent[];
   shown: number;
+  // Пришли из инспектора: какой файл открыть (path).
+  focus?: SearchLink | null;
 }
 
-export function CodeView({ events, shown }: CodeViewProps): ReactElement {
+export function CodeView({ events, shown, focus }: CodeViewProps): ReactElement {
   const view = useMemo(() => projectCode(events, shown), [events, shown]);
   if (isEmpty(view)) {
     return (
@@ -37,7 +40,7 @@ export function CodeView({ events, shown }: CodeViewProps): ReactElement {
         <HelpButton topic="code-arena" />
       </div>
       {view.acceptance !== null && <AcceptanceCard acceptance={view.acceptance} />}
-      <FilesCard files={view.files} />
+      <FilesCard files={view.files} focused={focus?.path ?? null} />
       {view.testRuns.length > 0 && <TestRunsCard view={view} />}
       {view.programRuns.length > 0 && <ProgramRunsCard view={view} />}
     </div>
@@ -91,8 +94,9 @@ function describeProgramRun(run: View['programRuns'][number]): string {
   return run.timedOut ? 'не уложилась во время' : `код выхода ${String(run.exitCode)}`;
 }
 
-function FilesCard({ files }: { files: readonly CodeFile[] }): ReactElement {
-  const [selected, setSelected] = useState<string | null>(null);
+function FilesCard(props: { files: readonly CodeFile[]; focused: string | null }): ReactElement {
+  const { files } = props;
+  const [selected, setSelected] = useState<string | null>(props.focused);
   const changed = files.filter((file) => file.status !== 'read');
   const read = files.filter((file) => file.status === 'read');
   const current =

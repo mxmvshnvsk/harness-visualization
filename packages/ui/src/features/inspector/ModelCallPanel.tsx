@@ -13,6 +13,7 @@ import styles from './Inspector.module.css';
 import { MessageList } from './MessageList';
 import { ReplyTokens } from '../tokens/ReplyTokens';
 import { HelpButton, Term } from '../../help/HelpLinks';
+import { ChainLinks } from '../ChainLinks';
 import { formatRu } from '../../text/formatNumber';
 
 interface ModelCallPanelProps {
@@ -33,6 +34,9 @@ export function ModelCallPanel({ call, calls, onFocus }: ModelCallPanelProps): R
         <h2 className={styles.panelTitle}>{describePurpose(call)}</h2>
         {cache !== null && <Badge dot={cache.warm}>{cache.label}</Badge>}
         <span className={styles.headerHelp}>
+          {(call.request.budget ?? null) !== null && (
+            <ChainLinks link={{ toolCallId: null, query: '', requestId: call.requestId }} context />
+          )}
           <HelpButton topic="agent-loop" />
         </span>
       </header>

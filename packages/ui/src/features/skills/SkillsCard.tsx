@@ -17,6 +17,8 @@ interface CardProps {
   shown: number;
   // Повтор дошёл до конца: «не загрузила» — уже итог, а не «пока».
   ended: boolean;
+  // Вызов тула, след которого подсветить (пришли из инспектора); null — ничего.
+  focused: string | null;
   onSeek: (moment: Moment) => void;
 }
 
@@ -32,7 +34,8 @@ const TRIGGERS: Record<SkillLoad['trigger'], string> = {
   user: 'загрузил пользователь',
 };
 
-export function SkillsCard({ view, shown, ended, onSeek }: CardProps): ReactElement | null {
+export function SkillsCard(props: CardProps): ReactElement | null {
+  const { view, shown, ended, focused, onSeek } = props;
   if (view.catalog === null) {
     return null;
   }
@@ -54,6 +57,7 @@ export function SkillsCard({ view, shown, ended, onSeek }: CardProps): ReactElem
             skill={skill}
             load={skillLoadAt(view, skill.name, shown)}
             ended={ended}
+            focused={focused}
             onSeek={onSeek}
           />
         ))}
@@ -71,12 +75,17 @@ interface SkillRowProps {
   skill: SkillSummary;
   load: SkillLoad | null;
   ended: boolean;
+  focused: string | null;
   onSeek: (moment: Moment) => void;
 }
 
-function SkillRow({ skill, load, ended, onSeek }: SkillRowProps): ReactElement {
+function SkillRow({ skill, load, ended, focused, onSeek }: SkillRowProps): ReactElement {
   return (
-    <li className={styles.skill} data-loaded={load === null ? 'false' : 'true'}>
+    <li
+      className={styles.skill}
+      data-loaded={load === null ? 'false' : 'true'}
+      data-focused={focused !== null && load?.toolCallId === focused}
+    >
       <div className={styles.skillHead}>
         <span className={styles.mono}>{skill.name}</span>
         <span className={styles.badge}>{MODES[skill.mode]}</span>
@@ -92,7 +101,7 @@ function SkillRow({ skill, load, ended, onSeek }: SkillRowProps): ReactElement {
   );
 }
 
-function SkillStatus({ skill, load, ended, onSeek }: SkillRowProps): ReactElement {
+function SkillStatus({ skill, load, ended, onSeek }: Omit<SkillRowProps, 'focused'>): ReactElement {
   if (load !== null) {
     return (
       <>

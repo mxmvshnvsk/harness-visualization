@@ -8,10 +8,11 @@ import styles from './SkillsMemory.module.css';
 interface CardProps {
   view: SkillsMemoryView;
   shown: number;
+  focused: string | null;
   onSeek: (moment: Moment) => void;
 }
 
-export function MemoryCard({ view, shown, onSeek }: CardProps): ReactElement | null {
+export function MemoryCard({ view, shown, focused, onSeek }: CardProps): ReactElement | null {
   if (view.memoPath === null) {
     return null;
   }
@@ -33,7 +34,11 @@ export function MemoryCard({ view, shown, onSeek }: CardProps): ReactElement | n
       ) : (
         <ol className={styles.timeline}>
           {view.changes.map((change) => (
-            <li key={change.index} data-future={change.index >= shown ? 'true' : undefined}>
+            <li
+              key={change.index}
+              data-future={change.index >= shown ? 'true' : undefined}
+              data-focused={focused !== null && change.toolCallId === focused}
+            >
               <button
                 type="button"
                 className={styles.timelineRow}
