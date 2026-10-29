@@ -21,7 +21,8 @@ export function StartIntro(props: StartIntroProps): ReactElement {
       <section className={styles.intro}>
         <div className={styles.introText}>
           <h2 className={styles.introTitle}>
-            Учебный стенд: агент работает на настоящей модели, а вы видите каждый его шаг
+            Тренажёр, чтобы понять, как устроены агенты: харнесс, тулы, RAG — на настоящей модели,
+            шаг за шагом
           </h2>
           <p className={styles.muted}>
             Что ушло в модель, какие тулы она попросила, что разрешил харнесс и из чего сложился
@@ -49,8 +50,8 @@ export function StartIntro(props: StartIntroProps): ReactElement {
         <div className={styles.entryGrid}>
           <Entry
             main
-            title="Посмотреть, как работает агент"
-            text="Готовая запись по шагам: что агент спросил у модели, какие тулы вызвал и как пришёл к ответу."
+            title="Как работает тренажёр"
+            text="Готовая запись по шагам: что где на экране и как по нему проследить путь агента от вопроса к ответу."
             tags={['3 минуты', 'без ключа']}
             action="Открыть пример"
             onAction={props.onOpenExample}

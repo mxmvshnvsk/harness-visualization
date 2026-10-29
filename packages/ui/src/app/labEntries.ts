@@ -10,6 +10,8 @@ export interface LabEntry {
   title: string;
   // Одна строка для коротких списков.
   short: string;
+  // Та же строка в режиме «Исследование» — в терминах; нет — как в «Обучении».
+  researchShort?: string;
   // Вопрос, на который отвечает лаборатория.
   question: string;
   // Что поймёте — для карточки на экране «Лаборатории».
@@ -47,7 +49,8 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
   {
     lab: 'tokens',
     title: 'Выбор токена',
-    short: 'вероятности, температура',
+    short: 'какие слова модель взвешивала на каждом шаге и почему ответ каждый раз разный',
+    researchShort: 'logprobs, температура, ответ с другого токена',
     question: 'Как модель выбирает следующее слово?',
     learn:
       'вероятности токенов, где модель уверена и где колеблется, что меняет температура, как продолжить ответ с другого токена',
@@ -77,5 +80,11 @@ export const LAB_ENTRIES: readonly LabEntry[] = [
 ];
 
 export function labEntries(mode: UiMode): readonly LabEntry[] {
-  return mode === 'research' ? LAB_ENTRIES.filter((entry) => entry.teaching !== true) : LAB_ENTRIES;
+  if (mode === 'learn') {
+    return LAB_ENTRIES;
+  }
+  return LAB_ENTRIES.filter((entry) => entry.teaching !== true).map((entry) => ({
+    ...entry,
+    short: entry.researchShort ?? entry.short,
+  }));
 }

@@ -559,11 +559,12 @@ function StartScreen(props: {
 const FIRST_EXAMPLE = '2026-10-26T08-03-22_040414ea.jsonl';
 
 // Открыть пример; null — его нет в списке (папку примеров убрали или список ещё грузится).
+// Тот же файл может лежать и в traces/ — тогда сервер отдаёт его как свой трейс: годится и он.
 function exampleOpener(
-  traces: readonly TraceSummary[] | null,
+  traces: readonly TraceSummary[],
   pick: (next: Selection | null) => void,
 ): (() => void) | null {
-  const found = traces?.some((trace) => trace.example && trace.file === FIRST_EXAMPLE) === true;
+  const found = traces.some((trace) => trace.file === FIRST_EXAMPLE);
   return found ? () => pick({ kind: 'trace', file: FIRST_EXAMPLE }) : null;
 }
 
