@@ -377,12 +377,14 @@ function bringIntoView(element: HTMLElement, stop: TourStop): void {
 // Нижняя граница подсветки: над плеером — он закреплён внизу поверх страницы, и рамка, ушедшая
 // под него, не замыкалась бы (а сквозь стекло плеера просвечивала бы рядом с рамками вкладки).
 // Сам плеер подсвечиваем целиком, колонку «Диалог» — тоже: она справа от плеера, а не над ним.
+// Меряем по подложке дока, а не по самому плееру: у подложки отступ сверху, и когда «Попробуйте»
+// поднимает док над затемнением, она закрывала бы низ рамки.
 function floorFor(target: TourStop['target']): number {
-  const player = document.querySelector(SELECTORS.player)?.getBoundingClientRect();
-  if (target === 'player' || target === 'dialog' || player === undefined) {
+  const dock = document.querySelector('[data-tour-dock]')?.getBoundingClientRect();
+  if (target === 'player' || target === 'dialog' || dock === undefined) {
     return window.innerHeight - 4;
   }
-  return player.top - 8;
+  return dock.top - 8;
 }
 
 // Цель выше экрана — подсветку обрезаем по краям видимой области, чтобы рамка замыкалась.
