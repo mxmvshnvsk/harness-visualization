@@ -795,7 +795,7 @@ type Views = ReturnType<typeof useViews>;
 function useViews(initialStop: number | null) {
   const initial = initialStop === null ? undefined : TOUR_STOPS[initialStop];
   const [viewName, setViewName] = useState<ViewName>(initial?.view ?? 'flow');
-  const { links, link, show } = useLinkedViews(setViewName, linkOfStop(initial));
+  const { links, link, show, pick } = useLinkedViews(setViewName, linkOfStop(initial));
   const showStop = useCallback(
     (stop: number) => {
       const data = TOUR_STOPS[stop];
@@ -805,7 +805,8 @@ function useViews(initialStop: number | null) {
     },
     [show],
   );
-  return { viewName, setViewName, links, link, showStop };
+  // Вкладку выбрали сами — цель прошлой ссылки забыта: вернувшись в вид, не прыгаем к ней снова.
+  return { viewName, setViewName: pick, links, link, showStop };
 }
 
 // Что раскрыть на остановке: запрос к модели или вызов тула; null — ничего.
@@ -1025,9 +1026,19 @@ function useLinkedViews(setViewName: (view: ViewName) => void, initial: SearchLi
     },
     [setViewName],
   );
+  // Ручной выбор вкладки: цель ссылки сбрасывается. nonce прежний — вид и так открывается заново.
+  const pick = useCallback(
+    (view: ViewName) => {
+      setLink((current) =>
+        current.target === null ? current : { view: null, target: null, nonce: current.nonce },
+      );
+      setViewName(view);
+    },
+    [setViewName],
+  );
   const focusFor = (view: LinkedView): SearchLink | null =>
     link.view === view ? link.target : null;
-  return { links, link: { nonce: link.nonce, focusFor }, show };
+  return { links, link: { nonce: link.nonce, focusFor }, show, pick };
 }
 
 interface PlayerDockProps {
