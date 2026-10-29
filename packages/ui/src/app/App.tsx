@@ -61,7 +61,10 @@ import { useTheme, type ThemeChoice } from './theme';
 import { setMode, useMode, type UiMode } from './mode';
 import { ModeToggle } from '../components/ModeToggle';
 import {
+  cameFrom,
+  labBackOf,
   openedOf,
+  type LabOrigin,
   useSelection,
   type LabName,
   type OpenedSelection,
@@ -80,13 +83,13 @@ export function App(): ReactElement {
   const traces = useServerList(listTraces);
   const navigation = useNavigation(pick, traces.items);
   const { opened, stream, sessionId, pending } = useOpenedStream(selection);
-  const { openLab, closeLab } = useLabNavigation(select, pick, opened);
+  const { openLab, closeLab } = useLabNavigation(select, pick, selection);
   useReloadOnEnd(stream.state, sessions.reload, traces.reload);
 
   const sources = (
     <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} />
   );
-  const lab = labScreenOf(selection, { back: opened, onBack: closeLab, onSelect: pick, replace });
+  const lab = labScreenOf(selection, { onBack: closeLab, onSelect: pick, replace });
   if (opened === null) {
     return (
       lab ??
@@ -149,7 +152,7 @@ function startScreenOf(
   sources: ReactNode,
 ): ReactElement {
   if (selection?.kind === 'labs') {
-    return <LabsScreen onBack={() => route.select(null)} onOpenLab={route.openLab} />;
+    return <LabsScreen onBack={() => goBack(route.select, null)} onOpenLab={route.openLab} />;
   }
   return (
     <StartScreen
@@ -163,7 +166,6 @@ function startScreenOf(
 }
 
 interface LabRoute {
-  back: OpenedSelection | null;
   onBack: () => void;
   onSelect: (next: Selection | null) => void;
   // Сменить шаг урока в адресе, не добавляя записи в историю.
@@ -179,7 +181,7 @@ function labScreenOf(selection: Selection | null, route: LabRoute): ReactElement
     <LabScreen
       lab={selection.lab}
       step={selection.step}
-      back={route.back}
+      back={backKindOf(selection)}
       onBack={route.onBack}
       onSelect={route.onSelect}
       onStepChange={(step) => {
@@ -258,12 +260,12 @@ function LabScreen(props: {
   // Шаг урока из адреса — у RAG и MCP; null — с начала.
   step: string | null;
   onStepChange: (step: string) => void;
-  back: OpenedSelection | null;
+  back: BackKind;
   onBack: () => void;
   // Лаборатория evals открывает трейс попытки.
   onSelect: (next: Selection) => void;
 }): ReactElement {
-  const backLabel = BACK_LABELS[props.back?.kind ?? 'start'];
+  const backLabel = BACK_LABELS[props.back];
   const openTrace = (file: string): void => {
     props.onSelect({ kind: 'trace', file });
   };
@@ -303,33 +305,63 @@ function LabScreen(props: {
   }
 }
 
-const BACK_LABELS: Record<OpenedSelection['kind'] | 'start', string> = {
+type BackKind = OpenedSelection['kind'] | LabOrigin;
+
+const BACK_LABELS: Record<BackKind, string> = {
   session: '← К сессии',
   trace: '← К трейсу',
-  start: '← К сессиям',
+  start: '← На старт',
+  labs: '← К лабораториям',
 };
+
+function backKindOf(selection: Selection & { kind: 'lab' }): BackKind {
+  return selection.back?.kind ?? selection.from;
+}
+
+// «Назад» с экрана приложения: пришли с target — шаг назад в истории браузера, чтобы его кнопки
+// «назад / вперёд» вели себя так же; иначе (прямая ссылка) — открыть target новой записью.
+function goBack(select: (next: Selection | null) => void, target: Selection | null): void {
+  if (cameFrom(target)) {
+    window.history.back();
+  } else {
+    select(target);
+  }
+}
 
 // Лаборатория открывается со стартового экрана и из шапки сессии или трейса. «Назад» ведёт
 // туда, откуда пришли, — и на то же место страницы.
 function useLabNavigation(
   select: (next: Selection | null) => void,
   pick: (next: Selection | null) => void,
-  opened: OpenedSelection | null,
+  selection: Selection | null,
 ): { openLab: OpenLab; closeLab: () => void } {
   const [scrollY, setScrollY] = useState(0);
+  const opened = openedOf(selection);
+  const from: LabOrigin = selection?.kind === 'labs' ? 'labs' : 'start';
   const openLab = useCallback(
     (lab: LabName, step?: string) => {
       setScrollY(window.scrollY);
-      pick({ kind: 'lab', lab, back: opened, step: step ?? null });
+      pick({ kind: 'lab', lab, back: opened, from, step: step ?? null });
     },
-    [pick, opened],
+    [pick, opened, from],
   );
   const closeLab = useCallback(() => {
-    select(opened);
-    requestAnimationFrame(() => {
-      window.scrollTo({ top: opened === null ? 0 : scrollY });
-    });
-  }, [select, opened, scrollY]);
+    const target = selection?.kind === 'lab' ? labBackOf(selection) : null;
+    const top = target?.kind === 'session' || target?.kind === 'trace' ? scrollY : 0;
+    const restore = (): void => {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top });
+      });
+    };
+    // Пришли из приложения — экран сменится по popstate; по прямой ссылке — сразу.
+    if (cameFrom(target)) {
+      window.addEventListener('popstate', restore, { once: true });
+      window.history.back();
+    } else {
+      select(target);
+      restore();
+    }
+  }, [select, selection, scrollY]);
   return { openLab, closeLab };
 }
 
