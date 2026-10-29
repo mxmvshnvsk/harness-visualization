@@ -211,44 +211,40 @@
   }
 }
 
+/* Стартовый экран: вопрос и лаборатории (инструменты) — во всю ширину друг под другом,
+   под ними «Идут сейчас» и «Записи» по половине. Колонка вопроса и списков раскрывается
+   (display: contents), и её карточки встают в общую сетку рядом с лабораториями. */
 .startGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
   align-items: start;
 }
 
-/* Узкий экран — по мокапу: вопрос, лаборатории, потом сессии и трейсы. Колонка вопроса
-   раскрывается (display: contents), и её карточки встают в общую сетку рядом с лабораториями. */
-@media (max-width: 1000px) {
-  .startGrid {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
+.startGrid .sourcesWide {
+  display: contents;
+}
 
-  .startGrid .sourcesWide {
-    display: contents;
-  }
+.startGrid .formCard {
+  order: 1;
+}
 
-  .startGrid .formCard {
-    order: 1;
-  }
+/* Лаборатории во всю ширину — плиткой, а не длинным столбиком. */
+.startGrid > .labs {
+  order: 2;
+  grid-column: 1 / -1;
+  position: static;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
 
-  /* Лаборатории во всю ширину — плиткой, а не длинным столбиком. */
-  .startGrid > .labs {
-    order: 2;
-    grid-column: 1 / -1;
-    position: static;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  }
+.startGrid > .labs .labsTitle,
+.startGrid > .labs .allLabs {
+  grid-column: 1 / -1;
+}
 
-  .startGrid > .labs .labsTitle {
-    grid-column: 1 / -1;
-  }
-
-  .startGrid .sourcesWide > section:not(.formCard) {
-    order: 3;
-  }
+.startGrid .sourcesWide > section:not(.formCard) {
+  order: 3;
 }
 
 @media (max-width: 760px) {

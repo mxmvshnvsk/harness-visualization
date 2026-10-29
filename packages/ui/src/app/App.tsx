@@ -495,7 +495,7 @@ const START_TEXT: Record<UiMode, { title: string; text: string }> = {
 };
 
 // Пока ничего не открыто — вопрос агенту и списки прямо на экране, без панели.
-// Широкий экран: слева вопрос и списки, справа — лаборатории коротким списком.
+// Сверху вопрос и лаборатории во всю ширину, под ними сессии и записи — по половине.
 function StartScreen(props: {
   children: ReactNode;
   onOpenLab: (lab: LabName) => void;
