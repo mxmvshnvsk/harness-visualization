@@ -55,7 +55,6 @@ export function MeaningMap({ base, search, question }: MapProps): ReactElement {
             setMethod(next);
             setUmapWanted((wanted) => wanted || next === 'umap');
           }}
-          size="small"
         />
       </div>
       <MapNote count={chunks.length} method={method} />

@@ -4,6 +4,7 @@
 import type { SessionSummary, TraceSummary } from '@harness-visualization/server';
 import { useState, type ReactElement, type ReactNode } from 'react';
 import type { Selection } from '../app/useSelection';
+import { useMode } from '../app/mode';
 import { Badge } from '../components/Badge';
 import { Button } from '../components/Button';
 import { plural } from '../text/plural';
@@ -13,6 +14,10 @@ import { ImportTrace } from './ImportTrace';
 
 interface SourceSectionProps {
   title: string;
+  // Что это за список — мелко рядом с заголовком: «сессии», «трейсы».
+  kind: string;
+  // Одна строка для новичка: что в списке; только в режиме «Обучение».
+  note: string;
   error: string | null;
   onReload: () => void;
   children: ReactNode;
@@ -22,12 +27,16 @@ interface SourceSectionProps {
 
 function SourceSection(props: SourceSectionProps): ReactElement {
   const { title, error, onReload, children } = props;
+  const mode = useMode();
   return (
     <section className={styles.section}>
       <div className={styles.header}>
-        <h2 className={styles.title}>{title}</h2>
+        <h2 className={styles.title}>
+          {title} <span className={styles.kind}>· {props.kind}</span>
+        </h2>
         <Button onClick={onReload}>обновить</Button>
       </div>
+      {mode === 'learn' && <p className={styles.note}>{props.note}</p>}
       {error !== null && <div className={styles.error}>Не загрузилось: {error}</div>}
       <ul className={styles.list}>{children}</ul>
       {props.footer}
@@ -48,7 +57,13 @@ export function SessionList(props: SessionListProps): ReactElement {
   // Свежие сверху: сервер отдаёт в порядке запуска.
   const items = [...sessions].reverse();
   return (
-    <SourceSection title="Сессии сервера" error={props.error} onReload={props.onReload}>
+    <SourceSection
+      title="Идут сейчас"
+      kind="сессии"
+      note="Сессии, запущенные на этом сервере. Закончилась — остаётся в записях."
+      error={props.error}
+      onReload={props.onReload}
+    >
       {items.length === 0 && <li className={styles.empty}>Пока ни одной</li>}
       {items.map((session) => (
         <li key={session.sessionId}>
@@ -107,7 +122,9 @@ export function TraceList(props: TraceListProps): ReactElement {
   );
   return (
     <SourceSection
-      title="Трейсы"
+      title="Записи"
+      kind="трейсы"
+      note="Каждая сессия сохраняется записью. Откройте — плеер покажет её по шагам."
       error={props.error}
       onReload={props.onReload}
       footer={

@@ -55,12 +55,22 @@ import { buildSchedule, type Schedule } from '../timeline/schedule';
 import type { TimelineClock } from '../timeline/TimelineClock';
 import { useTimeline } from '../timeline/useTimeline';
 import styles from './App.module.css';
+import { labEntries } from './labEntries';
 import { Sidebar } from './Sidebar';
 import { useTheme, type ThemeChoice } from './theme';
 import { setMode, useMode, type UiMode } from './mode';
 import { ModeToggle } from '../components/ModeToggle';
-import { useSelection, type LabName, type OpenedSelection, type Selection } from './useSelection';
+import {
+  openedOf,
+  useSelection,
+  type LabName,
+  type OpenedSelection,
+  type Selection,
+} from './useSelection';
 import { OpenLabContext, type OpenLab } from './labLinks';
+import { LabsScreen } from './start/LabsScreen';
+import { QUESTION_FIELD_ID } from '../features/SessionForm';
+import { StartIntro } from './start/StartIntro';
 import { ViewLinksContext, type SearchLink, type ViewLinks } from './viewLinks';
 
 export function App(): ReactElement {
@@ -76,12 +86,16 @@ export function App(): ReactElement {
   const sources = (
     <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} />
   );
-  const startSources = (
-    <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} wide />
-  );
   const lab = labScreenOf(selection, { back: opened, onBack: closeLab, onSelect: pick, replace });
   if (opened === null) {
-    return lab ?? <StartScreen onOpenLab={openLab}>{startSources}</StartScreen>;
+    return (
+      lab ??
+      startScreenOf(
+        selection,
+        { select, pick, openLab, traces: traces.items },
+        <Sidebar sessions={sessions} traces={traces} selection={selection} onSelect={pick} wide />,
+      )
+    );
   }
   return (
     <>
@@ -118,6 +132,33 @@ export function App(): ReactElement {
         </Drawer>
       </div>
     </>
+  );
+}
+
+interface StartRoute {
+  select: (next: Selection | null) => void;
+  pick: (next: Selection | null) => void;
+  openLab: OpenLab;
+  traces: readonly TraceSummary[];
+}
+
+// Ничего не открыто: экран «Лаборатории» или стартовый экран со списками.
+function startScreenOf(
+  selection: Selection | null,
+  route: StartRoute,
+  sources: ReactNode,
+): ReactElement {
+  if (selection?.kind === 'labs') {
+    return <LabsScreen onBack={() => route.select(null)} onOpenLab={route.openLab} />;
+  }
+  return (
+    <StartScreen
+      onOpenLab={route.openLab}
+      onOpenLabs={() => route.select({ kind: 'labs' })}
+      onOpenExample={exampleOpener(route.traces, route.pick)}
+    >
+      {sources}
+    </StartScreen>
   );
 }
 
@@ -188,7 +229,7 @@ function permissionPrompt(
 // Что за поток открыт. Лаборатория, открытая из сессии или трейса, лежит поверх него:
 // поток не закрывается.
 function useOpenedStream(selection: Selection | null) {
-  const opened = selection?.kind === 'lab' ? selection.back : selection;
+  const opened = openedOf(selection);
   const stream = useEventStream<StreamEnd>(streamUrl(opened), opened?.kind === 'trace');
   const sessionId = opened?.kind === 'session' ? opened.sessionId : null;
   const pending = usePendingPermission(sessionId, stream.events);
@@ -328,7 +369,7 @@ function Topbar({ onOpenSources, onOpenLab, ...header }: TopbarProps): ReactElem
   const mode = useMode();
   const labs = labEntries(mode).map((entry) => ({
     label: entry.title,
-    hint: entry.short,
+    hint: entry.question,
     onSelect: () => {
       onOpenLab(entry.lab);
     },
@@ -386,48 +427,6 @@ function MoreIcon(): ReactElement {
   );
 }
 
-// teaching — учебная лаборатория: в режиме «Исследование» её нет, остаются инструменты.
-const LAB_ENTRIES: readonly {
-  lab: LabName;
-  title: string;
-  short: string;
-  text: string;
-  teaching?: boolean;
-}[] = [
-  {
-    lab: 'rag',
-    teaching: true,
-    title: 'Лаборатория RAG',
-    short: 'поиск, векторы, проверка ответа',
-    text: 'Как агент ищет в базе знаний, что такое векторы и почему найденное не гарантирует верный ответ.',
-  },
-  {
-    lab: 'mcp',
-    teaching: true,
-    title: 'Лаборатория MCP',
-    short: 'тулы, протокол, цена, доверие',
-    text: 'Что такое тул для модели, как харнесс говорит с MCP-сервером, сколько стоят тулы и можно ли верить серверу.',
-  },
-  {
-    lab: 'evals',
-    title: 'Лаборатория Evals',
-    short: 'задачи, попытки, pass@k',
-    text: 'Как понять, что агент стал лучше, а не «вроде лучше»: набор задач, несколько попыток, проверки по трейсу и итог по конфигурациям.',
-  },
-  {
-    lab: 'tokens',
-    title: 'Выбор токена',
-    short: 'вероятности, температура',
-    text: 'Как модель выбирает следующий кусочек текста: где она уверена, где колеблется и что меняет температура.',
-  },
-  {
-    lab: 'arena',
-    title: 'Код-арена',
-    short: 'агент пишет код, харнесс принимает',
-    text: 'Агент правит маленький проект и сам гоняет тесты, а харнесс принимает работу тестами, которых агент не видел: когда агент говорит «готово» — это правда?',
-  },
-];
-
 // Режим и тема — в меню «⋯» на узком экране, где переключателей в шапке нет.
 function settingsItems(
   mode: UiMode,
@@ -452,14 +451,10 @@ function settingsItems(
   ];
 }
 
-function labEntries(mode: UiMode): typeof LAB_ENTRIES {
-  return mode === 'research' ? LAB_ENTRIES.filter((entry) => entry.teaching !== true) : LAB_ENTRIES;
-}
-
 const START_TEXT: Record<UiMode, { title: string; text: string }> = {
   learn: {
     title: 'Как запрос проходит через харнесс',
-    text: 'Задайте вопрос агенту или откройте трейс — и посмотрите по шагам: prompt, модель, политика, тулы, ответ.',
+    text: 'Ниже — что здесь к чему и три способа начать: готовая запись, свой вопрос или одна тема.',
   },
   research: {
     title: 'Сессии и записи',
@@ -472,6 +467,8 @@ const START_TEXT: Record<UiMode, { title: string; text: string }> = {
 function StartScreen(props: {
   children: ReactNode;
   onOpenLab: (lab: LabName) => void;
+  onOpenLabs: () => void;
+  onOpenExample: (() => void) | null;
 }): ReactElement {
   const mode = useMode();
   return (
@@ -488,6 +485,13 @@ function StartScreen(props: {
           <ThemeToggle />
         </span>
       </div>
+      {mode === 'learn' && (
+        <StartIntro
+          onOpenExample={props.onOpenExample}
+          onAsk={focusQuestion}
+          onOpenLabs={props.onOpenLabs}
+        />
+      )}
       <div className={styles.startGrid}>
         {props.children}
         <aside className={`${styles.card} ${styles.labs}`}>
@@ -499,7 +503,7 @@ function StartScreen(props: {
               key={entry.lab}
               type="button"
               className={styles.labEntry}
-              title={entry.text}
+              title={entry.question}
               onClick={() => {
                 props.onOpenLab(entry.lab);
               }}
@@ -508,10 +512,34 @@ function StartScreen(props: {
               <span>{entry.short}</span>
             </button>
           ))}
+          {mode === 'learn' && (
+            <button type="button" className={styles.allLabs} onClick={props.onOpenLabs}>
+              Все лаборатории — с вопросами и временем →
+            </button>
+          )}
         </aside>
       </div>
     </div>
   );
+}
+
+// Пример для первого знакомства: «удалёнка» — короткая сессия с поиском по документам и тулами.
+const FIRST_EXAMPLE = '2026-10-26T08-03-22_040414ea.jsonl';
+
+// Открыть пример; null — его нет в списке (папку примеров убрали или список ещё грузится).
+function exampleOpener(
+  traces: readonly TraceSummary[] | null,
+  pick: (next: Selection | null) => void,
+): (() => void) | null {
+  const found = traces?.some((trace) => trace.example && trace.file === FIRST_EXAMPLE) === true;
+  return found ? () => pick({ kind: 'trace', file: FIRST_EXAMPLE }) : null;
+}
+
+// «Спросить агента самому»: прокрутить к полю вопроса и поставить в него курсор.
+function focusQuestion(): void {
+  const field = document.getElementById(QUESTION_FIELD_ID);
+  field?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  field?.focus({ preventScroll: true });
 }
 
 const VIEWS = [

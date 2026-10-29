@@ -1,0 +1,242 @@
+/* Стартовый экран в режиме «Обучение» и экран «Лаборатории» (онбординг, 29.10.2026). */
+
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  padding: var(--space-card);
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 var(--edge-hi);
+}
+
+.introText {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.introTitle {
+  margin: 0;
+  font-size: clamp(18px, 1.8vw, 21px);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.muted {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 68ch;
+}
+
+.glossary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 4px 0 0;
+  font-size: 13.5px;
+}
+
+.glossary dt,
+.glossary dd {
+  display: inline;
+}
+
+.glossary dt {
+  font-weight: 600;
+}
+
+.glossary dt::after {
+  content: ' —';
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.glossary dd {
+  margin: 0 0 0 0.35em;
+  color: var(--muted);
+}
+
+.diagram {
+  width: 100%;
+  max-width: 440px;
+  height: auto;
+  justify-self: center;
+}
+
+.diagram text {
+  font-family: var(--font-text);
+  font-size: 13px;
+  fill: var(--text);
+}
+
+.diagram .diagramNote {
+  font-size: 11.5px;
+  fill: var(--muted);
+}
+
+.diagramBox {
+  fill: var(--raised);
+  stroke: var(--line);
+}
+
+.diagramLine {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+}
+
+.diagramArrow {
+  fill: var(--accent);
+}
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.label {
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.entryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+}
+
+.entry[data-main='true'] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+
+.entryTitle {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.3;
+}
+
+.entry .muted {
+  font-size: 13.5px;
+  flex: 1;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  font: 11px var(--font-mono);
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.entryAction {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+@media (width <= 860px) {
+  .intro {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Экран «Лаборатории» */
+.labsScreen {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px var(--space-page) 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.labsTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.labsTitle {
+  margin: 0;
+  font-size: clamp(22px, 2.4vw, 28px);
+  letter-spacing: -0.02em;
+}
+
+.labGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.labCard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-inner);
+  padding: 20px;
+}
+
+.labQuestion {
+  margin: 0;
+  font-size: 16.5px;
+  line-height: 1.35;
+  text-wrap: balance;
+}
+
+.labFacts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 0;
+  font-size: 13.5px;
+  flex: 1;
+}
+
+.labFacts dt {
+  color: var(--muted);
+}
+
+.labFacts dd {
+  margin: 0;
+}
+
+@media (width <= 860px) {
+  .labsScreen {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}

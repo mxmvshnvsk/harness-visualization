@@ -1,4 +1,4 @@
-// «Открыть трейс другого харнесса…» (этап 9.4): запись сессии Claude Code или экспорт OpenCode;
+// «Открыть запись Claude Code или OpenCode…» (этап 9.4; окно с инструкцией — онбординг): запись сессии Claude Code или экспорт OpenCode;
 // формат сервер определяет по содержимому. Запись переводится в наш трейс и открывается как своя.
 // Субагенты Claude Code 2.1 записаны в отдельных файлах (<id>/subagents/agent-*.jsonl): если
 // в главной записи есть поручения без них, предлагаем добавить — главная запись переводится
@@ -8,6 +8,7 @@ import { useRef, useState, type ReactElement, type Ref } from 'react';
 import { importTrace } from '../api/serverApi';
 import { Button } from '../components/Button';
 import { HelpButton } from '../help/HelpLinks';
+import { ImportGuide } from './ImportGuide';
 import styles from './SourceList.module.css';
 
 interface ImportTraceProps {
@@ -18,9 +19,6 @@ interface Imported {
   text: string;
   subagentsWithoutRecord: number;
 }
-
-const HINT =
-  'Claude Code: ~/.claude/projects/<проект>/<id>.jsonl (папка скрытая — в окне выбора Cmd+Shift+.). OpenCode: файл из opencode session export. Формат определится сам; ключи и домашняя папка маскируются.';
 
 export function ImportTrace({ onImported }: ImportTraceProps): ReactElement {
   const mainInput = useRef<HTMLInputElement>(null);
@@ -41,10 +39,7 @@ export function ImportTrace({ onImported }: ImportTraceProps): ReactElement {
   const missing = imported?.subagentsWithoutRecord ?? 0;
   return (
     <div className={styles.import}>
-      <span className={styles.importRow}>
-        <Button onClick={() => mainInput.current?.click()}>Открыть трейс другого харнесса…</Button>
-        <HelpButton topic="imported-traces" />
-      </span>
+      <OpenImport onChooseFile={() => mainInput.current?.click()} />
       <FileInput
         ref={mainInput}
         multiple={false}
@@ -68,13 +63,41 @@ export function ImportTrace({ onImported }: ImportTraceProps): ReactElement {
           }
         }}
       />
-      <span className={styles.importHint}>
-        {state ??
-          (missing > 0
-            ? `Субагентов без записи: ${String(missing)}. Claude Code пишет их рядом с главной записью: папка <id сессии>/subagents/, файлы agent-*.jsonl — выберите их все.`
-            : HINT)}
-      </span>
+      {(state !== null || missing > 0) && (
+        <span className={styles.importHint}>
+          {state ??
+            `Субагентов без записи: ${String(missing)}. Claude Code пишет их рядом с главной записью: папка <id сессии>/subagents/, файлы agent-*.jsonl — выберите их все.`}
+        </span>
+      )}
     </div>
+  );
+}
+
+// Сначала окно с инструкцией, где лежит запись, — потом выбор файла.
+function OpenImport({ onChooseFile }: { onChooseFile: () => void }): ReactElement {
+  const [guideOpen, setGuideOpen] = useState(false);
+  return (
+    <span className={styles.importRow}>
+      <Button
+        className={styles.importButton}
+        onClick={() => {
+          setGuideOpen(true);
+        }}
+      >
+        Открыть запись Claude Code или OpenCode…
+      </Button>
+      <HelpButton topic="imported-traces" />
+      <ImportGuide
+        open={guideOpen}
+        onClose={() => {
+          setGuideOpen(false);
+        }}
+        onChooseFile={() => {
+          setGuideOpen(false);
+          onChooseFile();
+        }}
+      />
+    </span>
   );
 }
 

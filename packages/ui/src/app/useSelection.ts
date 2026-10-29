@@ -13,10 +13,20 @@ const LABS: readonly LabName[] = ['rag', 'mcp', 'evals', 'arena', 'tokens'];
 export type OpenedSelection =
   { kind: 'session'; sessionId: string } | { kind: 'trace'; file: string };
 
-// step — id шага урока лаборатории (RAG, MCP); null — с начала.
+// step — id шага урока лаборатории (RAG, MCP); null — с начала. labs — экран «Лаборатории»
+// со списком и вопросом каждой (?labs).
 export type Selection =
   | OpenedSelection
-  | { kind: 'lab'; lab: LabName; back: OpenedSelection | null; step: string | null };
+  | { kind: 'lab'; lab: LabName; back: OpenedSelection | null; step: string | null }
+  | { kind: 'labs' };
+
+// Открытая сессия или трейс под выбором: у лаборатории — откуда её открыли.
+export function openedOf(selection: Selection | null): OpenedSelection | null {
+  if (selection === null || selection.kind === 'labs') {
+    return null;
+  }
+  return selection.kind === 'lab' ? selection.back : selection;
+}
 
 type SetSelection = (selection: Selection | null) => void;
 
@@ -52,8 +62,11 @@ function urlOf(selection: Selection | null): string {
 }
 
 function queryOf(selection: Selection): string {
+  if (selection.kind === 'labs') {
+    return 'labs';
+  }
   const params = new URLSearchParams();
-  const opened = selection.kind === 'lab' ? selection.back : selection;
+  const opened = openedOf(selection);
   if (selection.kind === 'lab') {
     params.set('lab', selection.lab);
     if (selection.step !== null) {
@@ -70,6 +83,9 @@ function queryOf(selection: Selection): string {
 
 function readSelection(): Selection | null {
   const params = new URLSearchParams(window.location.search);
+  if (params.has('labs')) {
+    return { kind: 'labs' };
+  }
   const lab = LABS.find((name) => name === params.get('lab'));
   const opened = readOpened(params);
   return lab === undefined ? opened : { kind: 'lab', lab, back: opened, step: params.get('step') };

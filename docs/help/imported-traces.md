@@ -4,7 +4,7 @@
 
 ## Как открыть
 
-- В интерфейсе — «Сессии и трейсы» → «Открыть трейс другого харнесса…». Формат определится сам; трейс сохранится в `traces/` с чипом «Claude Code» или «OpenCode».
+- В интерфейсе — «Сессии и трейсы» → «Открыть запись Claude Code или OpenCode…» — окно подскажет, где лежит запись, — затем «Выбрать файл…». Формат определится сам; трейс сохранится в `traces/` с чипом «Claude Code» или «OpenCode».
 - В терминале — `pnpm import-trace claude-code <файл>.jsonl`, `pnpm import-trace opencode session.json` или `pnpm import-trace auto <файл>`.
 
 **OpenCode 2.x** — экспорт сессии: `opencode session list` в папке проекта покажет id, `opencode session export` выгрузит JSON. В старых версиях команда называлась `opencode export`. Экспорт без маскировки: в нём всё, что видела модель, — просмотрите файл, прежде чем им делиться.

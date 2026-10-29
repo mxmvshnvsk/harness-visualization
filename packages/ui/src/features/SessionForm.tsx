@@ -18,6 +18,9 @@ import {
 import styles from './SessionForm.module.css';
 import { formatRu } from '../text/formatNumber';
 
+// Поле вопроса: в него ставит курсор «Спросить агента самому» на стартовом экране.
+export const QUESTION_FIELD_ID = 'session-question';
+
 const RETRIEVAL: Record<RetrievalChoice, { label: string; hint: string }> = {
   tool: { label: 'ищет модель', hint: 'сама решает, искать ли и сколько раз' },
   auto: { label: 'ищет харнесс', hint: 'всегда один раз до ответа, по словам вопроса' },
@@ -84,6 +87,7 @@ export function SessionForm({ onStarted }: SessionFormProps): ReactElement {
   return (
     <form className={styles.form} onSubmit={submit}>
       <textarea
+        id={QUESTION_FIELD_ID}
         className={styles.question}
         aria-label="Вопрос агенту"
         value={question}
