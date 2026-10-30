@@ -3,6 +3,9 @@
 
 import {
   compareReports,
+  evalReportModelLabel,
+  evalConfigModelLabel,
+  evalJudgeLabel,
   summarizeConfig,
   type CellComparison,
   type CellSummary,
@@ -63,6 +66,12 @@ function Comparison({ before, after }: { before: EvalReport; after: EvalReport }
         Сравнение · было {before.startedAt.slice(0, 16).replace('T', ' ')} → стало{' '}
         {after.startedAt.slice(0, 16).replace('T', ' ')}
       </span>
+      <p className={styles.note}>
+        Модели: {evalReportModelLabel(before)} → {evalReportModelLabel(after)}
+      </p>
+      <p className={styles.note}>
+        Было: {evalJudgeLabel(before)} Стало: {evalJudgeLabel(after)}
+      </p>
       <h2 className={styles.heading}>
         Позеленело {comparison.better}, покраснело {comparison.worse}
       </h2>
@@ -144,6 +153,10 @@ function ConfigShift(props: {
         return (
           <div key={config} className={styles.total}>
             <span className={styles.mono}>{config}</span>
+            <span className={styles.small}>
+              {evalConfigModelLabel(props.before, config)} →{' '}
+              {evalConfigModelLabel(props.after, config)}
+            </span>
             <span className={styles.small}>
               <PassHatHint trials={props.after.trials} /> {percent(was.passHatK)} →{' '}
               <b>{percent(now.passHatK)}</b> · <PassRateHint /> {percent(was.trialPassRate)} →{' '}

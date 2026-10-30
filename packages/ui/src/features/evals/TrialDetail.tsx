@@ -1,7 +1,13 @@
 // Попытка крупно: ответ агента, каждая проверка с тем, что нашли на деле, и ссылка в трейс —
 // провалившуюся проверку можно открыть и понять почему.
 
-import type { CheckResult, EvalReport } from '@harness-visualization/harness/evals';
+import {
+  evalTrialModelLabel,
+  type CheckResult,
+  type EvalReport,
+  type TrialResult,
+  type ReportTask,
+} from '@harness-visualization/harness/evals';
 import type { ReactElement } from 'react';
 import { Button } from '../../components/Button';
 import { MarkdownView } from '../../help/MarkdownView';
@@ -47,15 +53,11 @@ export function TrialDetail(props: {
   if (task === undefined || trial === undefined) {
     return null;
   }
-  const outcome = resultOf(trial.passed);
   const traceFile = trial.tracePath.split('/').at(-1) ?? trial.tracePath;
   const cost = trial.costUsd === null ? 'цена неизвестна' : `${formatFixed(trial.costUsd, 6)} USD`;
   return (
     <section className={labStyles.card}>
-      <span className={styles.eyebrow}>Попытка крупно</span>
-      <h2 className={styles.heading}>
-        «{task.question}» · {cell.config} · попытка {cell.trial} — {RESULT_WORDS[outcome]}
-      </h2>
+      <TrialIdentity report={report} task={task} trial={trial} />
       <div className={styles.pair}>
         <div className={styles.results}>
           <span className={`${styles.small} ${styles.muted}`}>
@@ -110,5 +112,26 @@ function CheckList({ checks }: { checks: CheckResult[] }): ReactElement {
         );
       })}
     </div>
+  );
+}
+
+function TrialIdentity({
+  report,
+  task,
+  trial,
+}: {
+  report: EvalReport;
+  task: ReportTask;
+  trial: TrialResult;
+}): ReactElement {
+  const outcome = resultOf(trial.passed);
+  return (
+    <>
+      <span className={styles.eyebrow}>Попытка крупно</span>
+      <h2 className={styles.heading}>
+        «{task.question}» · {trial.config} · попытка {trial.trial} — {RESULT_WORDS[outcome]}
+      </h2>
+      <p className={styles.note}>{evalTrialModelLabel(report, trial)}</p>
+    </>
   );
 }

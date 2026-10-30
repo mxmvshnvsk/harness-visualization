@@ -5,17 +5,23 @@
 // pass@k — задача решена хоть раз из k попыток: «умеет ли агент». pass^k — решена во всех k:
 // «можно ли на него положиться». При k = 1 они совпадают; чем больше k, тем дальше расходятся.
 
+import type { EvalModel } from './evalModels.js';
+import type { ReasoningEffort } from '../model/chatTypes.js';
 import type { CheckResult } from './codeChecks.js';
 import type { EvalSuite, EvalTask } from './evalSet.js';
 
 export const EVAL_REPORT_VERSION = 1;
 
 export interface EvalConfig {
+  model?: EvalModel;
+  reasoningEffort?: ReasoningEffort;
+  variantName?: string;
   name: string;
   description: string;
 }
 
 export interface TrialResult {
+  actualModels?: string[];
   taskId: string;
   config: string;
   // Номер попытки, с 1.
@@ -58,6 +64,8 @@ export interface EvalReport {
   results: TrialResult[];
   // Трейс судьи — все его запросы за прогон; null — судью не звали.
   judgeTracePath: string | null;
+  // Один судья для всех сравниваемых моделей; undefined — старый отчёт.
+  judgeModel?: EvalModel | null;
 }
 
 export function trialPassed(failed: boolean, checks: readonly CheckResult[]): boolean | null {

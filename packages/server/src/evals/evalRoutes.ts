@@ -11,6 +11,7 @@ import { basename, join } from 'node:path';
 import { evalSetSchema, type HarnessEvent } from '@harness-visualization/harness';
 import {
   readTrialFacts,
+  evalReportModelLabel,
   type EvalReport,
   type EvalSet,
 } from '@harness-visualization/harness/evals';
@@ -144,7 +145,7 @@ function summarizeReport(report: LocatedReport): EvalReportSummary {
     setName: report.set.name,
     startedAt: report.startedAt,
     finishedAt: report.finishedAt,
-    model: report.model,
+    model: evalReportModelLabel(report),
     trials: report.trials,
     configs: report.configs.map((config) => config.name),
     tasks: report.tasks.length,

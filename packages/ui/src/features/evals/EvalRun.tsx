@@ -3,6 +3,9 @@
 
 import {
   EVAL_SUITES,
+  evalReportModelLabel,
+  evalConfigModelLabel,
+  evalJudgeLabel,
   summarizeCell,
   summarizeConfig,
   type EvalReport,
@@ -151,7 +154,7 @@ function describeReport(report: EvalReportSummary): string {
       ? ` · идёт: ${String(report.done)} из ${String(report.planned)}`
       : '';
   const example = report.example ? ' · пример' : '';
-  return `${when} · ${report.setName} · ${report.configs.join(', ')} · k = ${String(report.trials)}${progress}${example}`;
+  return `${when} · ${report.setName} · ${report.model} · ${report.configs.join(', ')} · k = ${String(report.trials)}${progress}${example}`;
 }
 
 function RunSummary(props: {
@@ -165,7 +168,7 @@ function RunSummary(props: {
     <>
       <span className={styles.eyebrow}>
         Прогон · {report.tasks.length} задач × {report.trials} попыток × {report.configs.length}{' '}
-        конф. · {report.model} · effort {report.reasoningEffort}
+        конф. · {evalReportModelLabel(report)} · effort {report.reasoningEffort}
       </span>
       <h2 className={styles.heading}>Что решает агент и насколько стабильно</h2>
       {report.results.length < planned && (
@@ -174,6 +177,7 @@ function RunSummary(props: {
           попыток из {planned}. Итоги — по сделанным.
         </p>
       )}
+      <p className={styles.note}>{evalJudgeLabel(report)}</p>
       <ConfigTotals report={report} />
       <Matrix report={report} cell={props.cell} onCell={props.onCell} />
     </>
@@ -192,6 +196,7 @@ function ConfigTotals({ report }: { report: EvalReport }): ReactElement {
             <span className={styles.mono}>
               {config.name} · {config.description}
             </span>
+            <span className={styles.small}>{evalConfigModelLabel(report, config.name)}</span>
             <div className={styles.big}>
               <div>
                 <b>{percent(summary.trialPassRate)}</b>
@@ -258,8 +263,8 @@ function Matrix(props: {
             <th>задача</th>
             {report.configs.map((config) => (
               <th key={config.name} colSpan={2}>
-                {config.name}: попытки · <PassAtHint trials={report.trials} /> /{' '}
-                <PassHatHint trials={report.trials} />
+                {config.name} · {evalConfigModelLabel(report, config.name)}: попытки ·{' '}
+                <PassAtHint trials={report.trials} /> / <PassHatHint trials={report.trials} />
               </th>
             ))}
           </tr>

@@ -36,7 +36,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 6px 18px;
+  gap: 12px 18px;
   padding-bottom: 14px;
 }
 
@@ -45,8 +45,14 @@
   grid-row: 1;
   display: flex;
   flex: none;
+  min-width: 0;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.toolbar > * {
+  flex-shrink: 0;
 }
 
 /* Когда открытый диалог сужает основную колонку, инструменты получают свою строку,
@@ -55,8 +61,7 @@
   .toolbar {
     grid-column: 1 / -1;
     grid-row: 2;
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    justify-content: flex-start;
   }
 }
 

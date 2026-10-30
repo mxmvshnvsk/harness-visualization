@@ -30,3 +30,12 @@ export {
   type CellComparison,
   type ReportComparison,
 } from './compareReports.js';
+
+export {
+  evalModelLabel,
+  evalReportModelLabel,
+  evalConfigModelLabel,
+  evalTrialModelLabel,
+  evalJudgeLabel,
+  type EvalModel,
+} from './evalModels.js';

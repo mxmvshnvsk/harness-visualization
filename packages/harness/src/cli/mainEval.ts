@@ -5,27 +5,35 @@
 //   pnpm eval --configs tool,auto,rewrite  — конфигурации из compare-runs
 //   pnpm eval --task vacation-days         — только эти задачи (через запятую)
 //   pnpm eval --suite capability           — только трудные задачи (или regression)
+//   pnpm eval --models default,glm-4.6 --configs tool — сравнить модели на одном харнессе
+//   pnpm eval --model qwen-local --no-judge          — одна модель без ключа DeepSeek
+//   pnpm eval --judge-model default                 — отдельная фиксированная модель судьи
+//   pnpm eval --effort high                         — общий effort, без молчаливого понижения
 //   pnpm eval --no-judge                   — без судьи: только проверки кодом, без лишних денег
 //   pnpm eval --set evals/arena.json       — задачи Код-арены (этап 10.3); конфигурации — режимы
 //                                            арены: blind, tests (по умолчанию), tests-max, squeezed
 //
 // Каждая попытка — обычная сессия со своим трейсом в traces/ и своей временной рабочей
-// папкой из примеров. Конфигурации чередуются внутри попытки: кэш промпта, прогретый
-// предыдущей сессией, достаётся всем. Отчёт — JSON в traces/evals/.
+// папкой из примеров. Конфигурации чередуются внутри попытки. Разные модели и провайдеры
+// имеют отдельные кэши prompt; чередование не делает их одинаково прогретыми. Отчёт — JSON в traces/evals/.
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { parseArgs, styleText } from 'node:util';
 import { readTrace } from '../grounding/readTrace.js';
-import { RUN_VARIANTS, type RunVariant } from '../runComparison/comparisonVariants.js';
 import { prepareArenaRun } from '../arena/arenaSession.js';
 import { arenaSessionInput } from '../arena/arenaSessionInput.js';
 import {
-  ARENA_VARIANTS,
-  DEFAULT_ARENA_VARIANTS,
-  type ArenaVariant,
-} from '../arena/arenaVariants.js';
+  prepareEvalModels,
+  resolveEvalVariants,
+  selectEvalModel,
+  parseEvalModelKeys,
+  type EvalExecutionConfig,
+} from '../evals/evalExecutionPlan.js';
+import { evalConfigModelLabel, evalReportModelLabel, type EvalModel } from '../evals/evalModels.js';
+import { REASONING_EFFORTS, type ReasoningEffort } from '../model/chatTypes.js';
+import { validateModelEffort } from '../settings/selectSessionModel.js';
 import { readFirstRequestCache } from '../runComparison/summarizeRun.js';
 import { readTrialFacts, runCodeCheck, type CheckResult } from '../evals/codeChecks.js';
 import {
@@ -49,14 +57,8 @@ import { runCliSession } from './runCliSession.js';
 import { formatFixed } from '../events/formatForConsole.js';
 
 const DEFAULT_SET = 'evals/kedr.json';
-const DEFAULT_CONFIGS = ['tool', 'auto'];
 const DEFAULT_TRIALS = 3;
 const MAX_TRIALS = 10;
-
-// Конфигурация попытки: вариант поиска для вопросов или режим арены для задач с кодом.
-type EvalConfig =
-  | { kind: 'questions'; name: string; description: string; variant: RunVariant }
-  | { kind: 'arena'; name: string; description: string; variant: ArenaVariant };
 
 interface EvalOptions {
   setFile: string;
@@ -66,6 +68,9 @@ interface EvalOptions {
   taskIds: string[] | null;
   suite: EvalSuite | null;
   judge: boolean;
+  modelKeys: string[] | null;
+  judgeModelKey: string;
+  reasoningEffort?: ReasoningEffort;
 }
 
 interface EvalContext {
@@ -76,15 +81,21 @@ interface EvalContext {
   report: EvalReport;
   reportPath: string;
   total: number;
-  configs: EvalConfig[];
+  configs: EvalExecutionConfig[];
 }
 
 async function main(): Promise<void> {
   const options = parseOptions(process.argv.slice(2));
   const projectRoot = process.cwd();
-  const loadedSettings = await loadSettings(projectRoot);
+  const loadedSettings = await loadSettings(projectRoot, { requireModelKey: false });
   const set = await readSet(join(projectRoot, options.setFile));
-  const configs = resolveConfigs(set, options.configNames);
+  const variants = resolveEvalVariants(set, options.configNames);
+  const configs = await prepareEvalModels({
+    loadedSettings,
+    configs: variants,
+    modelKeys: options.modelKeys,
+    reasoningEffort: options.reasoningEffort,
+  });
   const tasks = pickTasks(set, options.taskIds).filter(
     (task) => options.suite === null || task.suite === options.suite,
   );
@@ -114,12 +125,12 @@ async function main(): Promise<void> {
 }
 
 // Порядок попыток: сначала первая попытка всех задач во всех конфигурациях, потом вторая…
-// Конфигурации чередуются, поэтому прогретый кэш и время суток достаются всем поровну.
+// Чередование уменьшает влияние порядка; общий кэш возможен только у одной модели и API.
 function planTrials(
   trials: number,
   tasks: EvalTask[],
-  configs: EvalConfig[],
-): { task: EvalTask; config: EvalConfig; trial: number }[] {
+  configs: EvalExecutionConfig[],
+): { task: EvalTask; config: EvalExecutionConfig; trial: number }[] {
   const plan = [];
   for (let trial = 1; trial <= trials; trial += 1) {
     for (const task of tasks) {
@@ -138,6 +149,10 @@ function parseOptions(argumentList: string[]): EvalOptions {
       configs: { type: 'string' },
       task: { type: 'string' },
       suite: { type: 'string' },
+      models: { type: 'string' },
+      model: { type: 'string' },
+      effort: { type: 'string' },
+      'judge-model': { type: 'string' },
       'no-judge': { type: 'boolean', default: false },
     },
   });
@@ -146,6 +161,12 @@ function parseOptions(argumentList: string[]): EvalOptions {
     throw new Error(`--trials: целое число от 1 до ${String(MAX_TRIALS)}`);
   }
   return {
+    ...parseModelOptions({
+      model: values.model,
+      models: values.models,
+      effort: values.effort,
+      judge: values['judge-model'],
+    }),
     setFile: values.set ?? DEFAULT_SET,
     trials,
     configNames:
@@ -153,6 +174,23 @@ function parseOptions(argumentList: string[]): EvalOptions {
     taskIds: values.task === undefined ? null : values.task.split(',').map((id) => id.trim()),
     suite: parseSuite(values.suite),
     judge: !values['no-judge'],
+  };
+}
+
+function parseModelOptions(input: {
+  model: string | undefined;
+  models: string | undefined;
+  effort: string | undefined;
+  judge: string | undefined;
+}): Pick<EvalOptions, 'modelKeys' | 'judgeModelKey' | 'reasoningEffort'> {
+  if (input.model !== undefined && input.models !== undefined) {
+    throw new Error('Укажите --model или --models, оба флага вместе не поддерживаются');
+  }
+  const modelKeys = input.models ?? input.model;
+  return {
+    modelKeys: modelKeys === undefined ? null : parseEvalModelKeys(modelKeys),
+    judgeModelKey: input.judge ?? 'default',
+    reasoningEffort: parseEffort(input.effort),
   };
 }
 
@@ -167,27 +205,15 @@ function parseSuite(value: string | undefined): EvalSuite | null {
   return suite;
 }
 
-// Набор вопросов сравнивает варианты поиска (compare-runs), набор арены — режимы арены.
-function resolveConfigs(set: EvalSet, names: string[] | null): EvalConfig[] {
-  if (set.kind === 'arena') {
-    return (names ?? DEFAULT_ARENA_VARIANTS).map((name) => {
-      const variant = findVariant(ARENA_VARIANTS, name);
-      return { kind: 'arena', name, description: variant.description, variant };
-    });
+function parseEffort(value: string | undefined): ReasoningEffort | undefined {
+  if (value === undefined) {
+    return undefined;
   }
-  return (names ?? DEFAULT_CONFIGS).map((name) => {
-    const variant = findVariant(RUN_VARIANTS, name);
-    return { kind: 'questions', name, description: variant.description, variant };
-  });
-}
-
-function findVariant<Variant extends { name: string }>(variants: Variant[], name: string): Variant {
-  const variant = variants.find((candidate) => candidate.name === name);
-  if (variant === undefined) {
-    const known = variants.map((candidate) => candidate.name).join(', ');
-    throw new Error(`--configs: неизвестная конфигурация «${name}». Допустимые: ${known}`);
+  const effort = REASONING_EFFORTS.find((entry) => entry === value);
+  if (effort === undefined) {
+    throw new Error(`--effort: ${REASONING_EFFORTS.join(', ')}`);
   }
-  return variant;
+  return effort;
 }
 
 async function readSet(path: string): Promise<EvalSet> {
@@ -223,7 +249,7 @@ interface ContextInput {
   options: EvalOptions;
   set: EvalSet;
   tasks: EvalTask[];
-  configs: EvalConfig[];
+  configs: EvalExecutionConfig[];
   loadedSettings: LoadedSettings;
   projectRoot: string;
 }
@@ -231,16 +257,19 @@ interface ContextInput {
 async function createContext(input: ContextInput): Promise<EvalContext> {
   const { options, set, tasks, configs, loadedSettings, projectRoot } = input;
   const { settings } = loadedSettings;
+  const judgeSelection = await prepareJudge(input);
   const startedAt = new Date().toISOString();
   const directory = join(projectRoot, settings.traces.directory, 'evals');
   await mkdir(directory, { recursive: true });
   const stamp = startedAt.slice(0, 19).replaceAll(':', '-');
-  const usesJudge = options.judge && tasks.some((task) => hasJudge(task));
   return {
     loadedSettings,
     projectRoot,
     temporaryRoot: await mkdtemp(join(tmpdir(), 'harness-eval-')),
-    judge: usesJudge ? await startEvalJudge(loadedSettings, projectRoot) : null,
+    judge:
+      judgeSelection === null
+        ? null
+        : await startEvalJudge(judgeSelection.loadedSettings, projectRoot),
     reportPath: join(directory, `${stamp}_${basename(options.setFile, '.json')}.json`),
     total: tasks.length * configs.length * options.trials,
     configs,
@@ -248,17 +277,46 @@ async function createContext(input: ContextInput): Promise<EvalContext> {
       kind: 'evalReport',
       version: EVAL_REPORT_VERSION,
       set: { name: set.name, description: set.description, file: options.setFile },
-      model: settings.model.model,
-      reasoningEffort: settings.model.defaultReasoningEffort,
+      model: reportModel(configs),
+      reasoningEffort: reportEffort(configs),
       startedAt,
       finishedAt: null,
       trials: options.trials,
-      configs: configs.map(({ name, description }) => ({ name, description })),
+      configs: configs.map(({ name, description, model, reasoningEffort, variant }) => ({
+        name,
+        description,
+        model,
+        reasoningEffort,
+        variantName: variant.name,
+      })),
       tasks,
       results: [],
       judgeTracePath: null,
+      judgeModel: judgeSelection?.model ?? null,
     },
   };
+}
+
+async function prepareJudge(
+  input: ContextInput,
+): Promise<{ loadedSettings: LoadedSettings; model: EvalModel } | null> {
+  if (!input.options.judge || !input.tasks.some(hasJudge)) {
+    return null;
+  }
+  const key = input.options.judgeModelKey;
+  const selection = await selectEvalModel(input.loadedSettings, key);
+  validateModelEffort(input.loadedSettings, key, 'off');
+  return selection;
+}
+
+function reportModel(configs: EvalExecutionConfig[]): string {
+  const models = [...new Set(configs.map((config) => config.model.model))];
+  return models.length === 1 ? (models[0] ?? 'multiple') : 'multiple';
+}
+
+function reportEffort(configs: EvalExecutionConfig[]): string {
+  const efforts = [...new Set(configs.map((config) => config.reasoningEffort))];
+  return efforts.length === 1 ? (efforts[0] ?? 'mixed') : 'mixed';
 }
 
 function hasJudge(task: EvalTask): boolean {
@@ -272,11 +330,16 @@ function printIntroduction(context: EvalContext): void {
       'bold',
       `Evals «${report.set.name}»: ${String(report.tasks.length)} задач × ` +
         `${String(report.configs.length)} конф. × ${String(report.trials)} попыток = ` +
-        `${String(context.total)} сессий · ${report.model} · effort ${report.reasoningEffort}`,
+        `${String(context.total)} сессий · ${evalReportModelLabel(report)} · effort ${report.reasoningEffort}`,
     ),
   );
   for (const config of report.configs) {
-    console.log(styleText('dim', `${config.name} — ${config.description}`));
+    console.log(
+      styleText(
+        'dim',
+        `${config.name} — ${config.description} · ${evalConfigModelLabel(report, config.name)}`,
+      ),
+    );
   }
   if (context.judge === null) {
     console.log(styleText('dim', 'Судья выключен: проверки с рубрикой останутся без вердикта.'));
@@ -285,7 +348,7 @@ function printIntroduction(context: EvalContext): void {
 
 async function runTrial(
   task: EvalTask,
-  config: EvalConfig,
+  config: EvalExecutionConfig,
   trial: number,
   context: EvalContext,
 ): Promise<TrialResult> {
@@ -293,8 +356,8 @@ async function runTrial(
   const { projectRoot } = context;
   const session =
     config.kind === 'arena'
-      ? await runArenaTrial(task, config.variant, context)
-      : await runQuestionTrial(task, config.variant, number, context);
+      ? await runArenaTrial(task, config, context)
+      : await runQuestionTrial(task, config, number, context);
   const events = await readTrace(join(projectRoot, session.tracePath));
   const checks = await runChecks(task, events, context.judge);
   const result = describeTrial({ task, config, trial, session, events, checks });
@@ -304,16 +367,17 @@ async function runTrial(
 
 async function runQuestionTrial(
   task: EvalTask,
-  variant: RunVariant,
+  config: Extract<EvalExecutionConfig, { kind: 'questions' }>,
   number: number,
   context: EvalContext,
 ): Promise<{ tracePath: string; failed: boolean }> {
-  const { loadedSettings, projectRoot } = context;
+  const { loadedSettings, variant, reasoningEffort } = config;
+  const { projectRoot } = context;
   return runCliSession({
     loadedSettings,
     projectRoot,
     question: task.question,
-    reasoningEffort: loadedSettings.settings.model.defaultReasoningEffort,
+    reasoningEffort,
     searchProvider: null,
     retrievalMode: variant.retrievalMode,
     retrievalToolName: variant.retrievalToolName,
@@ -331,10 +395,11 @@ async function runQuestionTrial(
 // после попытки удаляем: всё, что агент делал, — в трейсе, а копий за прогон набираются десятки.
 async function runArenaTrial(
   task: EvalTask,
-  variant: ArenaVariant,
+  config: Extract<EvalExecutionConfig, { kind: 'arena' }>,
   context: EvalContext,
 ): Promise<{ tracePath: string; failed: boolean }> {
-  const { loadedSettings, projectRoot } = context;
+  const { loadedSettings, variant, reasoningEffort } = config;
+  const { projectRoot } = context;
   const arena = await prepareArenaRun({
     projectRoot,
     settings: loadedSettings.settings.arena,
@@ -349,8 +414,7 @@ async function runArenaTrial(
         loadedSettings,
         projectRoot,
         arena,
-        reasoningEffort:
-          variant.reasoningEffort ?? loadedSettings.settings.model.defaultReasoningEffort,
+        reasoningEffort,
         question: null,
       }),
       verbose: false,
@@ -382,7 +446,7 @@ async function runChecks(
 
 interface TrialInput {
   task: EvalTask;
-  config: EvalConfig;
+  config: EvalExecutionConfig;
   trial: number;
   session: { tracePath: string; failed: boolean };
   events: HarnessEvent[];
@@ -393,6 +457,11 @@ function describeTrial(input: TrialInput): TrialResult {
   const { task, config, trial, session, events, checks } = input;
   const facts = readTrialFacts(events);
   return {
+    actualModels: [
+      ...new Set(
+        events.flatMap((event) => (event.type === 'model_response' ? [event.reply.model] : [])),
+      ),
+    ],
     taskId: task.id,
     config: config.name,
     trial,

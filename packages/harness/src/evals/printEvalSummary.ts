@@ -3,12 +3,17 @@
 
 import { styleText } from 'node:util';
 import { summarizeCell, summarizeConfig, type EvalReport } from './evalReport.js';
+import { evalConfigModelLabel, evalJudgeLabel } from './evalModels.js';
 import { EVAL_SUITES } from './evalSet.js';
 import { formatFixed } from '../events/formatForConsole.js';
 
 const TASK_WIDTH = 24;
 
 export function printEvalSummary(report: EvalReport): void {
+  console.log(evalJudgeLabel(report));
+  for (const config of report.configs) {
+    console.log(`${config.name}: ${evalConfigModelLabel(report, config.name)}`);
+  }
   const configs = report.configs.map((config) => config.name);
   const cellWidth = Math.max(report.trials + 2, ...configs.map((name) => name.length)) + 2;
   console.log(`\n${styleText('bold', 'Задача × конфигурация')}`);
