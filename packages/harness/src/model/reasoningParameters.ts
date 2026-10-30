@@ -11,6 +11,10 @@ export function buildReasoningParameters(
   switch (style) {
     case 'deepseek':
       return buildDeepSeekParameters(effort);
+    case 'openrouter':
+      return { reasoning: effort === 'off' ? { enabled: false } : { effort } };
+    case 'openai':
+      return { reasoning_effort: effort === 'off' ? 'none' : effort };
     case 'none':
       // Провайдер не умеет регулировать рассуждения — ничего не добавляем.
       return {};

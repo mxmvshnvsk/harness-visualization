@@ -19,6 +19,8 @@ const wireMessageSchema = z.object({
   content: z.string().nullable().optional(),
   // Есть у моделей с рассуждениями, например у DeepSeek в режиме thinking.
   reasoning_content: z.string().nullable().optional(),
+  reasoning: z.string().nullish(),
+  reasoning_details: z.array(z.record(z.string(), z.unknown())).nullish(),
   tool_calls: z.array(wireToolCallSchema).nullish(),
 });
 
@@ -51,6 +53,7 @@ const wireUsageSchema = z.object({
   // Те же данные в формате OpenAI.
   prompt_tokens_details: z.object({ cached_tokens: z.number().optional() }).nullish(),
   completion_tokens_details: z.object({ reasoning_tokens: z.number().optional() }).nullish(),
+  cost: z.number().nonnegative().nullish(),
 });
 
 export const wireChatCompletionSchema = z.object({

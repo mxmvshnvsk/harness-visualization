@@ -4,12 +4,12 @@
 
 ## Установка и запуск
 
-Нужны Node.js 24 (минимум 22.13, версия — в `.nvmrc`) и ключ [DeepSeek API](https://platform.deepseek.com).
+Нужны Node.js 24 (минимум 22.13, версия — в `.nvmrc`) и ключ выбранного провайдера: по умолчанию [DeepSeek API](https://platform.deepseek.com), также OpenRouter или OpenAI. Можно использовать локальный Ollama без ключа.
 
 ```bash
 corepack enable          # pnpm нужной версии — из package.json
 pnpm install
-cp .env.example .env     # вписать DEEPSEEK_API_KEY
+cp .env.example .env     # вписать ключ нужного провайдера
 pnpm rag-index           # один раз: модель эмбеддингов и индекс базы знаний
 pnpm dev                 # интерфейс — http://127.0.0.1:5173
 ```
@@ -22,6 +22,10 @@ pnpm dev                 # интерфейс — http://127.0.0.1:5173
 pnpm serve               # собрать всё; сервер с интерфейсом — http://127.0.0.1:4317
 pnpm chat "вопрос"       # агент в терминале, события — в консоль
 ```
+
+В форме вопроса можно выбрать модель: DeepSeek по умолчанию, GLM или Claude через OpenRouter, GPT напрямую, Qwen локально. Ключи — в `.env`: `DEEPSEEK_API_KEY`, `OPENROUTER_API_KEY`, `OPENAI_API_KEY`. Пустой ключ не мешает открыть интерфейс; соответствующая модель недоступна для выбора. Для Qwen нужен запущенный Ollama с установленной `qwen3:8b`.
+
+Модели задаются в `harness.config.json`, блоки `providers` и `models`. Старый блок `model` остаётся моделью по умолчанию; старый конфиг без реестра работает. CLI, ветки, Evals, лаборатории и оркестрация пока используют модель по умолчанию. Подробности — [реестр моделей](docs/reference.md#реестр-моделей).
 
 Если DeepSeek или поисковик доступны только через прокси или VPN — раздел «Прокси и VPN» в [docs/reference.md](docs/reference.md).
 

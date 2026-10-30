@@ -68,7 +68,10 @@ export async function requestModel(
     timing: rawResponse.timing,
     body: rawResponse.body,
     reply,
-    cost: calculateCost(reply.usage, dependencies.prices[provider.model], requestedAt),
+    cost:
+      reply.cost === undefined
+        ? calculateCost(reply.usage, dependencies.prices[provider.model], requestedAt)
+        : reply.cost,
   });
   return { requestId, reply };
 }

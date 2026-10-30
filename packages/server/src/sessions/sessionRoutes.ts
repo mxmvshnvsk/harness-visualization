@@ -11,6 +11,11 @@
 
 import {
   describeSubagentsOption,
+  DEFAULT_MODEL_KEY,
+  modelOptions,
+  selectSessionModel,
+  validateModelEffort,
+  type ModelOption,
   startSession,
   type LoadedSettings,
   type SessionInput,
@@ -47,6 +52,8 @@ export interface SessionOptionsResponse {
   reasoningEffort: StartSessionRequest['reasoningEffort'];
   retrievalMode: StartSessionRequest['retrievalMode'];
   subagents: SubagentsOption;
+  defaultModelKey: string;
+  models: ModelOption[];
 }
 
 interface SessionParams {
@@ -65,7 +72,28 @@ export function registerSessionRoutes(app: FastifyInstance, options: SessionRout
     if (!parsed.success) {
       return reply.code(400).send({ error: parsed.error.message });
     }
-    const input = toSessionInput(parsed.data, options.loadedSettings, options.projectRoot);
+    const body = parsed.data;
+    const modelKey = body.modelKey ?? DEFAULT_MODEL_KEY;
+    if (body.orchestration !== undefined && modelKey !== DEFAULT_MODEL_KEY) {
+      return reply.code(400).send({
+        error:
+          'Выбор модели для оркестрации будет доступен в следующем этапе. Сейчас используется модель по умолчанию.',
+      });
+    }
+    let loaded: LoadedSettings;
+    try {
+      loaded = await selectSessionModel(options.loadedSettings, modelKey);
+      validateModelEffort(
+        options.loadedSettings,
+        modelKey,
+        body.reasoningEffort ?? loaded.settings.model.defaultReasoningEffort,
+      );
+    } catch (error) {
+      return reply
+        .code(400)
+        .send({ error: error instanceof Error ? error.message : String(error) });
+    }
+    const input = toSessionInput(body, loaded, options.projectRoot);
     const sessionId = await launchSession(input, parsed.data.question, options);
     return reply.code(201).send({ sessionId, eventsUrl: `/api/sessions/${sessionId}/events` });
   });
@@ -78,6 +106,13 @@ export function registerSessionRoutes(app: FastifyInstance, options: SessionRout
       reasoningEffort: settings.model.defaultReasoningEffort,
       retrievalMode: settings.retrieval.mode,
       subagents: describeSubagentsOption(settings),
+      defaultModelKey: DEFAULT_MODEL_KEY,
+      models: modelOptions(settings).map((model) => ({
+        ...model,
+        available:
+          model.available ||
+          (model.key === DEFAULT_MODEL_KEY && options.loadedSettings.modelApiKey !== ''),
+      })),
     };
   });
 

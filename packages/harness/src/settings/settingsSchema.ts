@@ -4,15 +4,24 @@
 
 import { z } from 'zod';
 import { REASONING_EFFORTS } from '../model/chatTypes.js';
+import {
+  modelDialectSchema,
+  registryModelSchema,
+  registryProviderSchema,
+} from './modelRegistrySchema.js';
 import { PERMISSION_DECISIONS, TOOL_EFFECTS } from '../permissions/permissionTypes.js';
 
-const modelSettingsSchema = z.object({
+export const modelSettingsSchema = z.object({
   // Человекочитаемое имя провайдера — только для отображения.
   providerName: z.string().min(1),
   baseUrl: z.url(),
   model: z.string().min(1),
   // Имя переменной окружения, в которой лежит ключ (или ссылка keychain:...).
-  apiKeyVariable: z.string().min(1),
+  apiKeyVariable: z.string().min(1).nullable(),
+  dialect: modelDialectSchema.optional(),
+  modelKey: z.string().optional(),
+  label: z.string().optional(),
+  outputTokenParameter: z.enum(['max_tokens', 'max_completion_tokens']).optional(),
   requestTimeoutMs: z.number().int().positive(),
   // Потоковый ответ (этап 8d.2): модель присылает ответ кусками, харнесс замеряет фазы инференса.
   // false — ответ целиком, как до 8d.2; нужно, если провайдер не умеет stream_options.include_usage.
@@ -20,7 +29,7 @@ const modelSettingsSchema = z.object({
   maxOutputTokens: z.number().int().positive(),
   // Как провайдер управляет рассуждениями: deepseek — параметры thinking и reasoning_effort,
   // none — провайдер не умеет регулировать рассуждения, уровень effort не передаётся.
-  reasoningStyle: z.enum(['deepseek', 'none']).default('none'),
+  reasoningStyle: z.enum(['deepseek', 'openrouter', 'openai', 'none']).default('none'),
   defaultReasoningEffort: z.enum(REASONING_EFFORTS).default('high'),
   // Поля, которые понимает только конкретный провайдер.
   // Добавляются в тело запроса как есть.
@@ -410,6 +419,8 @@ const orchestrationSettingsSchema = z.object({
 
 export const harnessSettingsSchema = z.object({
   model: modelSettingsSchema,
+  providers: z.record(z.string(), registryProviderSchema).optional(),
+  models: z.record(z.string(), registryModelSchema).optional(),
   agent: agentSettingsSchema,
   context: contextSettingsSchema.default({
     preset: 'demo',

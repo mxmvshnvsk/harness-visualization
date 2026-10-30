@@ -40,11 +40,18 @@ export function StreamHeader({
 // С какими опциями шла сессия: субагенты, Clean Workspace, поиск, effort.
 function Chips({ events }: { events: EventStream<StreamEnd>['events'] }): ReactElement | null {
   const chips = sessionChips(events);
-  if (chips.length === 0) {
+  const started = events.find((event) => event.type === 'session_started');
+  const model = started?.type === 'session_started' && started.model !== '' ? started : null;
+  if (chips.length === 0 && model === null) {
     return null;
   }
   return (
     <ul className={styles.chips} aria-label="Опции сессии">
+      {model !== null && (
+        <li className={styles.chip} data-on="true">
+          {model.modelLabel ?? model.model} · {model.providerName}
+        </li>
+      )}
       {chips.map((chip) => (
         <li key={chip.label} className={styles.chip} data-on={chip.on} title={chip.hint}>
           {chip.label}

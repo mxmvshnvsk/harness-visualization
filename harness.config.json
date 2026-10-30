@@ -12,6 +12,59 @@
     "topLogprobs": 0,
     "prefixCompletionBaseUrl": "https://api.deepseek.com/beta"
   },
+  "providers": {
+    "openrouter": {
+      "providerName": "OpenRouter",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "apiKeyVariable": "OPENROUTER_API_KEY",
+      "dialect": "openrouter"
+    },
+    "openai": {
+      "providerName": "OpenAI напрямую",
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKeyVariable": "OPENAI_API_KEY",
+      "dialect": "openai"
+    },
+    "ollama": {
+      "providerName": "Ollama локально",
+      "baseUrl": "http://127.0.0.1:11434/v1",
+      "apiKeyVariable": null,
+      "dialect": "openai"
+    }
+  },
+  "models": {
+    "glm-4.6": {
+      "provider": "openrouter",
+      "model": "z-ai/glm-4.6",
+      "label": "GLM 4.6",
+      "capabilities": { "reasoning": true, "cache": true, "logprobs": false }
+    },
+    "claude-sonnet": {
+      "provider": "openrouter",
+      "model": "anthropic/claude-sonnet-4.5",
+      "label": "Claude Sonnet 4.5",
+      "capabilities": { "reasoning": true, "cache": true, "logprobs": false }
+    },
+    "gpt-mini": {
+      "provider": "openai",
+      "model": "gpt-5-mini",
+      "label": "GPT-5 mini",
+      "reasoningStyle": "openai",
+      "outputTokenParameter": "max_completion_tokens",
+      "capabilities": {
+        "reasoning": true,
+        "cache": true,
+        "logprobs": false,
+        "reasoningEfforts": ["low", "high"]
+      }
+    },
+    "qwen-local": {
+      "provider": "ollama",
+      "model": "qwen3:8b",
+      "label": "Qwen3 8B",
+      "capabilities": { "logprobs": false }
+    }
+  },
   "prices": {
     "deepseek-flash": {
       "currency": "USD",

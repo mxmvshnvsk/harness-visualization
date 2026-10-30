@@ -45,6 +45,9 @@ export interface SessionStartedPayload {
   providerName: string;
   baseUrl: string;
   model: string;
+  modelKey?: string;
+  modelLabel?: string;
+  dialect?: 'deepseek' | 'openrouter' | 'openai';
   reasoningEffort: ReasoningEffort;
   // Прокси для запросов с маршрутом proxy (из окружения, секреты скрыты); null — прокси не задан,
   // все запросы идут напрямую. Маршрут каждого запроса — в событиях network_request.

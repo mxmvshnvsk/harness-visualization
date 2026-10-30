@@ -4,12 +4,13 @@ export interface RequestCost {
   currency: string;
   // Какой тариф применён: например, peak или offPeak у DeepSeek.
   tariffName: string;
-  inputCacheHit: number;
-  inputCacheMiss: number;
-  output: number;
+  inputCacheHit: number | null;
+  inputCacheMiss: number | null;
+  output: number | null;
   total: number;
   // Когда проверяли цены — стоимость не точнее таблицы цен.
   pricesCheckedAt: string;
+  source?: 'provider';
 }
 
 // Стоимость одного вызова тула, который ходит в платный сервис (например, поиск Яндекса).

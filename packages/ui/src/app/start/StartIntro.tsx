@@ -98,7 +98,7 @@ function Entries(props: StartIntroProps): ReactElement {
         title="Спросить агента самому"
         mark="↓"
         text="Ваш вопрос станет сессией, а потом записью."
-        meta="нужен ключ DeepSeek"
+        meta="нужен ключ выбранного провайдера или локальная модель"
         onClick={props.onAsk}
       />
       <Entry

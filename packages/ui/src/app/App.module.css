@@ -32,17 +32,32 @@
 }
 
 .topbar {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px 18px;
+  container: stream-header / inline-size;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 6px 18px;
+  padding-bottom: 14px;
 }
 
 .toolbar {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   flex: none;
   align-items: center;
   gap: 8px;
+}
+
+/* Когда открытый диалог сужает основную колонку, инструменты получают свою строку,
+   чтобы длинный заголовок не сжимался между ними и краем страницы. */
+@container stream-header (max-width: 1150px) {
+  .toolbar {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
 }
 
 .narrowOnly {
@@ -383,7 +398,7 @@
   }
 
   .topbar {
-    flex-direction: column;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .toolbar {

@@ -69,7 +69,13 @@ const readabilityRules = {
 };
 
 export default defineConfig([
-  globalIgnores(['**/dist/**', '**/coverage/**', '**/node_modules/**']),
+  globalIgnores([
+    '**/dist/**',
+    '**/coverage/**',
+    '**/node_modules/**',
+    '.cache/**',
+    'workspaces/**',
+  ]),
 
   eslint.configs.recommended,
 

@@ -1,6 +1,7 @@
 // Наш нейтральный формат общения с моделью.
 // Харнесс работает только с этими типами, а провайдер переводит их
 // в формат конкретного API и обратно. Так визуализация не зависит от провайдера.
+import type { RequestCost } from '../tokenomics/costTypes.js';
 
 // Насколько усердно модель рассуждает перед ответом. Это наш нейтральный уровень:
 // провайдер сам переводит его в параметры своего API (у DeepSeek — thinking и reasoning_effort).
@@ -25,6 +26,8 @@ export interface AssistantMessage {
   // Рассуждения, с которыми модель пришла к этому сообщению.
   // DeepSeek требует возвращать их в следующих запросах, если в запросе есть тулы.
   reasoningContent: string | null;
+  // OpenRouter: подписанные/зашифрованные блоки нужны для следующего вызова с тулами.
+  reasoningDetails?: Record<string, unknown>[];
   toolCalls: ToolCall[];
 }
 
@@ -102,6 +105,9 @@ export interface ModelReply {
   text: string | null;
   // Рассуждения модели перед ответом (у DeepSeek — reasoning_content).
   reasoningText: string | null;
+  reasoningDetails?: Record<string, unknown>[];
+  // undefined — считать по тарифам; null — провайдер не сообщил стоимость.
+  cost?: RequestCost | null;
   // Пустой список, если модель не просит вызвать тулы.
   toolCalls: ToolCall[];
   usage: TokenUsage;

@@ -99,9 +99,17 @@ function ReplyNumbers(props: { reply: Response['reply']; cost: Response['cost'] 
           <div>
             <dt>цена</dt>
             <dd>
-              {formatFixed(cost.total, 5)} {cost.currency} = кэш{' '}
-              {formatFixed(cost.inputCacheHit, 5)} + промах {formatFixed(cost.inputCacheMiss, 5)} +
-              вывод {formatFixed(cost.output, 5)} · тариф {cost.tariffName}
+              {formatFixed(cost.total, 5)} {cost.currency}
+              {cost.source === 'provider' ? (
+                ' · из ответа провайдера'
+              ) : (
+                <>
+                  {' '}
+                  = кэш {formatFixed(cost.inputCacheHit ?? 0, 5)} + промах{' '}
+                  {formatFixed(cost.inputCacheMiss ?? 0, 5)} + вывод{' '}
+                  {formatFixed(cost.output ?? 0, 5)} · тариф {cost.tariffName}
+                </>
+              )}
             </dd>
           </div>
         )}

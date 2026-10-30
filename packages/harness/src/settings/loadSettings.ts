@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { resolveSecret } from './resolveSecret.js';
 import { harnessSettingsSchema, type HarnessSettings } from './settingsSchema.js';
+import { resolveRegistryModels } from './modelRegistry.js';
 
 const CONFIG_FILE_NAME = 'harness.config.json';
 const ENV_FILE_NAME = '.env';
@@ -16,10 +17,19 @@ export interface LoadedSettings {
   modelApiKey: string;
 }
 
-export async function loadSettings(projectRoot: string): Promise<LoadedSettings> {
+export async function loadSettings(
+  projectRoot: string,
+  options: { requireModelKey?: boolean } = {},
+): Promise<LoadedSettings> {
   const settings = await readConfigFile(projectRoot);
   loadEnvFileIfPresent(projectRoot);
-  const modelApiKey = await readModelApiKey(settings.model.apiKeyVariable);
+  const variable = settings.model.apiKeyVariable;
+  let modelApiKey = '';
+  if (options.requireModelKey !== false) {
+    modelApiKey = await readModelApiKey(variable);
+  } else if (variable !== null) {
+    modelApiKey = (await readOptionalSecret(variable)) ?? '';
+  }
   return { settings, modelApiKey };
 }
 
@@ -32,6 +42,7 @@ export async function readConfigFile(projectRoot: string): Promise<HarnessSettin
   if (!validation.success) {
     throw new Error(`Ошибка в ${CONFIG_FILE_NAME}:\n${validation.error.message}`);
   }
+  resolveRegistryModels(validation.data);
   return validation.data;
 }
 
@@ -54,7 +65,10 @@ export async function readOptionalSecret(variableName: string): Promise<string |
   return resolveSecret(rawValue.trim());
 }
 
-async function readModelApiKey(variableName: string): Promise<string> {
+export async function readModelApiKey(variableName: string | null): Promise<string> {
+  if (variableName === null) {
+    return '';
+  }
   const rawValue = process.env[variableName];
   if (rawValue === undefined || rawValue.trim() === '') {
     throw new Error(

@@ -48,6 +48,9 @@ function toWireAssistantMessage(
   if (reasoningStyle === 'deepseek' && message.reasoningContent !== null) {
     wireMessage['reasoning_content'] = message.reasoningContent;
   }
+  if (reasoningStyle === 'openrouter' && message.reasoningDetails !== undefined) {
+    wireMessage['reasoning_details'] = message.reasoningDetails;
+  }
   return wireMessage;
 }
 

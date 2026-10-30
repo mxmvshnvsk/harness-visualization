@@ -24,6 +24,58 @@ pnpm chat --verbose "вопрос"
 
 Каждая сессия записывается в `traces/` — формат описан в [docs/events.md](events.md).
 
+## Реестр моделей
+
+В форме новой сессии модель и reasoning effort выбираются одинаковыми селекторами перед запуском, выбор запоминается в браузере. Селекторы расположены под настройками харнесса, которые раскрыты по умолчанию при каждом открытии формы; их можно временно свернуть. Модель и поиск ограничены шириной 330 px, effort — 180 px; в узкой панели поля переносятся и сжимаются. В шапке сессии и списках записей видны модель и провайдер. В «Исследовании» — фактический URL и заголовки запроса с замаскированным ключом.
+
+Текущий блок `model` — модель по умолчанию (`default`). Он работает без изменений, даже если `providers` и `models` отсутствуют. В начальном конфиге дополнительно есть GLM 4.6 и Claude Sonnet 4.5 через OpenRouter, GPT-5 mini через OpenAI и Qwen3 8B через Ollama.
+
+В `.env` ключ задаётся один раз на провайдера:
+
+```dotenv
+DEEPSEEK_API_KEY=ваш-ключ
+OPENROUTER_API_KEY=ваш-ключ
+OPENAI_API_KEY=
+```
+
+Один ключ OpenRouter используется всеми моделями этого провайдера. Пустые ключи допустимы: сервер и просмотр записей работают, но модель нельзя выбрать. Наличие ключа означает только наличие настройки — доступность API проверяется при запросе. Ссылки `keychain:имя-сервиса` продолжают работать. Ключи читаются сервером, браузер получает только имя переменной и признак её заполнения. После изменения конфига или `.env` перезапустите сервер.
+
+Пример добавления провайдера и модели в `harness.config.json` рядом с существующим `model`:
+
+```json
+{
+  "providers": {
+    "openrouter": {
+      "providerName": "OpenRouter",
+      "baseUrl": "https://openrouter.ai/api/v1",
+      "apiKeyVariable": "OPENROUTER_API_KEY",
+      "dialect": "openrouter"
+    }
+  },
+  "models": {
+    "glm-4.6": {
+      "provider": "openrouter",
+      "model": "z-ai/glm-4.6",
+      "label": "GLM 4.6"
+    }
+  }
+}
+```
+
+Вместо `provider` модель может содержать `baseUrl`, `apiKeyVariable` и `dialect` непосредственно. `apiKeyVariable: null` — явно без ключа и без заголовка Authorization, например для Ollama или LM Studio. Включение локальной модели не запускает её сервер и не скачивает веса; для примера Qwen нужны работающий Ollama и `ollama pull qwen3:8b`.
+
+Диалекты: `deepseek` сохраняет прежние `thinking`, `reasoning_content`, кэш и расчёт цены по тарифам; `openrouter` использует `reasoning`, сохраняет reasoning-блоки между tool calls, читает цену из `usage.cost`; `openai` — общий OpenAI-совместимый формат. Для прямых reasoning-моделей нужно явно задать `reasoningStyle: "openai"`; для GPT-5 mini также `outputTokenParameter: "max_completion_tokens"`. Это адаптер Chat Completions, а не поддержка произвольных API вроде Anthropic Messages или OpenAI Responses.
+
+Общие `requestTimeoutMs`, `maxOutputTokens`, `stream`, `reasoningStyle`, `defaultReasoningEffort`, `outputTokenParameter` и `requestExtras` можно задать у провайдера и переопределить у модели. Если таймаут и лимит ответа не заданы, берутся из текущего `model`. DeepSeek-специфичные beta URL, logprobs и параметры запроса другим моделям не наследуются.
+
+`capabilities` описывает возможности для отображения: `reasoning`, `cache`, `logprobs` — `true`, `false` или отсутствуют («нет данных»). `reasoningEfforts` ограничивает доступные уровни; `defaultReasoningEffort` должен входить в этот список. Уровень `off` для OpenAI преобразуется в `none`, у DeepSeek и OpenRouter отключает reasoning. Неподдерживаемые уровни не добавляйте в список. Для API без настройки reasoning используйте `reasoningStyle: "none"` — effort не передаётся.
+
+Стоимость OpenRouter берётся из ответа в USD; если `usage.cost` нет, цена неизвестна, а не нулевая. Разбивка по input/output не выдумывается. Для остальных API используются записи `prices` по точному API ID модели; без тарифа стоимость неизвестна. Кэш нормализуется из полей провайдера; правила его учёта могут различаться. Оценка бюджета prompt до ответа по-прежнему настроена на DeepSeek и для других моделей приблизительная.
+
+Первый этап ограничен обычными сессиями, включая диалог и включённых субагентов: все используют выбранную модель. Для именованной модели compaction также выполняется на ней; глобальный `context.compactionModel` относится к провайдеру по умолчанию. CLI, ветки, Evals, лаборатории и оркестрация пока работают на текущем `model`. Старые трейсы не требуют новых полей; новые `modelKey`, `modelLabel` и `dialect` добавляются при наличии настройки.
+
+Форматы сверены с [OpenRouter API](https://openrouter.ai/docs/api/reference/overview), [reasoning и сохранением его блоков](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens) и [публичным каталогом моделей](https://openrouter.ai/api/v1/models) 30.10.2026. Каталог и возможности провайдеров могут меняться.
+
 ## Песочница и тулы
 
 Агент работает с файлами только в папке `workspaces/demo/`. При первом запуске она создаётся из примеров `examples/workspace/` — документов вымышленной компании «Кедр Софт». Выйти за пределы песочницы тулы не дают.

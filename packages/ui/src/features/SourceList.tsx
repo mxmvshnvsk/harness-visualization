@@ -69,6 +69,11 @@ export function SessionList(props: SessionListProps): ReactElement {
             }}
           >
             <span className={styles.itemTitle}>{session.question}</span>
+            {session.model !== undefined && (
+              <span className={styles.meta}>
+                {session.model} · {session.providerName}
+              </span>
+            )}
             <span className={styles.meta}>
               {session.sessionId} · {describeStatus(session.status)} ·{' '}
               {countEvents(session.eventCount)}
@@ -208,6 +213,12 @@ function TraceRow({ node, current, fromExample, onSelect }: TraceRowProps): Reac
           {trace.title ?? trace.file}
         </span>
         <span className={styles.meta}>
+          {trace.model !== null && (
+            <>
+              {trace.model}
+              {trace.providerName ? ` · ${trace.providerName}` : ''} ·{' '}
+            </>
+          )}
           {formatDate(trace.startedAt)} · {countEvents(trace.eventCount)} ·{' '}
           {describeTraceState(trace)}
         </span>

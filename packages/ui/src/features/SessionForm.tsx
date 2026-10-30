@@ -4,59 +4,12 @@
 import { useState, type FormEvent, type ReactElement } from 'react';
 import { startSession } from '../api/serverApi';
 import { Button } from '../components/Button';
-import { Menu } from '../components/Menu';
-import { Segmented } from '../components/Segmented';
-import { TogglePill } from '../components/TogglePill';
-import {
-  toStartRequest,
-  useSessionChoices,
-  type ChoicesState,
-  type EffortChoice,
-  type OrchestrationChoice,
-  type RetrievalChoice,
-} from './session/sessionChoices';
+import { toStartRequest, useSessionChoices, selectedSessionModel } from './session/sessionChoices';
 import styles from './SessionForm.module.css';
-import { formatRu } from '../text/formatNumber';
-import { useMode, type UiMode } from '../app/mode';
+import { SessionSettings, describeCost } from './session/SessionSettings';
 
 // Поле вопроса: в него ставит курсор «Спросить агента самому» на стартовом экране.
 export const QUESTION_FIELD_ID = 'session-question';
-
-const RETRIEVAL: Record<RetrievalChoice, { label: string; hint: string }> = {
-  tool: { label: 'ищет модель', hint: 'сама решает, искать ли и сколько раз' },
-  auto: { label: 'ищет харнесс', hint: 'всегда один раз до ответа, по словам вопроса' },
-  rewrite: {
-    label: 'ищет харнесс, запрос пишет модель',
-    hint: 'всегда один раз до ответа, по запросу, который модель составила из вопроса',
-  },
-};
-
-const RETRIEVAL_ORDER: readonly RetrievalChoice[] = ['tool', 'auto', 'rewrite'];
-
-// Режимы оркестрации (этап 6d) — кто решает порядок шагов.
-const ORCHESTRATION: Record<OrchestrationChoice, { label: string; hint: string }> = {
-  pipeline: {
-    label: 'пайплайн',
-    hint: 'все шаги задаёт код: найти документы → раздать их исследователям → написать ответ → проверить ссылки',
-  },
-  superagent: {
-    label: 'суперагент',
-    hint: 'план, задачи исполнителям и проверку их работы решает модель — дороже и с разбросом',
-  },
-  hybrid: {
-    label: 'гибрид',
-    hint: 'порядок «план → выполнение → проверка → ответ» задаёт код, а что делать на каждом шаге — модель',
-  },
-};
-
-const ORCHESTRATION_ORDER: readonly OrchestrationChoice[] = ['pipeline', 'superagent', 'hybrid'];
-
-const EFFORTS: readonly { value: EffortChoice; label: string }[] = [
-  { value: 'off', label: 'off' },
-  { value: 'low', label: 'low' },
-  { value: 'high', label: 'high' },
-  { value: 'max', label: 'max' },
-];
 
 interface SessionFormProps {
   onStarted: (sessionId: string) => void;
@@ -67,6 +20,7 @@ export function SessionForm({ onStarted }: SessionFormProps): ReactElement {
   const state = useSessionChoices();
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const selectedModel = selectedSessionModel(state);
 
   const submit = (event: FormEvent): void => {
     event.preventDefault();
@@ -98,275 +52,29 @@ export function SessionForm({ onStarted }: SessionFormProps): ReactElement {
           setQuestion(event.target.value);
         }}
       />
-      {state.choices.demoProject && (
-        <p className={styles.note}>
-          Агент — сотрудник вымышленной компании «Кедр Софт» и отвечает по её документам.
+      <SessionSettings state={state} />
+      {state.modelNotice !== null && (
+        <p className={styles.note} role="status">
+          {state.modelNotice}
         </p>
       )}
-      <HarnessSettings state={state} />
+      {selectedModel?.available === false && (
+        <p className={styles.error}>
+          Нет ключа {selectedModel.apiKeyVariable}. Выберите другую модель или задайте ключ на
+          сервере.
+        </p>
+      )}
       {error !== null && <div className={styles.error}>Сессия не запущена: {error}</div>}
       <div className={styles.foot}>
         <span className={styles.cost}>{describeCost(state)}</span>
-        <Button type="submit" variant="accent" disabled={starting}>
+        <Button
+          type="submit"
+          variant="accent"
+          disabled={starting || selectedModel?.available === false}
+        >
           {starting ? 'Запускаю…' : 'Запустить'}
         </Button>
       </div>
     </form>
   );
-}
-
-function Toggles({ state }: { state: ChoicesState }): ReactElement {
-  const { choices, options, change } = state;
-  const hasSubagents = options === null || options.subagents.agents.length > 0;
-  return (
-    <div className={styles.row}>
-      <span className={styles.key}>Включить</span>
-      <TogglePill
-        label="Без демо-проекта"
-        hint="Агент без «Кедр Софт»: ни базы знаний, ни MCP, ни скиллов, ни памяти, ни слова о компании в system prompt. Своя пустая песочница, тулы файлов и веба — видно, как модель ведёт себя сама."
-        pressed={!choices.demoProject}
-        onChange={(pressed) => {
-          change({ demoProject: !pressed });
-        }}
-      />
-      {hasSubagents && (
-        <TogglePill
-          label="Субагенты"
-          hint={subagentsHint(choices)}
-          pressed={choices.subagents && !choices.orchestration}
-          disabled={!choices.demoProject || choices.orchestration}
-          onChange={(subagents) => {
-            change({ subagents });
-          }}
-        />
-      )}
-      <TogglePill
-        label="Clean Workspace"
-        hint="Пересоздать workspace из примеров — заметки и память прошлых сессий пропадут."
-        pressed={choices.cleanWorkspace}
-        onChange={(cleanWorkspace) => {
-          change({ cleanWorkspace });
-        }}
-      />
-      {hasSubagents && (
-        <TogglePill
-          label="Оркестрация"
-          hint={
-            choices.demoProject
-              ? 'Субагенты будут задействованы обязательно, а не на усмотрение модели — видно, как оркестратор раздаёт им работу. Кто оркестратор — код, модель или оба вместе — выбирается в строке «Режим».'
-              : 'Без демо-проекта оркестрации нет: исполнителям нечего читать.'
-          }
-          pressed={choices.orchestration && choices.demoProject}
-          disabled={!choices.demoProject}
-          onChange={(orchestration) => {
-            change({ orchestration });
-          }}
-        />
-      )}
-      <TogglePill
-        label="Injection"
-        hint="Атака в документах: кто защитит — промпт или харнесс. Этап 4b."
-        pressed={false}
-        soon="4b"
-      />
-    </div>
-  );
-}
-
-// Effort на виду, остальное — под «Настройки харнесса»: в «Обучении» свёрнуто, новичку для
-// первого раза трогать нечего (мокап старта, 29.10.2026). Сколько настроек включено — в кнопке,
-// чтобы свёрнутое не забылось; что они меняют — в строке под формой.
-function HarnessSettings({ state }: { state: ChoicesState }): ReactElement {
-  const { choices, change } = state;
-  const mode = useMode();
-  const [open, setOpen] = useSettingsOpen(mode);
-  const active = countActive(choices);
-  return (
-    <>
-      <div className={styles.row}>
-        <span className={styles.key}>Effort</span>
-        <Segmented
-          label="Reasoning effort"
-          size="small"
-          options={EFFORTS}
-          value={choices.reasoningEffort}
-          onChange={(reasoningEffort) => {
-            change({ reasoningEffort });
-          }}
-        />
-        <button
-          type="button"
-          className={styles.disclosure}
-          aria-expanded={open}
-          onClick={() => {
-            setOpen(!open);
-          }}
-        >
-          Настройки харнесса{active > 0 ? ` · ${String(active)}` : ''} {open ? '▴' : '▾'}
-        </button>
-        {!open && mode === 'learn' && (
-          <span className={styles.note}>
-            субагенты, оркестрация, поиск — для первого раза не трогайте
-          </span>
-        )}
-      </div>
-      {open && (
-        <>
-          <Toggles state={state} />
-          {choices.orchestration && choices.demoProject ? (
-            <OrchestrationRows state={state} />
-          ) : (
-            <div className={styles.row}>
-              <SearchMenu state={state} />
-            </div>
-          )}
-        </>
-      )}
-    </>
-  );
-}
-
-// Сколько настроек харнесса отличается от обычного запуска.
-function countActive(choices: ChoicesState['choices']): number {
-  const orchestrated = choices.demoProject && choices.orchestration;
-  const flags = [
-    !choices.demoProject,
-    choices.demoProject && choices.subagents && !orchestrated,
-    choices.cleanWorkspace,
-    orchestrated,
-    choices.demoProject && !orchestrated && choices.retrievalMode !== 'tool',
-  ];
-  return flags.filter(Boolean).length;
-}
-
-const SETTINGS_OPEN_KEY = 'hv-harness-settings-open';
-
-// Раскрыты ли настройки — помним в браузере; по умолчанию раскрыты только в «Исследовании».
-function useSettingsOpen(mode: UiMode): [boolean, (open: boolean) => void] {
-  const [saved, setSaved] = useState<boolean | null>(() => {
-    try {
-      const value = window.localStorage.getItem(SETTINGS_OPEN_KEY);
-      return value === null ? null : value === '1';
-    } catch {
-      return null;
-    }
-  });
-  const change = (open: boolean): void => {
-    setSaved(open);
-    try {
-      window.localStorage.setItem(SETTINGS_OPEN_KEY, open ? '1' : '0');
-    } catch {
-      // Хранилище недоступно — выбор живёт до перезагрузки.
-    }
-  };
-  return [saved ?? mode === 'research', change];
-}
-
-// Кто ищет в базе знаний в каждом режиме оркестрации: выбор поиска там не действует.
-const SEARCH_IN_ORCHESTRATION: Record<OrchestrationChoice, string> = {
-  pipeline: 'решает режим: в пайплайне документы ищет код — один раз, до исполнителей',
-  superagent: 'решает режим: у суперагента исполнители ищут сами, своими тулами',
-  hybrid: 'решает режим: в гибриде исполнители ищут сами внутри шага «выполнение»',
-};
-
-// В оркестрации — выбор режима, а строка «Поиск» остаётся и объясняет, почему выбора нет.
-function OrchestrationRows({ state }: { state: ChoicesState }): ReactElement {
-  return (
-    <>
-      <div className={styles.row}>
-        <OrchestrationMenu state={state} />
-      </div>
-      <div className={styles.row}>
-        <span className={styles.key}>Поиск</span>
-        <span className={styles.note}>
-          {SEARCH_IN_ORCHESTRATION[state.choices.orchestrationMode]}
-        </span>
-      </div>
-    </>
-  );
-}
-
-// В оркестрации вместо выбора поиска — выбор режима: искать будут исполнители или код.
-function OrchestrationMenu({ state }: { state: ChoicesState }): ReactElement {
-  const { choices, change } = state;
-  return (
-    <>
-      <span className={styles.key}>Режим</span>
-      <Menu
-        label="Режим оркестрации"
-        shape="small"
-        align="left"
-        trigger={<>{ORCHESTRATION[choices.orchestrationMode].label} ▾</>}
-        sections={[
-          {
-            items: ORCHESTRATION_ORDER.map((mode) => ({
-              ...ORCHESTRATION[mode],
-              checked: mode === choices.orchestrationMode,
-              onSelect: () => {
-                change({ orchestrationMode: mode });
-              },
-            })),
-          },
-        ]}
-      />
-    </>
-  );
-}
-
-function SearchMenu({ state }: { state: ChoicesState }): ReactElement {
-  const { choices, change } = state;
-  return (
-    <>
-      <span className={styles.key}>Поиск</span>
-      <Menu
-        label="Кто ищет в базе знаний"
-        shape="small"
-        align="left"
-        disabled={!choices.demoProject}
-        trigger={
-          choices.demoProject ? (
-            <>в базе знаний {RETRIEVAL[choices.retrievalMode].label} ▾</>
-          ) : (
-            <>без базы знаний</>
-          )
-        }
-        sections={[
-          {
-            items: RETRIEVAL_ORDER.map((mode) => ({
-              ...RETRIEVAL[mode],
-              checked: mode === choices.retrievalMode,
-              onSelect: () => {
-                change({ retrievalMode: mode });
-              },
-            })),
-          },
-        ]}
-      />
-    </>
-  );
-}
-
-function subagentsHint(choices: ChoicesState['choices']): string {
-  if (!choices.demoProject) {
-    return 'Без демо-проекта субагентов нет: им нечего исследовать.';
-  }
-  if (choices.orchestration) {
-    return 'В оркестрации задачи субагентам раздаёт код или модель-оркестратор, а не сам агент тулом delegate_task.';
-  }
-  return 'Агент сможет отдать чтение документов субагенту: тот прочитает их в своём отдельном контексте и вернёт короткий отчёт. Отдавать или нет, решает модель — может и всё прочитать сама. Чтобы субагенты были задействованы обязательно, а не на усмотрение модели, — «Оркестрация».';
-}
-
-// Цена опции до запуска: delegate_task уходит модели в каждом запросе.
-function describeCost({ choices, options }: ChoicesState): string {
-  if (!choices.demoProject) {
-    return 'без «Кедр Софт»: своя пустая песочница, тулы файлов и веба';
-  }
-  if (choices.orchestration) {
-    return ORCHESTRATION[choices.orchestrationMode].hint;
-  }
-  const tokens = options?.subagents.delegateToolTokens ?? null;
-  if (choices.subagents && tokens !== null) {
-    return `delegate_task добавит ≈${formatRu(tokens)} токенов в каждый запрос к модели`;
-  }
-  return 'по умолчанию — как в harness.config.json; выбор запоминается';
 }

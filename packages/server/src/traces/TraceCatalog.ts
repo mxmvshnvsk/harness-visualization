@@ -30,6 +30,7 @@ export interface TraceSummary {
   // Вопрос пользователя; у проверки опоры — путь к проверенному трейсу.
   title: string | null;
   model: string | null;
+  providerName?: string;
   startedAt: string | null;
   finishedAt: string | null;
   eventCount: number;
@@ -153,6 +154,7 @@ function buildSummary(
     kind: traceKind(events.at(0)),
     synthetic: file.startsWith(SYNTHETIC_PREFIX),
     ...sessionFacts(events),
+    ...(events[0]?.type === 'session_started' ? { providerName: events[0].providerName } : {}),
     title: traceTitle(events),
     eventCount: events.length,
     finished: events.some((event) => event.type === 'session_finished'),

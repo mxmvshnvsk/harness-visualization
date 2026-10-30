@@ -10,7 +10,7 @@ const HOST = '127.0.0.1';
 async function main(): Promise<void> {
   // Команда запускается из корня репозитория, там лежат harness.config.json и .env.
   const projectRoot = process.cwd();
-  const loadedSettings = await loadSettings(projectRoot);
+  const loadedSettings = await loadSettings(projectRoot, { requireModelKey: false });
   const app = createServer({ loadedSettings, projectRoot });
   const { port } = loadedSettings.settings.server;
   await app.listen({ host: HOST, port });

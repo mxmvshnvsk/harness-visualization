@@ -18,6 +18,13 @@ export type * from './model/modelProvider.js';
 export { ModelProviderError } from './model/ModelProviderError.js';
 export { OpenAiCompatibleProvider } from './model/OpenAiCompatibleProvider.js';
 export { loadSettings, type LoadedSettings } from './settings/loadSettings.js';
+export {
+  DEFAULT_MODEL_KEY,
+  modelOptions,
+  resolveRegistryModels,
+  type ModelOption,
+} from './settings/modelRegistry.js';
+export { selectSessionModel, validateModelEffort } from './settings/selectSessionModel.js';
 export type * from './settings/settingsSchema.js';
 export { evaluatePermission, type PermissionRequest } from './permissions/evaluatePermission.js';
 export { matchesHostPattern, matchesPathPattern } from './permissions/matchPatterns.js';

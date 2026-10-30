@@ -24,6 +24,8 @@ export interface SessionSummary {
   eventCount: number;
   // Путь к трейсу от корня проекта; null — сессия ещё идёт.
   tracePath: string | null;
+  model?: string;
+  providerName?: string;
 }
 
 interface SessionEntry {
@@ -64,6 +66,10 @@ export class SessionRegistry {
     }
     entry.events.push(event);
     entry.summary.eventCount = entry.events.length;
+    if (event.type === 'session_started') {
+      entry.summary.model = event.modelLabel ?? event.model;
+      entry.summary.providerName = event.providerName;
+    }
     for (const subscriber of entry.subscribers) {
       subscriber.onEvent(event);
     }

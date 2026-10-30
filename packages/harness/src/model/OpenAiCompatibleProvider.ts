@@ -5,6 +5,7 @@ import { describeFetchFailure } from '../http/describeFetchFailure.js';
 import { HARNESS_USER_AGENT } from '../http/userAgent.js';
 import type { RoutedFetch } from '../network/NetworkRouter.js';
 import type { ModelSettings } from '../settings/settingsSchema.js';
+import type { RequestCost } from '../tokenomics/costTypes.js';
 import type {
   ModelReply,
   ModelRequest,
@@ -58,7 +59,15 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       headers: {
         'Content-Type': 'application/json',
         'User-Agent': HARNESS_USER_AGENT,
-        Authorization: `Bearer ${this.apiKey}`,
+        ...(this.settings.apiKeyVariable === null
+          ? {}
+          : { Authorization: `Bearer ${this.apiKey}` }),
+        ...(this.settings.dialect === 'openrouter'
+          ? {
+              'HTTP-Referer': 'https://github.com/mxmvshnvsk/harness-visualization',
+              'X-Title': 'harness-visualization',
+            }
+          : {}),
       },
       body: {
         // Особые поля провайдера идут первыми, чтобы не перекрыть основные.
@@ -73,7 +82,7 @@ export class OpenAiCompatibleProvider implements ModelProvider {
             : [{ role: 'assistant', content: request.assistantPrefix, prefix: true }]),
         ],
         ...buildToolsParameter(request.tools, request.toolChoice ?? 'auto'),
-        max_tokens: this.settings.maxOutputTokens,
+        [this.settings.outputTokenParameter ?? 'max_tokens']: this.settings.maxOutputTokens,
         ...(topLogprobs === undefined ? {} : { logprobs: true, top_logprobs: topLogprobs }),
         ...(request.temperature === undefined ? {} : { temperature: request.temperature }),
         stream: this.settings.stream,
@@ -154,9 +163,16 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       model: completion.model,
       finishReason: firstChoice.finish_reason ?? 'unknown',
       text: firstChoice.message.content ?? null,
-      reasoningText: firstChoice.message.reasoning_content ?? null,
+      reasoningText: firstChoice.message.reasoning_content ?? firstChoice.message.reasoning ?? null,
+      ...(firstChoice.message.reasoning_details === null ||
+      firstChoice.message.reasoning_details === undefined
+        ? {}
+        : { reasoningDetails: firstChoice.message.reasoning_details }),
       toolCalls: (firstChoice.message.tool_calls ?? []).map(fromWireToolCall),
       usage: normalizeUsage(completion.usage),
+      ...(this.settings.dialect === 'openrouter'
+        ? { cost: providerCost(completion.usage.cost) }
+        : {}),
       ...(firstChoice.logprobs ? { logprobs: fromWireLogprobs(firstChoice.logprobs) } : {}),
     };
   }
@@ -177,6 +193,23 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       );
     }
   }
+}
+
+// OpenRouter сообщает итог, но не разбивку стоимости. Не выдаём выдуманные нули за данные.
+function providerCost(total: number | null | undefined): RequestCost | null {
+  if (total === undefined || total === null) {
+    return null;
+  }
+  return {
+    currency: 'USD',
+    tariffName: 'OpenRouter usage.cost',
+    total,
+    inputCacheHit: null,
+    inputCacheMiss: null,
+    output: null,
+    pricesCheckedAt: '',
+    source: 'provider',
+  };
 }
 
 // Без тулов поле tools не передаём совсем: часть API не принимает пустой список.

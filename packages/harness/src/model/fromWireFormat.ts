@@ -17,6 +17,7 @@ const wireMessageSchema = z.discriminatedUnion('role', [
     role: z.literal('assistant'),
     content: z.string().nullable(),
     reasoning_content: z.string().nullable().optional(),
+    reasoning_details: z.array(z.record(z.string(), z.unknown())).optional(),
     tool_calls: z.array(wireToolCallSchema).optional(),
   }),
   z.object({ role: z.literal('tool'), tool_call_id: z.string(), content: z.string() }),
@@ -36,6 +37,9 @@ export function fromWireMessages(body: unknown): ChatMessage[] {
           role: 'assistant',
           content: message.content,
           reasoningContent: message.reasoning_content ?? null,
+          ...(message.reasoning_details === undefined
+            ? {}
+            : { reasoningDetails: message.reasoning_details }),
           toolCalls: (message.tool_calls ?? []).map((call) => ({
             id: call.id,
             name: call.function.name,

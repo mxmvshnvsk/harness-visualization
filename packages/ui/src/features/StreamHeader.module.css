@@ -1,11 +1,11 @@
 .header {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-bottom: 14px;
+  display: contents;
 }
 
 .titleRow {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -19,6 +19,8 @@
 }
 
 .status {
+  grid-column: 1 / -1;
+  grid-row: 2;
   font-size: 13px;
   color: var(--muted);
   overflow-wrap: anywhere;
@@ -30,8 +32,14 @@
 }
 
 .chips {
+  grid-column: 1 / -1;
+  grid-row: 3;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
   gap: 6px;
   margin: 2px 0 0;
   padding: 0;
@@ -39,6 +47,8 @@
 }
 
 .chip {
+  flex: 0 0 auto;
+  white-space: nowrap;
   padding: 2px 10px;
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
@@ -51,4 +61,18 @@
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--text);
+}
+
+@container stream-header (max-width: 1150px) {
+  .titleRow {
+    grid-column: 1 / -1;
+  }
+
+  .status {
+    grid-row: 3;
+  }
+
+  .chips {
+    grid-row: 4;
+  }
 }

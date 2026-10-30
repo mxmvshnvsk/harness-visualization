@@ -20,6 +20,7 @@ export interface SessionChoices {
   cleanWorkspace: boolean;
   retrievalMode: RetrievalChoice;
   reasoningEffort: EffortChoice;
+  modelKey: string;
 }
 
 type Saved = Partial<Omit<SessionChoices, 'cleanWorkspace'>>;
@@ -34,6 +35,7 @@ const FALLBACK: SessionChoices = {
   cleanWorkspace: false,
   retrievalMode: 'tool',
   reasoningEffort: 'high',
+  modelKey: 'default',
 };
 
 export interface ChoicesState {
@@ -41,10 +43,22 @@ export interface ChoicesState {
   // null — настройки сервера ещё не пришли.
   options: SessionOptionsResponse | null;
   change: (patch: Partial<SessionChoices>) => void;
+  modelNotice: string | null;
+}
+
+export function selectedSessionModel(
+  state: Pick<ChoicesState, 'choices' | 'options'>,
+): SessionOptionsResponse['models'][number] | undefined {
+  const key =
+    state.choices.demoProject && state.choices.orchestration
+      ? state.options?.defaultModelKey
+      : state.choices.modelKey;
+  return state.options?.models.find((model) => model.key === key);
 }
 
 export function useSessionChoices(): ChoicesState {
   const [options, setOptions] = useState<SessionOptionsResponse | null>(null);
+  const [modelNotice, setModelNotice] = useState<string | null>(null);
   const [choices, setChoices] = useState<SessionChoices>(() => ({ ...FALLBACK, ...readSaved() }));
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +66,19 @@ export function useSessionChoices(): ChoicesState {
       .then((loaded) => {
         if (!cancelled) {
           setOptions(loaded);
-          setChoices((current) => ({ ...current, ...defaultsOf(loaded), ...readSaved() }));
+          const saved = readSaved();
+          const unavailable = loaded.models.find((model) => model.key === saved.modelKey);
+          if (
+            saved.modelKey !== undefined &&
+            (unavailable === undefined || !unavailable.available)
+          ) {
+            setModelNotice(
+              'Сохранённая модель больше недоступна. Восстановлена модель по умолчанию; проверьте выбор.',
+            );
+          }
+          setChoices((current) =>
+            normalizeModelChoice({ ...current, ...defaultsOf(loaded), ...saved }, loaded),
+          );
         }
       })
       .catch(() => {
@@ -62,21 +88,52 @@ export function useSessionChoices(): ChoicesState {
       cancelled = true;
     };
   }, []);
-  const change = useCallback((patch: Partial<SessionChoices>) => {
-    setChoices((current) => {
-      const next = { ...current, ...patch };
-      save(next);
-      return next;
-    });
-  }, []);
-  return { choices, options, change };
+  const change = useCallback(
+    (patch: Partial<SessionChoices>) => {
+      if (patch.modelKey !== undefined) {
+        setModelNotice(null);
+      }
+      setChoices((current) => {
+        const updated = { ...current, ...patch };
+        const next = options === null ? updated : normalizeModelChoice(updated, options);
+        save(next);
+        return next;
+      });
+    },
+    [options],
+  );
+  return { choices, options, change, modelNotice };
+}
+
+export function normalizeModelChoice(
+  choices: SessionChoices,
+  options: SessionOptionsResponse,
+): SessionChoices {
+  const selected = options.models.find(
+    (model) => model.key === choices.modelKey && model.available,
+  );
+  const model = selected ?? options.models.find((entry) => entry.key === options.defaultModelKey);
+  if (model === undefined) {
+    return { ...choices, modelKey: options.defaultModelKey };
+  }
+  const reasoningEffort = model.reasoningEfforts.includes(choices.reasoningEffort)
+    ? choices.reasoningEffort
+    : model.defaultReasoningEffort;
+  return { ...choices, modelKey: model.key, reasoningEffort };
 }
 
 export function toStartRequest(question: string, choices: SessionChoices): StartSessionRequest {
   const clean = choices.cleanWorkspace ? { freshWorkspace: true } : {};
+  const selectedModel = choices.modelKey === 'default' ? {} : { modelKey: choices.modelKey };
   // Без демо-проекта ни поиска в базе, ни субагентов — харнесс их и не включит.
   if (!choices.demoProject) {
-    return { question, reasoningEffort: choices.reasoningEffort, demoProject: false, ...clean };
+    return {
+      question,
+      reasoningEffort: choices.reasoningEffort,
+      demoProject: false,
+      ...selectedModel,
+      ...clean,
+    };
   }
   // В оркестрации поручения даёт код или оркестратор, а ищут исполнители — режим поиска
   // и субагенты модели не нужны.
@@ -93,6 +150,7 @@ export function toStartRequest(question: string, choices: SessionChoices): Start
     retrievalMode: choices.retrievalMode,
     reasoningEffort: choices.reasoningEffort,
     subagents: choices.subagents,
+    ...selectedModel,
     ...clean,
   };
 }
@@ -124,6 +182,7 @@ function save(choices: SessionChoices): void {
     orchestrationMode: choices.orchestrationMode,
     retrievalMode: choices.retrievalMode,
     reasoningEffort: choices.reasoningEffort,
+    modelKey: choices.modelKey,
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));

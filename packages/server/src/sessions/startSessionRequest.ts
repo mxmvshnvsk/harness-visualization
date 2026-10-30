@@ -9,6 +9,7 @@ const SEARCH_PROVIDERS = ['tavily', 'yandex'] as const;
 
 export const startSessionRequestSchema = z.object({
   question: z.string().trim().min(1),
+  modelKey: z.string().min(1).optional(),
   reasoningEffort: z.enum(REASONING_EFFORTS).optional(),
   retrievalMode: z.enum(RETRIEVAL_MODES).optional(),
   retrievalToolName: z.string().min(1).optional(),

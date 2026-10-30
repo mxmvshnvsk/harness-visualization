@@ -237,6 +237,7 @@ function toAssistantMessage(reply: ModelReply): AssistantMessage {
     role: 'assistant',
     content: reply.text,
     reasoningContent: reply.reasoningText,
+    ...(reply.reasoningDetails === undefined ? {} : { reasoningDetails: reply.reasoningDetails }),
     toolCalls: reply.toolCalls,
   };
 }

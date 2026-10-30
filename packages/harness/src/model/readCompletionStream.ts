@@ -8,6 +8,7 @@
 // Формат кусков: https://api-docs.deepseek.com/api/create-chat-completion
 
 import type { ResponseTiming } from './chatTypes.js';
+import { appendReasoningDetails } from './reasoningDetails.js';
 
 export interface StreamDelta {
   kind: 'reasoning' | 'answer';
@@ -31,6 +32,7 @@ interface Draft {
   model: string;
   content: string | null;
   reasoning: string | null;
+  reasoningDetails: Record<string, unknown>[];
   toolCalls: ToolCallDraft[];
   finishReason: string | null;
   usage: unknown;
@@ -41,6 +43,8 @@ interface Draft {
 interface ChunkDelta {
   content?: string | null;
   reasoning_content?: string | null;
+  reasoning?: string | null;
+  reasoning_details?: Record<string, unknown>[];
   tool_calls?: {
     index?: number;
     id?: string;
@@ -70,6 +74,7 @@ export async function readCompletionStream(
     model: '',
     content: null,
     reasoning: null,
+    reasoningDetails: [],
     toolCalls: [],
     finishReason: null,
     usage: null,
@@ -158,7 +163,10 @@ function applyDelta(
   marker: Marker,
   onDelta: (delta: StreamDelta) => void,
 ): void {
-  const reasoning = nonEmpty(delta.reasoning_content);
+  if (delta.reasoning_details !== undefined) {
+    appendReasoningDetails(draft.reasoningDetails, delta.reasoning_details);
+  }
+  const reasoning = nonEmpty(delta.reasoning_content) ?? nonEmpty(delta.reasoning);
   if (reasoning !== null) {
     draft.reasoning = (draft.reasoning ?? '') + reasoning;
     marker('reasoning');
@@ -218,6 +226,9 @@ function toCompletion(draft: Draft): Record<string, unknown> {
           role: 'assistant',
           content: draft.content,
           ...(draft.reasoning === null ? {} : { reasoning_content: draft.reasoning }),
+          ...(draft.reasoningDetails.length === 0
+            ? {}
+            : { reasoning_details: draft.reasoningDetails }),
           ...(toolCalls.length === 0
             ? {}
             : {

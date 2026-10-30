@@ -28,7 +28,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "pnpm --filter @harness-visualization/harness... run build && pnpm --filter @harness-visualization/ui run test && node packages/harness/dist/cli/mainArena.js --verify",
+    "test": "pnpm --filter @harness-visualization/server... run build && node --test packages/harness/dist/settings/modelRegistry.test.js packages/harness/dist/model/modelRegistryProvider.test.js packages/server/dist/sessions/modelSelection.test.js && pnpm --filter @harness-visualization/ui run test && node packages/harness/dist/cli/mainArena.js --verify",
     "check": "pnpm run typecheck && pnpm run lint && pnpm run format:check && pnpm run test"
   },
   "devDependencies": {
