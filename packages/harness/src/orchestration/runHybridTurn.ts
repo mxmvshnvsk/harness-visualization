@@ -34,6 +34,7 @@ import {
   type SuperagentState,
 } from './superagentTools.js';
 import { DELEGATE_TOOL_NAME } from '../subagents/delegateToolName.js';
+import { orchestratorDependencies } from '../agent/roleModelProviders.js';
 
 export interface HybridOptions {
   settings: HybridSettings;
@@ -87,7 +88,7 @@ export async function runHybridTurn(
   });
   const state = createSuperagentState(options.settings.maxTasks, 'plan');
   const context: HybridContext = {
-    dependencies,
+    dependencies: orchestratorDependencies(dependencies),
     options,
     state,
     tools: createSuperagentTools(options.subagents, options.superagent, state, () => dependencies),

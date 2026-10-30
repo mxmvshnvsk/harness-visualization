@@ -13,6 +13,7 @@ import type { MemoryStore } from '../memory/MemoryStore.js';
 import type { ProgressTracker } from '../progress/ProgressTracker.js';
 import type { SkillLibrary } from '../skills/SkillLibrary.js';
 import type { McpServerInstructions } from './systemPrompt.js';
+import type { SessionRoleModels } from './roleModelProviders.js';
 
 export interface ConfirmationRequest {
   // По нему ответ из браузера находит свой вопрос.
@@ -37,6 +38,8 @@ export interface SessionMemory {
 
 export interface AgentDependencies {
   provider: ModelProvider;
+  // Необязательно для старых клиентов и изолированных запусков цикла агента.
+  roleModels?: SessionRoleModels;
   events: EventStream;
   prices: Record<string, ModelPrices>;
   // Тулы, которые харнесс предлагает модели.

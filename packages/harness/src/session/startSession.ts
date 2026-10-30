@@ -17,7 +17,6 @@ import {
   type ConnectedMcpServers,
 } from '../mcp/connectMcpServers.js';
 import type { ChatMessage, ReasoningEffort } from '../model/chatTypes.js';
-import { OpenAiCompatibleProvider } from '../model/OpenAiCompatibleProvider.js';
 import { NetworkRouter, type RoutedFetch } from '../network/NetworkRouter.js';
 import { readProxyUrl } from '../network/proxyFromEnvironment.js';
 import type { LoadedSettings } from '../settings/loadSettings.js';
@@ -59,6 +58,12 @@ import { checkAcceptance } from '../arena/checkAcceptance.js';
 import { sandboxInfo } from '../arena/nodeSandbox.js';
 import { createRunTestsTool } from '../arena/runTestsTool.js';
 import { createRunNodeTool } from '../arena/runNodeTool.js';
+import {
+  createModelProviders,
+  createSessionRoleProviders,
+  prepareSessionRoleModels,
+  type SessionRoleModelPlan,
+} from './sessionRoleModels.js';
 
 export interface SessionInput {
   loadedSettings: LoadedSettings;
@@ -127,6 +132,7 @@ export async function startSession(
   input: SessionInput,
   hooks: SessionHooks,
 ): Promise<StartedSession> {
+  const roleModels = await prepareSessionRoleModels(input);
   const recording = await startSessionRecording({
     projectRoot: input.projectRoot,
     tracesDirectory: input.loadedSettings.settings.traces.directory,
@@ -136,16 +142,17 @@ export async function startSession(
   return {
     sessionId: recording.events.sessionId,
     events: recording.events,
-    completion: runRecordedSession(input, hooks, recording),
+    completion: runRecordedSession(input, hooks, recording, roleModels),
   };
 }
 
-// Любая ошибка — и до хода агента (песочница, MCP), и во время — попадает в трейс событием
-// error, а трейс закрывается: сессия всегда заканчивается записью, а не обрывом.
+// Ошибки подготовки ресурсов (песочница, MCP) и выполнения попадают в трейс событием
+// error, а трейс закрывается. Ошибки назначений моделей отклоняются выше, до записи.
 async function runRecordedSession(
   input: SessionInput,
   hooks: SessionHooks,
   recording: SessionRecording,
+  roleModels: SessionRoleModelPlan,
 ): Promise<SessionResult> {
   const { events } = recording;
   const { settings } = input.loadedSettings;
@@ -161,7 +168,7 @@ async function runRecordedSession(
       withOwnBlankWorkspace(input, recording.name),
       hooks,
       events,
-      network.fetch,
+      { fetchImpl: network.fetch, roleModels },
     );
     mcpServers = prepared.mcpServers;
     await runDialog(input, hooks, prepared.dependencies);
@@ -214,8 +221,9 @@ async function prepareSession(
   input: SessionInput,
   hooks: SessionHooks,
   events: EventStream,
-  fetchImpl: RoutedFetch,
+  models: { fetchImpl: RoutedFetch; roleModels: SessionRoleModelPlan },
 ): Promise<PreparedSession> {
+  const { fetchImpl, roleModels } = models;
   const { settings } = input.loadedSettings;
   const { workspaceSetting, preparedWorkspace } = await prepareSessionWorkspace(input);
   const searchProvider = await prepareSearchProvider(input, hooks, fetchImpl);
@@ -256,6 +264,7 @@ async function prepareSession(
     skills,
     memory,
     progress,
+    roleModels,
   });
   return { dependencies, mcpServers };
 }
@@ -365,6 +374,7 @@ async function prepareSearchProvider(
 }
 
 interface SessionResources {
+  roleModels: SessionRoleModelPlan;
   workspace: Workspace;
   // null — веб-поиск выключен.
   searchProvider: SearchProvider | null;
@@ -382,7 +392,7 @@ function createAgentDependencies(
   events: EventStream,
   resources: SessionResources,
 ): AgentDependencies {
-  const { settings, modelApiKey } = input.loadedSettings;
+  const { settings } = input.loadedSettings;
   const webTools = createWebTools({
     webFetch: settings.webFetch,
     search: createSearchOption(resources.searchProvider, settings.search),
@@ -399,18 +409,15 @@ function createAgentDependencies(
     harnessOnlyTools.register(tool);
   }
 
-  const provider = new OpenAiCompatibleProvider(settings.model, modelApiKey, resources.fetchImpl);
-  const { compactionModel } = settings.context;
+  const providers = createModelProviders(input.loadedSettings, resources.fetchImpl);
   const dependencies: AgentDependencies = {
-    provider,
-    compactionProvider:
-      compactionModel === null
-        ? provider
-        : new OpenAiCompatibleProvider(
-            { ...settings.model, model: compactionModel },
-            modelApiKey,
-            resources.fetchImpl,
-          ),
+    ...providers,
+    roleModels: createSessionRoleProviders(
+      resources.roleModels,
+      input.loadedSettings,
+      resources.fetchImpl,
+      providers,
+    ),
     events,
     prices: settings.prices,
     tools,

@@ -125,7 +125,11 @@ async function checkPublicRegistry({ app }: ModelSelectionFixture): Promise<void
   assert.equal(response.body.includes('private-default-key'), false);
 }
 
-async function checkRejectedSelections({ app, registry }: ModelSelectionFixture): Promise<void> {
+async function checkRejectedSelections({
+  app,
+  registry,
+  settings,
+}: ModelSelectionFixture): Promise<void> {
   for (const modelKey of ['unknown', 'missing']) {
     const rejected = await app.inject({
       method: 'POST',
@@ -134,12 +138,18 @@ async function checkRejectedSelections({ app, registry }: ModelSelectionFixture)
     });
     assert.equal(rejected.statusCode, 400);
   }
-  const orchestrated = await app.inject({
+  settings.orchestration.modelKey = 'missing';
+  const rejectedRole = await app.inject({
     method: 'POST',
     url: '/api/sessions',
     payload: { question: 'test', modelKey: 'alternate', orchestration: 'pipeline' },
   });
-  assert.equal(orchestrated.statusCode, 400);
+  assert.equal(rejectedRole.statusCode, 400);
+  assert.match(
+    rejectedRole.json<{ error: string }>().error,
+    /orchestration.*HARNESS_SELECTION_ABSENT_KEY/u,
+  );
+  delete settings.orchestration.modelKey;
   assert.equal(registry.list().length, 0);
 }
 

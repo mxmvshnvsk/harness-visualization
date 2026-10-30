@@ -10,6 +10,7 @@ import type { SubagentsSettings, SuperagentSettings } from '../settings/settings
 import { ToolRegistry } from '../tools/ToolRegistry.js';
 import { superagentSystemPrompt } from './superagentPrompt.js';
 import { createSuperagentState, createSuperagentTools } from './superagentTools.js';
+import { orchestratorDependencies } from '../agent/roleModelProviders.js';
 
 export interface SuperagentOptions {
   settings: SuperagentSettings;
@@ -35,7 +36,10 @@ export async function runSuperagentTurn(
   });
   const state = createSuperagentState();
   // Исполнители берут тулы из тулов сессии; у оркестратора — свои.
-  const orchestrator = { ...dependencies, tools: orchestratorTools(dependencies, options, state) };
+  const orchestrator = {
+    ...orchestratorDependencies(dependencies),
+    tools: orchestratorTools(dependencies, options, state),
+  };
   if (messages.length === 0) {
     messages.push({
       role: 'system',

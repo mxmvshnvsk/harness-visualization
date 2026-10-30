@@ -48,7 +48,24 @@ export function resolveRegistryModels(settings: HarnessSettings): RegisteredMode
     }
     result.push(resolveRegisteredModel(settings, key, entry));
   }
+  validateRoleReferences(settings, result);
   return result;
+}
+
+function validateRoleReferences(settings: HarnessSettings, models: RegisteredModel[]): void {
+  const references = [
+    { path: 'orchestration.modelKey', key: settings.orchestration.modelKey },
+    ...Object.entries(settings.subagents.agents).map(([name, agent]) => ({
+      path: `subagents.agents.${name}.modelKey`,
+      key: agent.modelKey,
+    })),
+  ];
+  const keys = new Set(models.map((model) => model.key));
+  for (const { path, key } of references) {
+    if (key !== undefined && key !== null && !keys.has(key)) {
+      throw new Error(`${path}: неизвестная модель «${key}»`);
+    }
+  }
 }
 
 type RegistryModelEntry = NonNullable<HarnessSettings['models']>[string];

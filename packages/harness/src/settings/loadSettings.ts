@@ -10,11 +10,17 @@ import { resolveRegistryModels } from './modelRegistry.js';
 const CONFIG_FILE_NAME = 'harness.config.json';
 const ENV_FILE_NAME = '.env';
 
-export interface LoadedSettings {
+export interface ModelRegistrySource {
   settings: HarnessSettings;
   // Ключ держим отдельно от настроек, чтобы настройки можно было
   // спокойно показывать и записывать в трейс.
   modelApiKey: string;
+}
+
+export interface LoadedSettings extends ModelRegistrySource {
+  // Исходный реестр сохраняется при выборе модели: default всегда означает
+  // блок model конфига, а не модель последней выбранной сессии или роли.
+  registrySource?: ModelRegistrySource;
 }
 
 export async function loadSettings(

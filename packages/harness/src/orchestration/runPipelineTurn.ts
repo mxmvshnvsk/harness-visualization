@@ -11,6 +11,7 @@
 //   5. код: проверить ссылки ответа — названы ли документы, которые изучали.
 
 import type { AgentDependencies } from '../agent/agentDependencies.js';
+import { orchestratorDependencies } from '../agent/roleModelProviders.js';
 import { requestModel } from '../agent/requestModel.js';
 import { retrieveContext } from '../agent/retrieveContext.js';
 import type { HarnessEvent, OrchestrationStep, PlannedTask } from '../events/harnessEvents.js';
@@ -219,7 +220,7 @@ async function answerByNotes(
   dependencies.events.emit({ type: 'prompt_assembled', messages: [...messages], toolNames: [] });
   const { reply } = await requestModel(
     { messages, tools: [], reasoningEffort: options.reasoningEffort },
-    dependencies,
+    orchestratorDependencies(dependencies),
     { purpose: 'agentStep', iteration: 1 },
   );
   const answer = reply.text ?? '';

@@ -351,6 +351,8 @@ const groundingSettingsSchema = z.object({
 
 // Субагент (этап 6c): кому главный агент может поручить задачу тулом delegate_task.
 const subagentSchema = z.object({
+  // Нет назначения — модель сессии, даже если у оркестратора своя модель.
+  modelKey: z.string().min(1).nullable().optional(),
   // Что умеет — это описание читает модель главного агента, выбирая, кому поручить.
   description: z.string().min(1),
   // Своя инструкция субагенту — в его system prompt после общих правил.
@@ -403,6 +405,8 @@ const hybridSettingsSchema = z.object({
 });
 
 const orchestrationSettingsSchema = z.object({
+  // Общая модель для запросов оркестратора и итогового ответа пайплайна.
+  modelKey: z.string().min(1).nullable().optional(),
   hybrid: hybridSettingsSchema.default({ maxTasks: 4 }),
   superagent: superagentSettingsSchema.default({
     maxReworks: 1,

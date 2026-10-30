@@ -7,25 +7,30 @@ export async function selectSessionModel(
   loaded: LoadedSettings,
   key: string,
 ): Promise<LoadedSettings> {
-  const model = resolveRegistryModels(loaded.settings).find((entry) => entry.key === key);
+  const source = loaded.registrySource ?? loaded;
+  const model = resolveRegistryModels(source.settings).find((entry) => entry.key === key);
   if (model === undefined) {
     throw new Error(`Неизвестная модель: ${key}`);
   }
   const modelApiKey =
-    key === DEFAULT_MODEL_KEY && loaded.modelApiKey !== ''
-      ? loaded.modelApiKey
+    key === DEFAULT_MODEL_KEY && source.modelApiKey !== ''
+      ? source.modelApiKey
       : await readModelApiKey(model.settings.apiKeyVariable);
-  if (key === DEFAULT_MODEL_KEY) {
+  if (key === DEFAULT_MODEL_KEY && loaded.registrySource === undefined) {
     return { ...loaded, modelApiKey };
   }
   return {
     modelApiKey,
+    registrySource: { settings: source.settings, modelApiKey: source.modelApiKey },
     settings: {
       ...loaded.settings,
       model: model.settings,
       // Имя compactionModel относится к провайдеру по умолчанию. Для выбранной
       // модели служебные запросы идут в неё же, а не в чужую модель этого API.
-      context: { ...loaded.settings.context, compactionModel: null },
+      context: {
+        ...loaded.settings.context,
+        compactionModel: key === DEFAULT_MODEL_KEY ? source.settings.context.compactionModel : null,
+      },
     },
   };
 }
@@ -35,7 +40,8 @@ export function validateModelEffort(
   key: string,
   effort: ReasoningEffort,
 ): void {
-  const model = modelOptions(loaded.settings).find((entry) => entry.key === key);
+  const source = loaded.registrySource ?? loaded;
+  const model = modelOptions(source.settings).find((entry) => entry.key === key);
   if (
     model !== undefined &&
     model.reasoningEfforts.length > 0 &&

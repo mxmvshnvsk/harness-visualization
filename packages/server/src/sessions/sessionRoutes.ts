@@ -269,24 +269,17 @@ async function handleSessionStart(
   }
   const body = parsed.data;
   const modelKey = body.modelKey ?? DEFAULT_MODEL_KEY;
-  if (body.orchestration !== undefined && modelKey !== DEFAULT_MODEL_KEY) {
-    return reply.code(400).send({
-      error:
-        'Выбор модели для оркестрации будет доступен в следующем этапе. Сейчас используется модель по умолчанию.',
-    });
-  }
-  let loaded: LoadedSettings;
   try {
-    loaded = await selectSessionModel(options.loadedSettings, modelKey);
+    const loaded = await selectSessionModel(options.loadedSettings, modelKey);
     validateModelEffort(
       options.loadedSettings,
       modelKey,
       body.reasoningEffort ?? loaded.settings.model.defaultReasoningEffort,
     );
+    const input = toSessionInput(body, loaded, options.projectRoot);
+    const sessionId = await launchSession(input, parsed.data.question, options);
+    return reply.code(201).send({ sessionId, eventsUrl: `/api/sessions/${sessionId}/events` });
   } catch (error) {
     return reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
   }
-  const input = toSessionInput(body, loaded, options.projectRoot);
-  const sessionId = await launchSession(input, parsed.data.question, options);
-  return reply.code(201).send({ sessionId, eventsUrl: `/api/sessions/${sessionId}/events` });
 }

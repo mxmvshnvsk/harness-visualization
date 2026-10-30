@@ -1,5 +1,5 @@
 // Субагент (этап 6c) — тот же цикл агента над своей историей: свой system prompt, поручение
-// вместо вопроса, свои тулы. Модель, политика разрешений, бюджет prompt — общие с главным.
+// вместо вопроса, свои тулы. Модель — назначенная роли или унаследованная от сессии.
 // Главному агенту возвращается только отчёт; всё остальное — в трейсе, с agentId субагента.
 // Идея — как у субагентов Claude Code (Anthropic): https://code.claude.com/docs/en/sub-agents
 
@@ -12,6 +12,7 @@ import { SessionTokenomics } from '../tokenomics/SessionTokenomics.js';
 import { ToolRegistry } from '../tools/ToolRegistry.js';
 import { DELEGATE_TOOL_NAME } from './delegateToolName.js';
 import { buildSubagentPrompt } from './subagentPrompt.js';
+import { subagentDependencies } from '../agent/roleModelProviders.js';
 
 export interface SubagentAssignment {
   subagentId: string;
@@ -120,7 +121,8 @@ async function runRound(
     });
   }
   const startedAt = performance.now();
-  const outcome = await runOwnLoop(run, { ...dependencies, events, tools: run.tools });
+  const ownDependencies = subagentDependencies(dependencies, assignment.agent);
+  const outcome = await runOwnLoop(run, { ...ownDependencies, events, tools: run.tools });
   const summary = tokenomics.summary();
   dependencies.events.emit({
     type: 'subagent_finished',
