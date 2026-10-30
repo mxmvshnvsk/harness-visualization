@@ -1,3 +1,4 @@
+import { ModelActor } from '../models/ModelActor';
 // Поручения и отчёты: что главный агент поручил субагенту, что тот сделал и что вернул.
 // Отчёт и есть результат delegate_task — больше главный агент ничего не увидит.
 
@@ -55,7 +56,10 @@ function Report(props: {
   const [whole, setWhole] = useState(false);
   return (
     <div>
-      <span className={styles.eyebrow}>отчёт — это и есть результат тула для главного</span>
+      <span className={styles.eyebrow}>
+        отчёт — это и есть результат тула для главного{' '}
+        <ModelActor eventIndex={run.finishedIndex ?? undefined} />
+      </span>
       {run.report === null ? (
         <p className={styles.quote}>{reportText(run)}</p>
       ) : (

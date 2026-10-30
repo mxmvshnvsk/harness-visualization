@@ -81,9 +81,26 @@ export function projectSkillsMemory(events: readonly HarnessEvent[]): SkillsMemo
     memoryArguments: null,
     toolCallId: null,
   };
+  const cursors = new Map<string, Cursor>([['', cursor]]);
   events.forEach((event, index) => {
-    advance(cursor, event);
-    collect(view, event, momentOf(cursor, event, index), cursor);
+    if (event.type === 'user_message' && event.agentId === undefined) {
+      for (const scoped of cursors.values()) {
+        if (scoped !== cursor) {
+          scoped.turn = cursor.turn + 1;
+          scoped.step = null;
+        }
+      }
+    }
+    const scope = event.agentId ?? '';
+    const scoped = cursors.get(scope) ?? {
+      ...cursor,
+      step: null,
+      toolCallId: null,
+      memoryArguments: null,
+    };
+    cursors.set(scope, scoped);
+    advance(scoped, event);
+    collect(view, event, momentOf(scoped, event, index), scoped);
   });
   return view;
 }

@@ -5,10 +5,13 @@
 import type { AgentDependencies } from '../agent/agentDependencies.js';
 import { runAgentLoop } from '../agent/agentLoop.js';
 import type { TurnOptions } from '../agent/runAgentTurn.js';
-import type { BranchChange } from '../events/harnessEvents.js';
+import type { BranchStartedPayload, BranchChange } from '../events/harnessEvents.js';
 import type { ChatMessage } from '../model/chatTypes.js';
 
-export interface BranchStart {
+export interface BranchStart extends Pick<
+  BranchStartedPayload,
+  'sourceModel' | 'targetModel' | 'historyAdapted' | 'historyActors'
+> {
   sourceTracePath: string;
   sourceSessionId: string | null;
   step: number;
@@ -29,6 +32,10 @@ export async function runBranchTurn(
   const { events, tools } = dependencies;
   events.emit({
     type: 'branch_started',
+    sourceModel: branch.sourceModel,
+    targetModel: branch.targetModel,
+    historyAdapted: branch.historyAdapted,
+    historyActors: branch.historyActors,
     sourceTracePath: branch.sourceTracePath,
     sourceSessionId: branch.sourceSessionId,
     step: branch.step,

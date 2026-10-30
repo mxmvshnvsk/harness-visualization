@@ -1,3 +1,4 @@
+import type { BranchModel } from '@harness-visualization/harness/branch';
 // Запросы к серверу харнесса (packages/server). Типы ответов — из самого сервера:
 // так интерфейс не разойдётся с API незаметно — расхождение поймает tsc.
 
@@ -35,8 +36,10 @@ export async function listTraces(): Promise<TraceSummary[]> {
 }
 
 // Чем кончилась записанная сессия — для сравнения веток (этап 9).
-export async function getTraceOutcome(file: string): Promise<TraceOutcome> {
-  return getJson<TraceOutcome>(`/api/traces/${encodeURIComponent(file)}/outcome`);
+export async function getTraceOutcome(file: string, fromStep?: number): Promise<TraceOutcome> {
+  return getJson<TraceOutcome>(
+    `/api/traces/${encodeURIComponent(file)}/outcome${fromStep === undefined ? '' : `?fromStep=${String(fromStep)}`}`,
+  );
 }
 
 export async function getSession(sessionId: string): Promise<SessionDetails> {
@@ -199,4 +202,15 @@ function describeErrorBody(body: unknown, status: number): string {
     return String(body.error);
   }
   return `HTTP ${String(status)}`;
+}
+
+interface BranchOptions {
+  source: BranchModel;
+  sourceKey: string | null;
+  models: SessionOptionsResponse['models'];
+}
+export function getBranchOptions(traceFile: string, step: number): Promise<BranchOptions> {
+  return getJson<BranchOptions>(
+    `/api/branch-options?traceFile=${encodeURIComponent(traceFile)}&step=${String(step)}`,
+  );
 }

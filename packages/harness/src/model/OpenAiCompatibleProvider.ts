@@ -1,3 +1,4 @@
+import type { BranchModel } from '../branch/branchModel.js';
 // Провайдер для любого OpenAI-совместимого API: DeepSeek, OpenAI, OpenRouter, Ollama.
 // Запросы отправляются встроенным fetch, без SDK, — так виден ровно тот HTTP-запрос, что уходит.
 
@@ -28,6 +29,7 @@ import {
   type WireLogprobs,
   type WireToolCall,
   type WireUsage,
+  type WireChatCompletion,
 } from './openAiWireSchema.js';
 import { buildReasoningParameters } from './reasoningParameters.js';
 import { toWireMessages, toWireTools } from './toWireFormat.js';
@@ -49,6 +51,11 @@ export class OpenAiCompatibleProvider implements ModelProvider {
     return this.settings.model;
   }
 
+  get identity(): BranchModel {
+    const { model, baseUrl, providerName, modelKey } = this.settings;
+    return { model, baseUrl, providerName, ...(modelKey === undefined ? {} : { modelKey }) };
+  }
+
   prepareRequest(request: ModelRequest): PreparedHttpRequest {
     const topLogprobs =
       request.topLogprobs ??
@@ -56,19 +63,7 @@ export class OpenAiCompatibleProvider implements ModelProvider {
     return {
       method: 'POST',
       url: buildUrl(this.baseUrlFor(request), CHAT_COMPLETIONS_PATH),
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': HARNESS_USER_AGENT,
-        ...(this.settings.apiKeyVariable === null
-          ? {}
-          : { Authorization: `Bearer ${this.apiKey}` }),
-        ...(this.settings.dialect === 'openrouter'
-          ? {
-              'HTTP-Referer': 'https://github.com/mxmvshnvsk/harness-visualization',
-              'X-Title': 'harness-visualization',
-            }
-          : {}),
-      },
+      headers: this.requestHeaders(),
       body: {
         // Особые поля провайдера идут первыми, чтобы не перекрыть основные.
         ...this.settings.requestExtras,
@@ -89,6 +84,20 @@ export class OpenAiCompatibleProvider implements ModelProvider {
         // Без этого в потоке нет usage — не узнаем ни токены, ни стоимость.
         ...(this.settings.stream ? { stream_options: { include_usage: true } } : {}),
       },
+    };
+  }
+
+  private requestHeaders(): Record<string, string> {
+    return {
+      'Content-Type': 'application/json',
+      'User-Agent': HARNESS_USER_AGENT,
+      ...(this.settings.apiKeyVariable === null ? {} : { Authorization: `Bearer ${this.apiKey}` }),
+      ...(this.settings.dialect === 'openrouter'
+        ? {
+            'HTTP-Referer': 'https://github.com/mxmvshnvsk/harness-visualization',
+            'X-Title': 'harness-visualization',
+          }
+        : {}),
     };
   }
 
@@ -164,16 +173,9 @@ export class OpenAiCompatibleProvider implements ModelProvider {
       finishReason: firstChoice.finish_reason ?? 'unknown',
       text: firstChoice.message.content ?? null,
       reasoningText: firstChoice.message.reasoning_content ?? firstChoice.message.reasoning ?? null,
-      ...(firstChoice.message.reasoning_details === null ||
-      firstChoice.message.reasoning_details === undefined
-        ? {}
-        : { reasoningDetails: firstChoice.message.reasoning_details }),
       toolCalls: (firstChoice.message.tool_calls ?? []).map(fromWireToolCall),
       usage: normalizeUsage(completion.usage),
-      ...(this.settings.dialect === 'openrouter'
-        ? { cost: providerCost(completion.usage.cost) }
-        : {}),
-      ...(firstChoice.logprobs ? { logprobs: fromWireLogprobs(firstChoice.logprobs) } : {}),
+      ...optionalReplyFields(completion, firstChoice, this.settings.dialect),
     };
   }
 
@@ -280,4 +282,23 @@ function normalizeUsage(wireUsage: WireUsage): TokenUsage {
     outputTokens: wireUsage.completion_tokens,
     reasoningTokens: wireUsage.completion_tokens_details?.reasoning_tokens ?? 0,
   };
+}
+
+function optionalReplyFields(
+  completion: WireChatCompletion,
+  choice: WireChatCompletion['choices'][number],
+  dialect: ModelSettings['dialect'],
+): Pick<ModelReply, 'reasoningDetails' | 'cost' | 'logprobs'> {
+  const fields: Pick<ModelReply, 'reasoningDetails' | 'cost' | 'logprobs'> = {};
+  const reasoningDetails = choice.message.reasoning_details;
+  if (reasoningDetails !== undefined && reasoningDetails !== null) {
+    fields.reasoningDetails = reasoningDetails;
+  }
+  if (dialect === 'openrouter') {
+    fields.cost = providerCost(completion.usage.cost);
+  }
+  if (choice.logprobs) {
+    fields.logprobs = fromWireLogprobs(choice.logprobs);
+  }
+  return fields;
 }

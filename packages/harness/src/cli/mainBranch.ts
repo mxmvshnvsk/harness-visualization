@@ -9,6 +9,9 @@
 import { readFile } from 'node:fs/promises';
 import { parseArgs, styleText } from 'node:util';
 import { listBranchSteps, type BranchEdit } from '../branch/branchPoint.js';
+import { selectBranchModel } from '../branch/selectBranchModel.js';
+import { validateModelEffort } from '../settings/selectSessionModel.js';
+import { REASONING_EFFORTS } from '../model/chatTypes.js';
 import { branchSessionInput } from '../branch/branchInput.js';
 import { readTrace } from '../grounding/readTrace.js';
 import { loadSettings } from '../settings/loadSettings.js';
@@ -21,6 +24,8 @@ async function main(): Promise<void> {
     options: {
       list: { type: 'boolean', default: false },
       step: { type: 'string' },
+      model: { type: 'string' },
+      effort: { type: 'string' },
       'tool-call': { type: 'string' },
       content: { type: 'string' },
       'content-file': { type: 'string' },
@@ -36,8 +41,15 @@ async function main(): Promise<void> {
     return;
   }
   const projectRoot = process.cwd();
+  const loaded = await loadSettings(projectRoot, { requireModelKey: false });
+  const loadedSettings = await selectBranchModel(loaded, events, Number(values.step), values.model);
+  const effort = REASONING_EFFORTS.find((value) => value === values.effort);
+  if (values.effort !== undefined && effort === undefined) {
+    throw new Error('Неизвестный effort');
+  }
   const input = branchSessionInput({
-    loadedSettings: await loadSettings(projectRoot),
+    loadedSettings,
+    ...(effort === undefined ? {} : { reasoningEffort: effort }),
     projectRoot,
     sourceTracePath: tracePath,
     sourceEvents: events,
@@ -45,6 +57,11 @@ async function main(): Promise<void> {
     edit: await readEdit(values['tool-call'], values.content, values['content-file']),
     workspaceDirectory: null,
   });
+  validateModelEffort(
+    loaded,
+    values.model ?? loadedSettings.settings.model.modelKey ?? 'default',
+    input.reasoningEffort,
+  );
   const result = await runCliSession({ ...input, verbose: false, quiet: false });
   if (result.failed) {
     process.exitCode = 1;

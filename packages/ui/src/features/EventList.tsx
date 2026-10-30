@@ -1,3 +1,4 @@
+import { ModelActor } from './models/ModelActor';
 // Лента событий: номер, время от начала, тип, коротко. Полное событие — по клику, в JSON.
 // Это «сырой» вид потока; таймлайн и инспектор (8.3) построят из тех же событий свои виды.
 
@@ -86,7 +87,7 @@ function EventRow({ event, startedAt }: EventRowProps): ReactElement {
         <span className={styles.number}>{event.sequence}</span>
         <span className={styles.time}>+{formatFixed(offsetSeconds, 2)} с</span>
         <span className={styles.type}>
-          {event.type} <AgentChip agentId={event.agentId} />
+          {event.type} <ModelActor event={event} /> <AgentChip agentId={event.agentId} />
         </span>
         <span className={styles.text}>{describeEvent(event)}</span>
       </summary>

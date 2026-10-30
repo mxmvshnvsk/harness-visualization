@@ -1,3 +1,4 @@
+import { ModelActor } from '../../models/ModelActor';
 // Ход поиска по порядку: поиски харнесса до модели, поиски и чтения модели по шагам.
 
 import type { ReactElement } from 'react';
@@ -36,7 +37,8 @@ export function SearchTimeline(props: SearchTimelineProps): ReactElement {
             >
               <span className={styles.letter}>{label.letter}</span>
               <span className={styles.who}>
-                <AgentChip agentId={action.agentId} /> {label.name} ·{' '}
+                <AgentChip agentId={action.agentId} /> {label.name}{' '}
+                <ModelActor eventIndex={action.index} /> ·{' '}
                 {action.kind === 'read'
                   ? `${String(action.chars)} симв.`
                   : `${String(action.documents.length)} док.`}

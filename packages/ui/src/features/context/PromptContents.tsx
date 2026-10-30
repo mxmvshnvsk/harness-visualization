@@ -1,3 +1,4 @@
+import { HistoryActors, MessageActor, ModelActor } from '../models/ModelActor';
 // Что именно ушло в модель в выбранном запросе: полоса — сколько места занимает каждое
 // сообщение, ниже — сами сообщения по порядку. Отметки показывают, что нового с прошлого
 // запроса и что харнесс подменил: заглушки, сводку, обрезанные результаты.
@@ -28,7 +29,8 @@ export function PromptContents({ request, previous }: PromptContentsProps): Reac
     <section className={styles.contents} aria-label="Содержимое prompt">
       <div className={styles.contentsHead}>
         <h3 className={styles.contentsTitle}>
-          prompt запроса {requestLabel(request)} · ≈ {formatTokens(total)} токенов
+          prompt запроса {requestLabel(request)} <ModelActor requestId={request.requestId} /> · ≈{' '}
+          {formatTokens(total)} токенов
         </h3>
         <span className={styles.contentsMeta}>
           сообщений:{' '}
@@ -46,6 +48,7 @@ export function PromptContents({ request, previous }: PromptContentsProps): Reac
           описания тулов того харнесса; их текста в записи нет.
         </p>
       )}
+      <HistoryActors />
       <div className={styles.strip} role="img" aria-label="Доля каждого сообщения в prompt">
         {items.map((item, index) => (
           <span
@@ -60,14 +63,14 @@ export function PromptContents({ request, previous }: PromptContentsProps): Reac
       </div>
       <div className={styles.rows}>
         {items.map((item, index) => (
-          <PromptRow key={index} item={item} />
+          <PromptRow key={index} item={item} requestId={request.requestId} />
         ))}
       </div>
     </section>
   );
 }
 
-function PromptRow({ item }: { item: PromptItem }): ReactElement {
+function PromptRow({ item, requestId }: { item: PromptItem; requestId: string }): ReactElement {
   const [open, setOpen] = useState(false);
   return (
     <details
@@ -77,7 +80,9 @@ function PromptRow({ item }: { item: PromptItem }): ReactElement {
       }}
     >
       <summary className={styles.rowSummary} style={{ '--swatch': colorOf(item) } as CSSProperties}>
-        <span className={styles.rowRole}>{item.label}</span>
+        <span className={styles.rowRole}>
+          {item.label} <MessageActor message={item.message} requestId={requestId} />
+        </span>
         <span className={styles.rowPreview}>{item.text}</span>
         <span className={styles.rowMarks}>
           {item.marks.map((mark) => (

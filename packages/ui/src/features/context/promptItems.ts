@@ -8,6 +8,7 @@ export type PromptPart = 'system' | 'skills' | 'memory' | 'tools' | 'dialog' | '
 export type PromptMark = 'new' | 'stub' | 'summary' | 'truncated';
 
 export interface PromptItem {
+  message?: unknown;
   part: PromptPart;
   // role сообщения или «tools» для описаний тулов.
   label: string;
@@ -48,6 +49,7 @@ export function promptContents(
     const toolName =
       typeof record.tool_call_id === 'string' ? (toolNames.get(record.tool_call_id) ?? null) : null;
     const item: PromptItem = {
+      message,
       part: partOf(role, toolName),
       label: toolName === null ? role : `tool · ${toolName}`,
       text,

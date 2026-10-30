@@ -2,6 +2,7 @@
 // Запрос разбит на три шага, чтобы харнесс мог показать каждый из них:
 // какой HTTP-запрос собран, что вернул сервер и как ответ понят.
 
+import type { BranchModel } from '../branch/branchModel.js';
 import type { ModelReply, ModelRequest, ResponseTiming } from './chatTypes.js';
 import type { StreamDelta } from './readCompletionStream.js';
 
@@ -27,6 +28,7 @@ export type DeltaListener = (delta: StreamDelta) => void;
 
 export interface ModelProvider {
   readonly model: string;
+  readonly identity?: BranchModel;
   prepareRequest(request: ModelRequest): PreparedHttpRequest;
   send(preparedRequest: PreparedHttpRequest, onDelta?: DeltaListener): Promise<RawHttpResponse>;
   parseReply(rawResponse: RawHttpResponse): ModelReply;

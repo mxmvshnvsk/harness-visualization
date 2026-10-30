@@ -94,3 +94,24 @@ describe('projectSkillsMemory', () => {
     expect(view.memoAtStart).toBeNull();
   });
 });
+
+it('parallel agents keep separate tool links for skills and memory', () => {
+  const main = toolCall(
+    'main-memory',
+    'memory',
+    '{"command":"create","path":"/memories/memo.md","file_text":"main"}',
+  );
+  const sub = toolCall('sub-skill', 'load_skill', '{"name":"policy-answer"}');
+  const log = new EventLog()
+    .add({ type: 'user_message', text: 'q' })
+    .add(toolCallEvent(main))
+    .add(toolCallEvent(sub), 'researcher')
+    .add({ type: 'memory_updated', command: 'create', path: '/memories/memo.md', newPath: null })
+    .add(
+      { type: 'skill_loaded', name: 'policy-answer', trigger: 'model', files: [] },
+      'researcher',
+    );
+  const view = projectSkillsMemory(log.events);
+  expect(view.changes[0]?.toolCallId).toBe('main-memory');
+  expect(view.loads[0]?.toolCallId).toBe('sub-skill');
+});

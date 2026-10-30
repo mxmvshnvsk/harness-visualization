@@ -1,3 +1,4 @@
+import { ModelActor } from '../models/ModelActor';
 // Карточка этапа: пиктограмма типа, заголовок, пометка, состояние и строки событий.
 // Будущее приглушено, текущий этап выделен цветом акцента (в тёмной теме) или группы (в светлой).
 
@@ -56,7 +57,13 @@ export function StageCard({
           <StageIcon kind={stage.kind} />
         </span>
         {nested && <AgentChip agentId={agentId} />}
-        <h2 className={styles.title}>{stage.title}</h2>
+        <h2 className={styles.title}>
+          {stage.title}{' '}
+          <ModelActor
+            requestId={stage.requestId}
+            eventIndex={stage.requestId === null ? stage.firstIndex : undefined}
+          />
+        </h2>
         {showBadge(stage, started, reached) && <span className={styles.badge}>{stage.badge}</span>}
         <span className={styles.when}>{statusOf(stage, started, active, reached)}</span>
         {!nested && <BranchButton requestId={stage.requestId} />}
@@ -124,7 +131,8 @@ function Row({
         <span className={styles.time}>+{formatSeconds(row.at)}</span>
         <span>
           {row.subagent !== undefined && <AgentSwatch subagentId={row.subagent.id} />}
-          {row.code !== null && <code className={styles.code}>{row.code}</code>} {row.text}
+          {row.code !== null && <code className={styles.code}>{row.code}</code>} {row.text}{' '}
+          <ModelActor eventIndex={row.index} />
         </span>
       </button>
       {opensSubagent && row.subagent !== undefined && (

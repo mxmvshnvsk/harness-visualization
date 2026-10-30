@@ -1,3 +1,4 @@
+import { projectModelActors } from '../projections/modelActors';
 // Шапка открытого потока: что открыто и в каком он состоянии.
 
 import type { SessionSummary, TraceStreamEnd } from '@harness-visualization/server';
@@ -40,6 +41,11 @@ export function StreamHeader({
 // С какими опциями шла сессия: субагенты, Clean Workspace, поиск, effort.
 function Chips({ events }: { events: EventStream<StreamEnd>['events'] }): ReactElement | null {
   const chips = sessionChips(events);
+  const actors = projectModelActors(events);
+  const requests = [...actors.requests.values()];
+  const models = [
+    ...new Map([...actors.inherited, ...requests].map((actor) => [actor.key, actor])).values(),
+  ];
   const started = events.find((event) => event.type === 'session_started');
   const model = started?.type === 'session_started' && started.model !== '' ? started : null;
   if (chips.length === 0 && model === null) {
@@ -47,7 +53,14 @@ function Chips({ events }: { events: EventStream<StreamEnd>['events'] }): ReactE
   }
   return (
     <ul className={styles.chips} aria-label="Опции сессии">
-      {model !== null && (
+      {actors.multiple &&
+        models.map((actor) => (
+          <li key={actor.key} className={styles.chip} data-on="true">
+            {actor.label} · {actor.provider}
+            {requests.some((request) => request.key === actor.key) ? '' : ' · из истории'}
+          </li>
+        ))}
+      {!actors.multiple && model !== null && (
         <li className={styles.chip} data-on="true">
           {model.modelLabel ?? model.model} · {model.providerName}
         </li>

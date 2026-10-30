@@ -1,3 +1,4 @@
+import { ModelActor } from './models/ModelActor';
 // Ссылки цепочки вызова: тот же вызов в других видах — шаг в инспекторе, пара сообщений
 // в журнале MCP, поиск в «RAG» (как запрос стал вектором), запрос в «Контексте», скилл или
 // память в «Скиллах и памяти», файл в «Коде». Показываются только нужные: из текущего вида
@@ -49,6 +50,7 @@ export function ChainLinks(props: ChainLinksProps): ReactElement | null {
   };
   return (
     <span className={styles.links}>
+      <ModelActor requestId={props.link.requestId} toolCallId={props.link.toolCallId} />
       {shown.map((target) => (
         <button
           key={target}

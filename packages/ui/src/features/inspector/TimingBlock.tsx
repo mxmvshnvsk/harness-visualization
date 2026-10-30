@@ -1,3 +1,4 @@
+import { ModelActor } from '../models/ModelActor';
 // Время запроса к модели по фазам (этап 8d.3): полоса, отметки, четыре цифры и сравнение
 // шагов сессии в одном масштабе. Фазы пишет харнесс в model_response.timing с этапа 8d.2.
 
@@ -139,7 +140,8 @@ function Comparison({
           {rows.map(({ call, timing, response }) => (
             <tr key={call.requestId} data-current={call.requestId === current.requestId}>
               <th scope="row">
-                <AgentChip agentId={call.agentId} /> {stepLabel(call)}
+                <AgentChip agentId={call.agentId} /> {stepLabel(call)}{' '}
+                <ModelActor requestId={call.requestId} />
               </th>
               <td className={styles.barCell}>
                 <PhaseBar timing={timing} scaleMs={scaleMs} mini />

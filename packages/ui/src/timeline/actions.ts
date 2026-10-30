@@ -1,3 +1,4 @@
+import { projectModelActors } from '../projections/modelActors';
 // Действия сессии для «Потока» — то, что делают участники, а не отдельные события.
 // exchange — обмен с длительностью: харнесс спросил модель и получил ответ, вызвал tool и получил
 // результат, спросил пользователя и дождался ответа. message — сообщение в одну сторону.
@@ -615,6 +616,7 @@ export function buildActions(
     markAgentBack(closing, event.agentId);
   }
   settleReading(builder, events.at(-1));
+  labelModelActions(builder.actions, events);
   return builder.actions;
 }
 
@@ -853,3 +855,34 @@ function shorten(text: string, limit = 140): string {
 
 const TOOLS = { one: 'тул', few: 'тула', many: 'тулов' };
 const MESSAGES = { one: 'message', few: 'messages', many: 'messages' };
+
+function labelModelActions(actions: FlowAction[], events: readonly HarnessEvent[]): void {
+  const actors = projectModelActors(events);
+  if (actors.multiple) {
+    const bySequence = new Map(events.map((event) => [event.sequence, event]));
+    for (const action of actions) {
+      const event = bySequence.get(action.startSequence);
+      const actor = actors.events.get(action.startSequence);
+      const label = actionModelLabel(event, actor?.label);
+      action.what += ` · ${label}`;
+      if (action.whatBack !== null) {
+        action.whatBack += ` · ${label}`;
+      }
+      action.out += ` · ${label}`;
+      if (action.back !== null) {
+        action.back += ` · ${label}`;
+      }
+    }
+  }
+}
+
+function actionModelLabel(event: HarnessEvent | undefined, actorLabel: string | undefined): string {
+  const fallback = event?.type === 'user_message' ? 'пользователь' : 'харнесс';
+  const who =
+    actorLabel ??
+    (event !== undefined && ('requestId' in event || 'toolCallId' in event)
+      ? 'модель не указана'
+      : fallback);
+  const label = event !== undefined && 'toolCallId' in event ? `по запросу ${who}` : who;
+  return label;
+}

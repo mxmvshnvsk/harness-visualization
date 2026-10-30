@@ -67,36 +67,7 @@ interface EventsQuery {
 export function registerSessionRoutes(app: FastifyInstance, options: SessionRoutesOptions): void {
   const { registry, permissions } = options;
 
-  app.post('/api/sessions', async (request, reply) => {
-    const parsed = startSessionRequestSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.code(400).send({ error: parsed.error.message });
-    }
-    const body = parsed.data;
-    const modelKey = body.modelKey ?? DEFAULT_MODEL_KEY;
-    if (body.orchestration !== undefined && modelKey !== DEFAULT_MODEL_KEY) {
-      return reply.code(400).send({
-        error:
-          'Выбор модели для оркестрации будет доступен в следующем этапе. Сейчас используется модель по умолчанию.',
-      });
-    }
-    let loaded: LoadedSettings;
-    try {
-      loaded = await selectSessionModel(options.loadedSettings, modelKey);
-      validateModelEffort(
-        options.loadedSettings,
-        modelKey,
-        body.reasoningEffort ?? loaded.settings.model.defaultReasoningEffort,
-      );
-    } catch (error) {
-      return reply
-        .code(400)
-        .send({ error: error instanceof Error ? error.message : String(error) });
-    }
-    const input = toSessionInput(body, loaded, options.projectRoot);
-    const sessionId = await launchSession(input, parsed.data.question, options);
-    return reply.code(201).send({ sessionId, eventsUrl: `/api/sessions/${sessionId}/events` });
-  });
+  app.post('/api/sessions', (request, reply) => handleSessionStart(request, reply, options));
 
   app.get('/api/sessions', () => registry.list());
 
@@ -285,4 +256,37 @@ function streamSessionEvents(
     clearInterval(heartbeat);
     unsubscribe();
   });
+}
+
+async function handleSessionStart(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  options: SessionRoutesOptions,
+): Promise<FastifyReply> {
+  const parsed = startSessionRequestSchema.safeParse(request.body);
+  if (!parsed.success) {
+    return reply.code(400).send({ error: parsed.error.message });
+  }
+  const body = parsed.data;
+  const modelKey = body.modelKey ?? DEFAULT_MODEL_KEY;
+  if (body.orchestration !== undefined && modelKey !== DEFAULT_MODEL_KEY) {
+    return reply.code(400).send({
+      error:
+        'Выбор модели для оркестрации будет доступен в следующем этапе. Сейчас используется модель по умолчанию.',
+    });
+  }
+  let loaded: LoadedSettings;
+  try {
+    loaded = await selectSessionModel(options.loadedSettings, modelKey);
+    validateModelEffort(
+      options.loadedSettings,
+      modelKey,
+      body.reasoningEffort ?? loaded.settings.model.defaultReasoningEffort,
+    );
+  } catch (error) {
+    return reply.code(400).send({ error: error instanceof Error ? error.message : String(error) });
+  }
+  const input = toSessionInput(body, loaded, options.projectRoot);
+  const sessionId = await launchSession(input, parsed.data.question, options);
+  return reply.code(201).send({ sessionId, eventsUrl: `/api/sessions/${sessionId}/events` });
 }

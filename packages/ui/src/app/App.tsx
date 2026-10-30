@@ -1,3 +1,4 @@
+import { StreamActors } from '../features/models/StreamActors';
 // Приложение-плеер (этап 8c): шапка с открытым потоком, виды, плеер внизу и колонка «Диалог»
 // справа (этап 6.1).
 // Сессии, трейсы и запуск — в выезжающей панели, а пока ничего не открыто — на стартовом экране.
@@ -41,7 +42,6 @@ import { CodeView } from '../features/code/CodeView';
 import { ArenaLab } from '../features/arena/ArenaLab';
 import { TokenLab } from '../features/tokens/TokenLab';
 import { AgentsView } from '../features/agents/AgentsView';
-import { AgentLabelsContext, useAgentLabelsOf } from '../features/agents/agentLabels';
 import { McpLab } from '../features/mcp/McpLab';
 import { EvalLab } from '../features/evals/EvalLab';
 import { NavigationContext, type Navigation } from '../features/branch/BranchContext';
@@ -679,10 +679,9 @@ function OpenStream(props: OpenStreamProps): ReactElement {
   const [playerCollapsed, togglePlayer] = usePlayerCollapsed();
   const liveStartedAt = live && events[0] !== undefined ? Date.parse(events[0].timestamp) : null;
   const dialog = { events, shown: cursor, sessionId, live };
-  const agentLabels = useAgentLabelsOf(events);
   const views = useViews(props.tour?.stop ?? null);
   return (
-    <AgentLabelsContext.Provider value={agentLabels}>
+    <StreamActors events={events}>
       <OpenDialogContext.Provider value={dialogOpen ? null : openDialog}>
         <div
           className={styles.shell}
@@ -728,7 +727,7 @@ function OpenStream(props: OpenStreamProps): ReactElement {
           <TourLayer tour={props.tour} replay={replay} events={events} views={views} />
         </div>
       </OpenDialogContext.Provider>
-    </AgentLabelsContext.Provider>
+    </StreamActors>
   );
 }
 

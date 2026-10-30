@@ -6,6 +6,7 @@
 // Поток отдаёт события сразу, без исходных пауз: время каждого события есть в timestamp,
 // а темп воспроизведения — забота интерфейса (там же пауза, перемотка, шаг вперёд).
 
+import { continuationFacts, listBranchSteps } from '@harness-visualization/harness/branch';
 import { readTrialFacts } from '@harness-visualization/harness/evals';
 import type { FastifyInstance } from 'fastify';
 import { openEventStream } from '../sse/openEventStream.js';
@@ -43,15 +44,30 @@ export interface TraceOutcome {
 export function registerTraceRoutes(app: FastifyInstance, catalog: TraceCatalog): void {
   app.get('/api/traces', () => catalog.list());
 
-  app.get<{ Params: TraceParams }>('/api/traces/:file/outcome', async (request, reply) => {
-    const { file } = request.params;
-    const contents = await catalog.read(file);
-    if (contents === null) {
-      return reply.code(404).send({ error: 'Такого трейса нет в traces/' });
-    }
-    const outcome: TraceOutcome = { file, ...readTrialFacts(contents.events) };
-    return outcome;
-  });
+  app.get<{ Params: TraceParams; Querystring: { fromStep?: string } }>(
+    '/api/traces/:file/outcome',
+    async (request, reply) => {
+      const { file } = request.params;
+      const contents = await catalog.read(file);
+      if (contents === null) {
+        return reply.code(404).send({ error: 'Такого трейса нет в traces/' });
+      }
+      const step = request.query.fromStep === undefined ? null : Number(request.query.fromStep);
+      if (step !== null && (!Number.isInteger(step) || step < 1)) {
+        return reply.code(400).send({ error: 'Неверный шаг' });
+      }
+      if (step !== null && !listBranchSteps(contents.events).some((item) => item.step === step)) {
+        return reply.code(400).send({ error: 'В трейсе нет такого шага' });
+      }
+      const outcome: TraceOutcome = {
+        file,
+        ...(step === null
+          ? readTrialFacts(contents.events)
+          : continuationFacts(contents.events, step)),
+      };
+      return outcome;
+    },
+  );
 
   app.get<{ Params: TraceParams; Querystring: EventsQuery }>(
     '/api/traces/:file/events',

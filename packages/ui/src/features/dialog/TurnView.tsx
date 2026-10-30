@@ -1,3 +1,4 @@
+import { ModelActor } from '../models/ModelActor';
 // Ход диалога: вопрос пузырём, пока ответа нет — строка «что харнесс делает сейчас» со
 // временем, потом ответ, итог хода и перемотка к нему на схеме.
 
@@ -37,6 +38,9 @@ export function TurnView({
       <div className={styles.question}>{turn.question}</div>
       {answered ? (
         <div className={styles.answer}>
+          <ModelActor
+            event={turn.answeredIndex === null ? undefined : events[turn.answeredIndex]}
+          />
           <MarkdownView text={turn.answer ?? ''} />
           <div className={styles.meta}>
             <span>шагов {turn.steps}</span>

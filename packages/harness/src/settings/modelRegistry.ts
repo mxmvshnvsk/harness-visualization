@@ -46,39 +46,42 @@ export function resolveRegistryModels(settings: HarnessSettings): RegisteredMode
     if (key === DEFAULT_MODEL_KEY) {
       throw new Error('models.default зарезервировано для текущего блока model');
     }
-    const provider =
-      entry.provider === undefined ? undefined : settings.providers?.[entry.provider];
-    if (entry.provider !== undefined && provider === undefined) {
-      throw new Error(`Модель ${key}: нет провайдера ${entry.provider} в providers`);
-    }
-    const connection = { ...provider, ...entry };
-    if (connection.baseUrl === undefined || connection.apiKeyVariable === undefined) {
-      throw new Error(`Модель ${key}: нужны baseUrl и apiKeyVariable (null — без ключа)`);
-    }
-    const dialect = connection.dialect ?? 'openai';
-    const reasoningStyle = connection.reasoningStyle ?? defaultReasoningStyle(dialect);
-    const model = modelSettingsSchema.parse({
-      requestTimeoutMs: settings.model.requestTimeoutMs,
-      maxOutputTokens: settings.model.maxOutputTokens,
-      providerName: entry.provider ?? 'OpenAI-compatible',
-      ...connection,
-      requestExtras: { ...provider?.requestExtras, ...entry.requestExtras },
-      dialect,
-      reasoningStyle,
-      modelKey: key,
-    });
-    const efforts = entry.capabilities?.reasoningEfforts;
-    if (efforts !== undefined && !efforts.includes(model.defaultReasoningEffort)) {
-      throw new Error(`Модель ${key}: defaultReasoningEffort должен входить в reasoningEfforts`);
-    }
-    result.push({
-      key,
-      label: entry.label ?? entry.model,
-      settings: model,
-      capabilities: entry.capabilities ?? {},
-    });
+    result.push(resolveRegisteredModel(settings, key, entry));
   }
   return result;
+}
+
+type RegistryModelEntry = NonNullable<HarnessSettings['models']>[string];
+
+function resolveRegisteredModel(
+  settings: HarnessSettings,
+  key: string,
+  entry: RegistryModelEntry,
+): RegisteredModel {
+  const provider = registryProvider(settings, key, entry);
+  const connection = { ...provider, ...entry };
+  if (connection.baseUrl === undefined || connection.apiKeyVariable === undefined) {
+    throw new Error(`Модель ${key}: нужны baseUrl и apiKeyVariable (null — без ключа)`);
+  }
+  const dialect = connection.dialect ?? 'openai';
+  const reasoningStyle = connection.reasoningStyle ?? defaultReasoningStyle(dialect);
+  const model = modelSettingsSchema.parse({
+    requestTimeoutMs: settings.model.requestTimeoutMs,
+    maxOutputTokens: settings.model.maxOutputTokens,
+    providerName: entry.provider ?? 'OpenAI-compatible',
+    ...connection,
+    requestExtras: { ...provider?.requestExtras, ...entry.requestExtras },
+    dialect,
+    reasoningStyle,
+    modelKey: key,
+  });
+  validateDefaultEffort(key, entry, model);
+  return {
+    key,
+    label: entry.label ?? entry.model,
+    settings: model,
+    capabilities: entry.capabilities ?? {},
+  };
 }
 
 function defaultReasoningStyle(dialect: ModelDialect): ModelSettings['reasoningStyle'] {
@@ -118,4 +121,19 @@ function priceSource(
     return 'provider';
   }
   return Object.hasOwn(settings.prices, model.model) ? 'tariffs' : 'unknown';
+}
+
+function registryProvider(settings: HarnessSettings, key: string, entry: RegistryModelEntry) {
+  const provider = entry.provider === undefined ? undefined : settings.providers?.[entry.provider];
+  if (entry.provider !== undefined && provider === undefined) {
+    throw new Error(`Модель ${key}: нет провайдера ${entry.provider} в providers`);
+  }
+  return provider;
+}
+
+function validateDefaultEffort(key: string, entry: RegistryModelEntry, model: ModelSettings): void {
+  const efforts = entry.capabilities?.reasoningEfforts;
+  if (efforts !== undefined && !efforts.includes(model.defaultReasoningEffort)) {
+    throw new Error(`Модель ${key}: defaultReasoningEffort должен входить в reasoningEfforts`);
+  }
 }

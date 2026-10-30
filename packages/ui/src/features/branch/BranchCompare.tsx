@@ -2,13 +2,14 @@
 // в другом ответе, подсвечены; шаги, тулы и цена. По умолчанию — открытая ветка против родителя.
 
 import type { HarnessEvent } from '@harness-visualization/harness';
-import { readTrialFacts } from '@harness-visualization/harness/evals';
+import { continuationFacts } from '@harness-visualization/harness/branch';
 import type { TraceOutcome } from '@harness-visualization/server';
 import { useState, type ReactElement } from 'react';
 import { getTraceOutcome } from '../../api/serverApi';
 import { MarkdownView } from '../../help/MarkdownView';
 import { paragraphsOf, uniqueParagraphs, type BranchNode } from '../../projections/branchTree';
 import { useLoaded } from '../rag/useRagData';
+import { comparisonSteps } from './comparisonSteps';
 import { CURRENT, describeNode } from './branchLabels';
 import styles from './Branch.module.css';
 import { formatFixed } from '../../text/formatNumber';
@@ -29,11 +30,53 @@ export function BranchCompare(props: {
         <Picker label="было" family={family} value={left} onChange={setLeft} />
         <Picker label="стало" family={family} value={right} onChange={setRight} />
       </div>
-      <div className={styles.pair}>
-        <OutcomeColumn file={left} other={right} events={props.events} />
-        <OutcomeColumn file={right} other={left} events={props.events} />
-      </div>
+      <ComparisonResults family={family} left={left} right={right} events={props.events} />
     </section>
+  );
+}
+
+function ComparisonResults({
+  family,
+  left,
+  right,
+  events,
+}: {
+  family: BranchNode[];
+  left: string;
+  right: string;
+  events: readonly HarnessEvent[];
+}): ReactElement {
+  const steps = comparisonSteps(family, left, right);
+  if (steps === null) {
+    return (
+      <p className={styles.muted}>
+        Для сравнения одного продолжения выберите ветку и её непосредственный исходный трейс.
+      </p>
+    );
+  }
+  return (
+    <>
+      <p className={styles.muted}>
+        Продолжение от точки ветвления до первого ответа. Общая история и следующие вопросы
+        исключены; стоимость включает все новые запросы.
+      </p>
+      <div className={styles.pair}>
+        <OutcomeColumn
+          file={left}
+          other={right}
+          step={steps.left}
+          otherStep={steps.right}
+          events={events}
+        />
+        <OutcomeColumn
+          file={right}
+          other={left}
+          step={steps.right}
+          otherStep={steps.left}
+          events={events}
+        />
+      </div>
+    </>
   );
 }
 
@@ -56,7 +99,7 @@ function Picker(props: {
         {props.family.map((node) => (
           <option key={node.trace.file} value={node.trace.file}>
             {'  '.repeat(node.depth)}
-            {describeNode(node)} · {node.trace.sessionId ?? node.trace.file}
+            {describeNode(node)} · {node.trace.model} · {node.trace.sessionId ?? node.trace.file}
           </option>
         ))}
       </select>
@@ -67,20 +110,25 @@ function Picker(props: {
 // Открытая живая сессия — ещё не трейс: её итог считается по событиям на экране.
 type Outcome = Omit<TraceOutcome, 'file'>;
 
-function useOutcome(file: string, events: readonly HarnessEvent[]) {
+function useOutcome(file: string, step: number, events: readonly HarnessEvent[]) {
   return useLoaded<Outcome>(
-    () => (file === CURRENT ? Promise.resolve(readTrialFacts([...events])) : getTraceOutcome(file)),
-    [file, file === CURRENT ? events.length : 0],
+    () =>
+      file === CURRENT
+        ? Promise.resolve(continuationFacts(events, step))
+        : getTraceOutcome(file, step),
+    [file, step, file === CURRENT ? events.length : 0],
   );
 }
 
 function OutcomeColumn(props: {
   file: string;
   other: string;
+  step: number;
+  otherStep: number;
   events: readonly HarnessEvent[];
 }): ReactElement {
-  const mine = useOutcome(props.file, props.events);
-  const other = useOutcome(props.other, props.events);
+  const mine = useOutcome(props.file, props.step, props.events);
+  const other = useOutcome(props.other, props.otherStep, props.events);
   if (mine.status !== 'ready') {
     return (
       <p className={styles.muted}>{mine.status === 'loading' ? 'Загружаем…' : mine.message}</p>

@@ -79,6 +79,8 @@ function liveNode(
     trace: {
       ...parent.trace,
       file: CURRENT,
+      model: branch.targetModel?.model ?? null,
+      providerName: branch.targetModel?.providerName,
       sessionId: branch.sessionId,
       startedAt: branch.timestamp,
       finished: false,
@@ -108,7 +110,9 @@ function BranchTree(props: {
             aria-current={node.trace.file === props.current}
           >
             <span className={styles.nodeLabel}>
-              <b>{describeNode(node)}</b>
+              <b>
+                {describeNode(node)} · {node.trace.model ?? 'модель не указана'}
+              </b>
               <span className={styles.muted}>
                 {node.trace.sessionId ?? node.trace.file} ·{' '}
                 {node.trace.startedAt === null

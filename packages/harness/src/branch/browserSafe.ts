@@ -9,3 +9,9 @@ export {
   type BranchStep,
 } from './branchPoint.js';
 export { fromWireMessages } from '../model/fromWireFormat.js';
+
+export { branchSourceModel, sameBranchModel, type BranchModel } from './branchModel.js';
+export { continuationFacts } from './continuationFacts.js';
+export { REASONING_EFFORTS, type ReasoningEffort } from '../model/chatTypes.js';
+export { traceModelNames } from './traceModelNames.js';
+export { continuationEvents } from './continuationEvents.js';

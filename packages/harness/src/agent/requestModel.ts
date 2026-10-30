@@ -38,6 +38,7 @@ export async function requestModel(
   const preparedRequest = provider.prepareRequest(request);
   events.emit({
     type: 'model_request',
+    ...(provider.identity === undefined ? {} : { modelIdentity: provider.identity }),
     requestId,
     purpose: step.purpose,
     iteration: step.iteration,

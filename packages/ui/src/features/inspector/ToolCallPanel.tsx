@@ -1,3 +1,4 @@
+import { ModelActor } from '../models/ModelActor';
 // Вызов тула: аргументы, цепочка разрешения (политика → вопрос → ответ) и результат —
 // ровно то, что увидит модель, и подробности, которые видит только харнесс.
 
@@ -19,7 +20,10 @@ export function ToolCallPanel({ tool }: { tool: ToolCallView }): ReactElement {
         <span className={styles.eventType} data-group="tool">
           tool_call
         </span>
-        <h2 className={styles.panelTitle}>{tool.toolName}</h2>
+        <h2 className={styles.panelTitle}>
+          {tool.toolName}{' '}
+          <ModelActor toolCallId={tool.toolCallId} agentId={tool.call.agentId ?? null} />
+        </h2>
         <Badge tone={STATUS_TONES[tool.status]}>{tool.status}</Badge>
         <span className={styles.headerHelp}>
           <ToolLinks tool={tool} />

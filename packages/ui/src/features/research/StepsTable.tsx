@@ -1,3 +1,4 @@
+import { ModelActor } from '../models/ModelActor';
 // Таблица запросов к модели: input, доля кэша, output, время; между запросами — события
 // харнесса мелким шрифтом (клик — перемотка плеера к событию). Сверху — input по запросам.
 // Таблица — по всей записи (мокап, одобренный 29.10.2026): перемотка не прячет шаги, а ставит
@@ -100,7 +101,7 @@ function StepRow(props: {
       <td>
         <button type="button" className={styles.stepButton} onClick={props.onSelect}>
           {step.agentId === null ? '' : `[${step.agentId}] `}
-          {step.label}
+          {step.label} <ModelActor requestId={step.request.requestId} />
           {tools.length > 0 && <span className={styles.toolTag}>{summarizeTools(tools)}</span>}
           {step.error !== null && <span className={styles.errorTag}>ошибка</span>}
         </button>
@@ -160,7 +161,7 @@ function Notes(props: {
                 className={styles.noteButton}
                 onClick={() => props.onSeek(note.index)}
               >
-                {note.text}
+                {note.text} <ModelActor eventIndex={note.index} />
               </button>
             </td>
           </tr>

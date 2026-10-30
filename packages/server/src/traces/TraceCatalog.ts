@@ -1,3 +1,4 @@
+import { traceModelNames } from '@harness-visualization/harness/branch';
 // Каталог записанных трейсов: папка traces/ и примеры из репозитория (examples/traces, этап 9.3) —
 // эталонные трейсы по урокам, чтобы у склонировавшего проект было что смотреть и от чего
 // ветвиться. Одноимённый трейс из traces/ главнее примера. Для списка каждый трейс читается целиком
@@ -31,6 +32,7 @@ export interface TraceSummary {
   title: string | null;
   model: string | null;
   providerName?: string;
+  models?: string[];
   startedAt: string | null;
   finishedAt: string | null;
   eventCount: number;
@@ -156,6 +158,7 @@ function buildSummary(
     ...sessionFacts(events),
     ...(events[0]?.type === 'session_started' ? { providerName: events[0].providerName } : {}),
     title: traceTitle(events),
+    models: traceModelNames(events),
     eventCount: events.length,
     finished: events.some((event) => event.type === 'session_finished'),
     hasError: events.some((event) => event.type === 'error'),

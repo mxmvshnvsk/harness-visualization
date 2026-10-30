@@ -65,16 +65,30 @@ export function SessionForm({ onStarted }: SessionFormProps): ReactElement {
         </p>
       )}
       {error !== null && <div className={styles.error}>Сессия не запущена: {error}</div>}
-      <div className={styles.foot}>
-        <span className={styles.cost}>{describeCost(state)}</span>
-        <Button
-          type="submit"
-          variant="accent"
-          disabled={starting || selectedModel?.available === false}
-        >
-          {starting ? 'Запускаю…' : 'Запустить'}
-        </Button>
-      </div>
+      <SessionSubmit
+        state={state}
+        starting={starting}
+        unavailable={selectedModel?.available === false}
+      />
     </form>
+  );
+}
+
+function SessionSubmit({
+  state,
+  starting,
+  unavailable,
+}: {
+  state: ReturnType<typeof useSessionChoices>;
+  starting: boolean;
+  unavailable: boolean;
+}): ReactElement {
+  return (
+    <div className={styles.foot}>
+      <span className={styles.cost}>{describeCost(state)}</span>
+      <Button type="submit" variant="accent" disabled={starting || unavailable}>
+        {starting ? 'Запускаю…' : 'Запустить'}
+      </Button>
+    </div>
   );
 }

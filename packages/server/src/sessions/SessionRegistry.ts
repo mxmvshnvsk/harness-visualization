@@ -1,3 +1,4 @@
+import { traceModelNames } from '@harness-visualization/harness/branch';
 // Сессии, запущенные через сервер, — в памяти. У каждой — все её события по порядку
 // (буфер) и подписчики, которым события идут вживую. Буфер нужен, чтобы браузер, подключившийся
 // позже или переподключившийся после обрыва, получил то, что пропустил: по Last-Event-ID.
@@ -26,6 +27,7 @@ export interface SessionSummary {
   tracePath: string | null;
   model?: string;
   providerName?: string;
+  models?: string[];
 }
 
 interface SessionEntry {
@@ -69,6 +71,9 @@ export class SessionRegistry {
     if (event.type === 'session_started') {
       entry.summary.model = event.modelLabel ?? event.model;
       entry.summary.providerName = event.providerName;
+    }
+    if (event.type === 'model_response' || event.type === 'branch_started') {
+      entry.summary.models = traceModelNames(entry.events);
     }
     for (const subscriber of entry.subscribers) {
       subscriber.onEvent(event);

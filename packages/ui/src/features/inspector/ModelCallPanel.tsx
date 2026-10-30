@@ -1,3 +1,4 @@
+import { ModelActor } from '../models/ModelActor';
 // Запрос к модели: числа, кэш prompt с объяснением, что ушло в модель и что она ответила.
 
 import type { ReactElement } from 'react';
@@ -31,7 +32,9 @@ export function ModelCallPanel({ call, calls, onFocus }: ModelCallPanelProps): R
         <span className={styles.eventType} data-group="model">
           model_request
         </span>
-        <h2 className={styles.panelTitle}>{describePurpose(call)}</h2>
+        <h2 className={styles.panelTitle}>
+          {describePurpose(call)} <ModelActor requestId={call.requestId} />
+        </h2>
         {cache !== null && <Badge dot={cache.warm}>{cache.label}</Badge>}
         <span className={styles.headerHelp}>
           {(call.request.budget ?? null) !== null && (

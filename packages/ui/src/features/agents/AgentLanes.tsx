@@ -1,3 +1,4 @@
+import { useModelActors } from '../models/ModelActor';
 // Дорожки агентов: запросы к модели, тулы и ожидание отчётов — по настоящему времени событий.
 // Наведение или фокус на отрезке — подпись под дорожками: кто, когда и что делал. Щелчок
 // закрепляет подпись и даёт ссылку в инспектор: у главного агента — на этот запрос или вызов,
@@ -139,6 +140,7 @@ interface LaneProps {
 
 function Lane(props: LaneProps): ReactElement {
   const { lane, total, now, onHover } = props;
+  const actors = useModelActors();
   return (
     <div className={styles.lane} data-color={lane.color}>
       <span className={styles.who}>
@@ -148,7 +150,13 @@ function Lane(props: LaneProps): ReactElement {
       <div className={styles.track} role="group" aria-label={lane.label}>
         <div className={styles.layer} data-zoom-layer="">
           {lane.segments.map((segment, index) => {
-            const label = describe(lane, segment, now);
+            const actor = segment.requestId
+              ? actors.requests.get(segment.requestId)
+              : actors.tools.get(
+                  `${lane.id === 'main' ? '' : lane.id}:${segment.toolCallId ?? ''}`,
+                );
+            const who = actors.multiple ? ` · ${actor?.label ?? 'харнесс'}` : '';
+            const label = describe(lane, segment, now) + who;
             return (
               <button
                 key={`${String(segment.start)}-${String(index)}`}
@@ -171,6 +179,7 @@ function Lane(props: LaneProps): ReactElement {
                 onFocus={() => {
                   onHover(label);
                 }}
+                title={label}
               />
             );
           })}

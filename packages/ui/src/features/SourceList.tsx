@@ -71,7 +71,9 @@ export function SessionList(props: SessionListProps): ReactElement {
             <span className={styles.itemTitle}>{session.question}</span>
             {session.model !== undefined && (
               <span className={styles.meta}>
-                {session.model} · {session.providerName}
+                {(session.models?.length ?? 0) > 1
+                  ? session.models?.join(' · ')
+                  : `${session.model} · ${session.providerName ?? ''}`}
               </span>
             )}
             <span className={styles.meta}>
@@ -212,16 +214,7 @@ function TraceRow({ node, current, fromExample, onSelect }: TraceRowProps): Reac
           {trace.importedFrom !== null && <Badge tone="judge">{trace.importedFrom}</Badge>}
           {trace.title ?? trace.file}
         </span>
-        <span className={styles.meta}>
-          {trace.model !== null && (
-            <>
-              {trace.model}
-              {trace.providerName ? ` · ${trace.providerName}` : ''} ·{' '}
-            </>
-          )}
-          {formatDate(trace.startedAt)} · {countEvents(trace.eventCount)} ·{' '}
-          {describeTraceState(trace)}
-        </span>
+        <TraceMetadata trace={trace} />
       </button>
     </li>
   );
@@ -293,4 +286,18 @@ function describeTraceState(trace: TraceSummary): string {
 
 function formatDate(value: string | null): string {
   return value === null ? '—' : new Date(value).toLocaleString('ru-RU');
+}
+
+function TraceMetadata({ trace }: { trace: TraceSummary }): ReactElement {
+  return (
+    <span className={styles.meta}>
+      {trace.model !== null && (
+        <>
+          {(trace.models?.length ?? 0) > 1 ? trace.models?.join(' · ') : trace.model}
+          {trace.providerName ? ` · ${trace.providerName}` : ''} ·{' '}
+        </>
+      )}
+      {formatDate(trace.startedAt)} · {countEvents(trace.eventCount)} · {describeTraceState(trace)}
+    </span>
+  );
 }

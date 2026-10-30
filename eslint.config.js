@@ -52,6 +52,7 @@ const typeScriptRules = {
 const readabilityRules = {
   // Фигурные скобки обязательны, однострочных if и for нет.
   curly: ['error', 'all'],
+  'brace-style': ['error', '1tbs', { allowSingleLine: false }],
   eqeqeq: ['error', 'always'],
   // Без трюков: битовых операций и неявных преобразований вроде ~index или !!value.
   'no-bitwise': 'error',

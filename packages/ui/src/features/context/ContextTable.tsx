@@ -1,3 +1,4 @@
+import { ModelActor } from '../models/ModelActor';
 // Табличный вид тех же данных — для точных чисел и для тех, кому график читать неудобно.
 
 import type { ReactElement } from 'react';
@@ -76,7 +77,9 @@ function Row({ request, future, selected, onSeek }: RowProps): ReactElement {
         onSeek(request);
       }}
     >
-      <td>{requestLabel(request)}</td>
+      <td>
+        {requestLabel(request)} <ModelActor requestId={request.requestId} />
+      </td>
       {PARTS.map((part) => (
         <td key={part.key}>{formatTokens(partTokens(estimate, part.key))}</td>
       ))}

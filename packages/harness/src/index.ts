@@ -100,3 +100,4 @@ export {
   describeSubagentsOption,
   type SubagentsOption,
 } from './subagents/describeSubagentsOption.js';
+export { branchSourceKey, selectBranchModel } from './branch/selectBranchModel.js';

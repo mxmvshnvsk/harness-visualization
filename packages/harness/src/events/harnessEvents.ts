@@ -1,3 +1,4 @@
+import type { BranchModel } from '../branch/branchModel.js';
 // Типы событий харнесса — это и есть формат трейса.
 // Каждое событие — одна строка JSONL; подробное описание в docs/events.md.
 
@@ -268,6 +269,10 @@ export type BranchChange =
   | { kind: 'toolResult'; toolCallId: string; toolName: string; before: string; after: string };
 
 export interface BranchStartedPayload {
+  sourceModel?: BranchModel;
+  targetModel?: BranchModel;
+  historyAdapted?: boolean;
+  historyActors?: { messageIndex: number; model: BranchModel }[];
   type: 'branch_started';
   sourceTracePath: string;
   // null — в исходном трейсе нет id сессии.
@@ -320,6 +325,7 @@ export type ModelRequestPurpose =
   | 'tokenLab';
 
 export interface ModelRequestPayload {
+  modelIdentity?: BranchModel;
   type: 'model_request';
   requestId: string;
   purpose: ModelRequestPurpose;

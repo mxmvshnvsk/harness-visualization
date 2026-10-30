@@ -1,3 +1,4 @@
+import { ModelActor } from '../../models/ModelActor';
 // Журнал протокола: сообщения JSON-RPC парами «вопрос — ответ» по id, со временем ответа;
 // над tools/call — просьба модели и решение политики; строки stderr сервера между ними.
 
@@ -84,7 +85,8 @@ export function PairRow({ pair, focused, open, onToggle }: PairRowProps): ReactE
       >
         <button type="button" aria-expanded={open} onClick={onToggle}>
           <span className={styles.method}>
-            → {pair.method}
+            → {pair.method}{' '}
+            <ModelActor toolCallId={pair.call?.toolCallId} agentId={pair.call?.agentId} />
             {pair.id !== null && <span className={styles.muted}> #{String(pair.id)}</span>}
           </span>
           <span className={styles.params}>{describePair(pair)}</span>
