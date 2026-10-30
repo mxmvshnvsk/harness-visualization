@@ -21,9 +21,10 @@ export interface SessionChoices {
   retrievalMode: RetrievalChoice;
   reasoningEffort: EffortChoice;
   modelKey: string;
+  roleModels?: NonNullable<StartSessionRequest['roleModels']>;
 }
 
-type Saved = Partial<Omit<SessionChoices, 'cleanWorkspace'>>;
+export type SavedSessionChoices = Partial<Omit<SessionChoices, 'cleanWorkspace'>>;
 
 const STORAGE_KEY = 'hv-session-choices';
 
@@ -49,24 +50,24 @@ export interface ChoicesState {
 export function selectedSessionModel(
   state: Pick<ChoicesState, 'choices' | 'options'>,
 ): SessionOptionsResponse['models'][number] | undefined {
-  const key =
-    state.choices.demoProject && state.choices.orchestration
-      ? state.options?.defaultModelKey
-      : state.choices.modelKey;
+  const key = state.choices.modelKey;
   return state.options?.models.find((model) => model.key === key);
 }
 
 export function useSessionChoices(): ChoicesState {
   const [options, setOptions] = useState<SessionOptionsResponse | null>(null);
   const [modelNotice, setModelNotice] = useState<string | null>(null);
-  const [choices, setChoices] = useState<SessionChoices>(() => ({ ...FALLBACK, ...readSaved() }));
+  const [choices, setChoices] = useState<SessionChoices>(() => ({
+    ...FALLBACK,
+    ...readSavedChoices(),
+  }));
   useEffect(() => {
     let cancelled = false;
     getSessionOptions()
       .then((loaded) => {
         if (!cancelled) {
           setOptions(loaded);
-          const saved = readSaved();
+          const saved = readSavedChoices();
           const unavailable = loaded.models.find((model) => model.key === saved.modelKey);
           if (
             saved.modelKey !== undefined &&
@@ -77,7 +78,7 @@ export function useSessionChoices(): ChoicesState {
             );
           }
           setChoices((current) =>
-            normalizeModelChoice({ ...current, ...defaultsOf(loaded), ...saved }, loaded),
+            normalizeModelChoice(restoreSessionChoices(current, loaded, saved), loaded),
           );
         }
       })
@@ -96,7 +97,7 @@ export function useSessionChoices(): ChoicesState {
       setChoices((current) => {
         const updated = { ...current, ...patch };
         const next = options === null ? updated : normalizeModelChoice(updated, options);
-        save(next);
+        saveSessionChoices(next);
         return next;
       });
     },
@@ -116,9 +117,10 @@ export function normalizeModelChoice(
   if (model === undefined) {
     return { ...choices, modelKey: options.defaultModelKey };
   }
-  const reasoningEffort = model.reasoningEfforts.includes(choices.reasoningEffort)
-    ? choices.reasoningEffort
-    : model.defaultReasoningEffort;
+  const reasoningEffort =
+    model.reasoningEfforts.length === 0 || model.reasoningEfforts.includes(choices.reasoningEffort)
+      ? choices.reasoningEffort
+      : model.defaultReasoningEffort;
   return { ...choices, modelKey: model.key, reasoningEffort };
 }
 
@@ -142,6 +144,8 @@ export function toStartRequest(question: string, choices: SessionChoices): Start
       question,
       reasoningEffort: choices.reasoningEffort,
       orchestration: choices.orchestrationMode,
+      ...selectedModel,
+      ...(choices.roleModels === undefined ? {} : { roleModels: choices.roleModels }),
       ...clean,
     };
   }
@@ -150,9 +154,38 @@ export function toStartRequest(question: string, choices: SessionChoices): Start
     retrievalMode: choices.retrievalMode,
     reasoningEffort: choices.reasoningEffort,
     subagents: choices.subagents,
+    ...subagentModelRequest(choices),
     ...selectedModel,
     ...clean,
   };
+}
+
+function subagentModelRequest(choices: SessionChoices): Pick<StartSessionRequest, 'roleModels'> {
+  if (!choices.subagents || choices.roleModels?.subagents === undefined) {
+    return {};
+  }
+  return { roleModels: { subagents: choices.roleModels.subagents } };
+}
+
+export function restoreSessionChoices(
+  current: SessionChoices,
+  options: SessionOptionsResponse,
+  saved: SavedSessionChoices,
+): SessionChoices {
+  const defaults = options.roleModels;
+  const subagents = Object.fromEntries(
+    options.subagents.agents.map((name) => [
+      name,
+      saved.roleModels?.subagents?.[name] === undefined
+        ? (defaults?.subagents[name]?.modelKey ?? null)
+        : saved.roleModels.subagents[name],
+    ]),
+  );
+  const orchestrator =
+    saved.roleModels?.orchestrator === undefined
+      ? (defaults?.orchestrator ?? null)
+      : saved.roleModels.orchestrator;
+  return { ...current, ...defaultsOf(options), ...saved, roleModels: { orchestrator, subagents } };
 }
 
 function defaultsOf(options: SessionOptionsResponse): Partial<SessionChoices> {
@@ -164,18 +197,19 @@ function defaultsOf(options: SessionOptionsResponse): Partial<SessionChoices> {
 }
 
 // Хранилище браузера может быть недоступно (приватный режим) — тогда просто не запоминаем.
-function readSaved(): Saved {
+export function readSavedChoices(): SavedSessionChoices {
   try {
     const text = localStorage.getItem(STORAGE_KEY);
-    return text === null ? {} : (JSON.parse(text) as Saved);
+    const parsed: unknown = text === null ? {} : JSON.parse(text);
+    return parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
   } catch {
     return {};
   }
 }
 
-function save(choices: SessionChoices): void {
+export function saveSessionChoices(choices: SessionChoices): void {
   // Clean Workspace не запоминаем: он стирает рабочую папку.
-  const saved: Saved = {
+  const saved: SavedSessionChoices = {
     demoProject: choices.demoProject,
     subagents: choices.subagents,
     orchestration: choices.orchestration,
@@ -183,6 +217,7 @@ function save(choices: SessionChoices): void {
     retrievalMode: choices.retrievalMode,
     reasoningEffort: choices.reasoningEffort,
     modelKey: choices.modelKey,
+    roleModels: choices.roleModels,
   };
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));

@@ -16,6 +16,7 @@ interface SelectFieldProps<Value extends string> {
   disabled?: boolean;
   hint?: string;
   width?: number;
+  hideLabel?: boolean;
 }
 
 // Один вид и одна геометрия для селекторов модели, effort, поиска и оркестрации.
@@ -24,7 +25,9 @@ export function SelectField<Value extends string>(props: SelectFieldProps<Value>
   const id = useId();
   return (
     <label className={styles.field} style={{ width: props.width ?? 330 }} title={props.hint}>
-      <span className={styles.label}>{props.label}</span>
+      <span className={styles.label} hidden={props.hideLabel}>
+        {props.label}
+      </span>
       <span className={styles.control}>
         <select
           id={id}

@@ -44,12 +44,12 @@ const options: SessionOptionsResponse = {
 };
 
 describe('Выбор модели в форме', () => {
-  it('показывает фактическую модель: default в оркестрации, выбранную — в обычной сессии', () => {
+  it('показывает выбранную модель сессии и при включённой оркестрации', () => {
     const selected = { ...choices, modelKey: 'limited' };
     expect(selectedSessionModel({ choices: selected, options })?.key).toBe('limited');
     expect(
       selectedSessionModel({ choices: { ...selected, orchestration: true }, options })?.key,
-    ).toBe('default');
+    ).toBe('limited');
     expect(
       selectedSessionModel({
         choices: { ...selected, orchestration: true, demoProject: false },
@@ -73,10 +73,10 @@ describe('Выбор модели в форме', () => {
       toStartRequest('question', { ...choices, modelKey: 'limited', demoProject: false }).modelKey,
     ).toBe('limited');
   });
-  it('оркестрация пока идёт в модель по умолчанию', () => {
+  it('передаёт выбранную модель сессии в оркестрацию', () => {
     expect(
       toStartRequest('question', { ...choices, modelKey: 'limited', orchestration: true }).modelKey,
-    ).toBeUndefined();
+    ).toBe('limited');
   });
   it('восстанавливает default после удаления модели или ключа, согласует effort', () => {
     expect(normalizeModelChoice({ ...choices, modelKey: 'removed' }, options).modelKey).toBe(

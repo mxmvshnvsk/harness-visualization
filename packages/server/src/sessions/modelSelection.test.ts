@@ -30,6 +30,54 @@ interface ModelSelectionFixture {
   requests: RecordedRequest[];
 }
 
+it('API: назначения формы изолированы, null наследует сессию, default сохраняет DeepSeek', async (context) => {
+  const fixture = await createFixture(context);
+  context.after(async () => {
+    await fixture.app.close();
+    await rm(fixture.root, { recursive: true, force: true });
+  });
+  const { app, settings, requests, registry } = fixture;
+  settings.orchestration.modelKey = 'alternate';
+  settings.orchestration.pipeline.searchTool = 'list_files';
+  const options = (
+    await app.inject({ method: 'GET', url: '/api/session-options' })
+  ).json<SessionOptionsResponse>();
+  assert.equal(options.roleModels?.orchestrator, 'alternate');
+  assert.equal(options.roleModels?.subagents.researcher?.reasoningEffort, 'low');
+  await checkRejectedRoleAssignments(app);
+  assert.equal(requests.length, 0);
+  const responses = await Promise.all(
+    [null, 'default'].map((orchestrator) =>
+      app.inject({
+        method: 'POST',
+        url: '/api/sessions',
+        payload: {
+          question: 'test',
+          modelKey: 'alternate',
+          orchestration: 'pipeline',
+          roleModels: { orchestrator, subagents: { researcher: null } },
+        },
+      }),
+    ),
+  );
+  assert.deepEqual(
+    responses.map((response) => response.statusCode),
+    [201, 201],
+  );
+  assert.equal(await registry.waitForRunning(5000), 0);
+  assert.deepEqual(requests.map((request) => request.model).sort(), [
+    'alternate',
+    'deepseek-flash',
+  ]);
+  assert.equal(
+    requests.find((request) => request.model === 'deepseek-flash')?.authorization,
+    'Bearer private-default-key',
+  );
+  assert.equal(settings.orchestration.modelKey, 'alternate');
+  assert.equal(settings.subagents.agents.researcher?.modelKey, null);
+  assert.ok(registry.list().every((session) => session.status === 'finished'));
+});
+
 it('API: публичный реестр, проверка выбора, две независимые модели и старые трейсы', async (context) => {
   const fixture = await createFixture(context);
   try {
@@ -45,6 +93,26 @@ it('API: публичный реестр, проверка выбора, две 
     await rm(fixture.root, { recursive: true, force: true });
   }
 });
+
+async function checkRejectedRoleAssignments(app: FastifyInstance): Promise<void> {
+  for (const roleModels of [
+    { orchestrator: 'unknown' },
+    { subagents: { unknown: null } },
+    { orchestrator: 'missing' },
+  ]) {
+    const rejected = await app.inject({
+      method: 'POST',
+      url: '/api/sessions',
+      payload: {
+        question: 'test',
+        modelKey: 'alternate',
+        orchestration: 'pipeline',
+        roleModels,
+      },
+    });
+    assert.equal(rejected.statusCode, 400, rejected.body);
+  }
+}
 
 async function createFixture(context: TestContext): Promise<ModelSelectionFixture> {
   const root = await mkdtemp(join(tmpdir(), 'harness-model-selection-'));

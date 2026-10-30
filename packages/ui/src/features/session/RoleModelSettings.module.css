@@ -1,0 +1,100 @@
+.roles {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+.heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.heading h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: var(--weight-medium);
+}
+.collapse {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.collapse svg {
+  width: 14px;
+  height: 14px;
+}
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.body[hidden] {
+  display: none;
+}
+.heading > span,
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.row {
+  display: grid;
+  grid-template-columns: minmax(180px, 210px) minmax(0, 330px) 150px;
+  gap: 12px 24px;
+  align-items: start;
+}
+.identity,
+.model,
+.effort {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.identity,
+.effort {
+  padding-top: 3px;
+  font-size: 13px;
+}
+.identity code {
+  font-size: 11px;
+  color: var(--muted);
+}
+.body > p {
+  max-width: 760px;
+}
+@media (pointer: coarse) {
+  .collapse {
+    min-height: 44px;
+  }
+}
+@media (width <= 1000px) {
+  .row {
+    grid-template-columns: 180px minmax(0, 330px);
+    gap: 10px 20px;
+  }
+  .effort {
+    grid-column: 2;
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding-top: 0;
+  }
+}
+@media (width <= 620px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+  .effort {
+    grid-column: 1;
+  }
+}

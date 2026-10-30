@@ -7,6 +7,7 @@ import { Button } from '../components/Button';
 import { toStartRequest, useSessionChoices, selectedSessionModel } from './session/sessionChoices';
 import styles from './SessionForm.module.css';
 import { SessionSettings, describeCost } from './session/SessionSettings';
+import { roleModelErrors } from './session/roleModelChoices';
 
 // Поле вопроса: в него ставит курсор «Спросить агента самому» на стартовом экране.
 export const QUESTION_FIELD_ID = 'session-question';
@@ -53,24 +54,41 @@ export function SessionForm({ onStarted }: SessionFormProps): ReactElement {
         }}
       />
       <SessionSettings state={state} />
+      <SessionModelNotices state={state} />
+      {error !== null && <div className={styles.error}>Сессия не запущена: {error}</div>}
+      <SessionSubmit
+        state={state}
+        starting={starting}
+        unavailable={selectedModel?.available === false || roleModelErrors(state).length > 0}
+      />
+    </form>
+  );
+}
+
+function SessionModelNotices({
+  state,
+}: {
+  state: ReturnType<typeof useSessionChoices>;
+}): ReactElement {
+  const selected = selectedSessionModel(state);
+  return (
+    <>
       {state.modelNotice !== null && (
         <p className={styles.note} role="status">
           {state.modelNotice}
         </p>
       )}
-      {selectedModel?.available === false && (
-        <p className={styles.error}>
-          Нет ключа {selectedModel.apiKeyVariable}. Выберите другую модель или задайте ключ на
-          сервере.
+      {selected?.available === false && (
+        <p className={styles.error} role="alert">
+          Нет ключа {selected.apiKeyVariable}. Выберите другую модель или задайте ключ на сервере.
         </p>
       )}
-      {error !== null && <div className={styles.error}>Сессия не запущена: {error}</div>}
-      <SessionSubmit
-        state={state}
-        starting={starting}
-        unavailable={selectedModel?.available === false}
-      />
-    </form>
+      {roleModelErrors(state).map((error) => (
+        <p key={error} className={styles.error} role="alert">
+          {error}
+        </p>
+      ))}
+    </>
   );
 }
 

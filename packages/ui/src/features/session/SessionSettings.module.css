@@ -11,6 +11,11 @@
   min-width: 0;
 }
 
+.sessionFields {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+}
+
 .heading {
   display: flex;
   align-items: center;

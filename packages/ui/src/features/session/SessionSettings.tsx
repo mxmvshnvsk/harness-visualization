@@ -3,6 +3,8 @@ import { SelectField } from '../../components/SelectField';
 import { useMode } from '../../app/mode';
 import { formatRu } from '../../text/formatNumber';
 import { ModelPicker } from './ModelPicker';
+import { RoleModelSettings } from './RoleModelSettings';
+import { activeRoleModels } from './roleModelChoices';
 import {
   selectedSessionModel,
   type ChoicesState,
@@ -84,9 +86,10 @@ export function SessionSettings({ state }: { state: ChoicesState }): ReactElemen
         <div id={id} hidden={!open} className={styles.body}>
           <SessionFlags state={state} />
           <RetrievalSettings state={state} />
+          <RoleModelSettings state={state} />
         </div>
       </section>
-      <div className={styles.fields}>
+      <div className={`${styles.fields} ${styles.sessionFields}`}>
         <ModelPicker state={state} />
         <EffortSelector state={state} />
       </div>
@@ -95,7 +98,12 @@ export function SessionSettings({ state }: { state: ChoicesState }): ReactElemen
 }
 
 function EffortSelector({ state }: { state: ChoicesState }): ReactElement {
-  const model = selectedSessionModel(state);
+  const sessionModel = selectedSessionModel(state);
+  const orchestrator = activeRoleModels(state).find((role) => role.orchestrator);
+  const model =
+    sessionModel?.reasoningEfforts.length === 0
+      ? (orchestrator?.model ?? sessionModel)
+      : sessionModel;
   const efforts =
     model === undefined
       ? EFFORTS
@@ -131,7 +139,7 @@ function SessionFlags({ state }: { state: ChoicesState }): ReactElement {
       {hasSubagents && (
         <SessionCheckbox
           label="Субагенты"
-          checked={choices.demoProject && choices.subagents && !orchestrated}
+          checked={choices.demoProject && (choices.subagents || orchestrated)}
           disabled={!choices.demoProject || orchestrated}
           hint={subagentsHint(choices)}
           onChange={(subagents) => change({ subagents })}
@@ -218,9 +226,7 @@ function RetrievalSettings({ state }: { state: ChoicesState }): ReactElement {
         )}
       </div>
       {orchestrated && (
-        <p className={styles.note}>
-          {SEARCH_IN_ORCHESTRATION[choices.orchestrationMode]} Используется модель по умолчанию.
-        </p>
+        <p className={styles.note}>{SEARCH_IN_ORCHESTRATION[choices.orchestrationMode]}</p>
       )}
       {!orchestrated && mode === 'learn' && (
         <p className={styles.note}>

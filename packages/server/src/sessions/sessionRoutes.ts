@@ -36,6 +36,11 @@ import {
 } from '../sse/sseMessages.js';
 import type { SessionRegistry } from './SessionRegistry.js';
 import { startSessionRequestSchema, type StartSessionRequest } from './startSessionRequest.js';
+import {
+  describeRoleModels,
+  withSessionRoleModels,
+  type RoleModelOptions,
+} from './sessionRoleModels.js';
 
 const HEARTBEAT_INTERVAL_MS = 15000;
 
@@ -54,6 +59,7 @@ export interface SessionOptionsResponse {
   subagents: SubagentsOption;
   defaultModelKey: string;
   models: ModelOption[];
+  roleModels?: RoleModelOptions;
 }
 
 interface SessionParams {
@@ -78,6 +84,7 @@ export function registerSessionRoutes(app: FastifyInstance, options: SessionRout
       retrievalMode: settings.retrieval.mode,
       subagents: describeSubagentsOption(settings),
       defaultModelKey: DEFAULT_MODEL_KEY,
+      roleModels: describeRoleModels(settings),
       models: modelOptions(settings).map((model) => ({
         ...model,
         available:
@@ -270,7 +277,8 @@ async function handleSessionStart(
   const body = parsed.data;
   const modelKey = body.modelKey ?? DEFAULT_MODEL_KEY;
   try {
-    const loaded = await selectSessionModel(options.loadedSettings, modelKey);
+    const assigned = withSessionRoleModels(options.loadedSettings, body.roleModels);
+    const loaded = await selectSessionModel(assigned, modelKey);
     validateModelEffort(
       options.loadedSettings,
       modelKey,
