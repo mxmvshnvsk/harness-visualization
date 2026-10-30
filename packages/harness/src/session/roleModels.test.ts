@@ -3,13 +3,14 @@ import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { it, type TestContext } from 'node:test';
-import type { HarnessEvent, OrchestrationMode } from '../events/harnessEvents.js';
+import type { HarnessEvent, ModelDelta, OrchestrationMode } from '../events/harnessEvents.js';
 import type { LoadedSettings } from '../settings/loadSettings.js';
 import { harnessSettingsSchema } from '../settings/settingsSchema.js';
 import { resolveRegistryModels } from '../settings/modelRegistry.js';
 import { selectSessionModel } from '../settings/selectSessionModel.js';
 import { prepareSessionRoleModels, createModelProviders } from './sessionRoleModels.js';
 import { startSession, type SessionInput } from './startSession.js';
+import { fragmentedSse } from '../model/adapterTestFixtures.js';
 
 const CONFIG: unknown = JSON.parse(
   await readFile(new URL('../../../../harness.config.json', import.meta.url), 'utf8'),
@@ -26,6 +27,8 @@ interface Fixture {
   loaded: LoadedSettings;
   requests: RecordedRequest[];
   events: HarnessEvent[];
+  deltas: ModelDelta[];
+  failRole?: boolean;
 }
 
 it('проверяет ссылки ролей в реестре, сохраняя необязательность новых полей', () => {
@@ -173,6 +176,56 @@ it('выключенные роли и сессия без демо не чит�
   assert.equal((await prepareSessionRoleModels(blank)).orchestrator, null);
 });
 
+it('роли: OpenAI JSON, DeepSeek и OpenRouter SSE сохраняют свой диалект, стоимость и agentId', async (context) => {
+  const fixture = await createFixture(context);
+  configureMixedAdapters(fixture);
+  fixture.loaded = await selectSessionModel(fixture.loaded, 'session');
+  await runFixture(fixture, null);
+  const main = fixture.requests.find((request) => request.model === 'session-model')!;
+  const worker = fixture.requests.find((request) => request.model === 'deepseek-flash')!;
+  const router = fixture.requests.find((request) => request.model === 'router-worker')!;
+  assert.equal(main.body.max_completion_tokens, 8192);
+  assert.equal(Object.hasOwn(main.body, 'thinking'), false);
+  assert.deepEqual(worker.body.thinking, { type: 'enabled' });
+  assert.deepEqual(router.body.reasoning, { effort: 'low' });
+  assert.equal(Object.hasOwn(router.body, 'thinking'), false);
+  const response = fixture.events.find(
+    (event) => event.type === 'model_response' && event.agentId === 'inherited-2',
+  );
+  assert.ok(response?.type === 'model_response');
+  assert.equal(response.reply.model, 'actual-router-worker');
+  assert.equal(response?.cost?.total, 0.02);
+  assert.ok(fixture.deltas.length > 0);
+  assert.ok(
+    fixture.deltas.every(
+      (delta) => delta.agentId === 'inherited-2' && delta.requestId === response?.requestId,
+    ),
+  );
+  checkTrace(fixture);
+});
+
+it('ошибка адаптера исполнителя привязана к его agentId, главный агент продолжает работу', async (context) => {
+  const fixture = await createFixture(context);
+  configureMixedAdapters(fixture);
+  fixture.failRole = true;
+  await runFixture(fixture, null);
+  const failure = fixture.events.find((event) => event.type === 'model_error');
+  assert.equal(failure?.agentId, 'inherited-2');
+  assert.equal(failure?.status, 429);
+  const finished = fixture.events.find(
+    (event) => event.type === 'subagent_finished' && event.subagentId === 'inherited-2',
+  );
+  assert.ok(finished?.type === 'subagent_finished');
+  assert.equal(finished.status, 'failed');
+  assert.ok(
+    fixture.events.some(
+      (event) => event.type === 'assistant_message' && event.agentId === undefined,
+    ),
+  );
+  assert.equal(fixture.events.find((event) => event.type === 'session_finished')?.modelCost, null);
+  checkTrace(fixture);
+});
+
 async function createFixture(
   context: TestContext,
   mode: OrchestrationMode | null = null,
@@ -219,6 +272,7 @@ async function createFixture(
     loaded: { settings, modelApiKey: 'private-default-key' },
     requests: [],
     events: [],
+    deltas: [],
   };
   mockTransport(context, fixture, mode);
   return fixture;
@@ -249,6 +303,7 @@ function hooksOf(fixture: Fixture) {
   return {
     confirmAction: () => Promise.resolve({ approved: true, answeredBy: 'user' as const }),
     listeners: [(event: HarnessEvent) => fixture.events.push(event)],
+    deltaListeners: [(delta: ModelDelta) => fixture.deltas.push(delta)],
     log: () => undefined,
   };
 }
@@ -285,17 +340,12 @@ function mockTransport(
       calls.length > 0
         ? { role: 'assistant', content: null, tool_calls: calls }
         : { role: 'assistant', content: 'Готово' };
-    return Promise.resolve(
-      new Response(
-        JSON.stringify({
-          id: 'test-reply',
-          model,
-          choices: [{ index: 0, finish_reason: calls.length > 0 ? 'tool_calls' : 'stop', message }],
-          usage: { prompt_tokens: 10, completion_tokens: 3 },
-        }),
-        { headers: { 'content-type': 'application/json' } },
-      ),
-    );
+    if (fixture.failRole && model === 'router-worker') {
+      return Promise.resolve(
+        Response.json({ error: { message: 'Role unavailable' } }, { status: 429 }),
+      );
+    }
+    return Promise.resolve(roleReply(model, message, calls.length > 0, body.stream === true));
   });
 }
 
@@ -369,7 +419,8 @@ function checkTrace(fixture: Fixture): void {
   assert.equal(summary?.modelRequests, responses.length);
   assert.equal(summary?.usage.inputTokens, responses.length * 10);
   const costs = responses.map((response) => response.cost);
-  if (costs.some((cost) => cost === null)) {
+  const hasFailure = fixture.events.some((event) => event.type === 'model_error');
+  if (hasFailure || costs.some((cost) => cost === null)) {
     assert.equal(summary?.modelCost, null);
   } else {
     assert.equal(
@@ -378,4 +429,50 @@ function checkTrace(fixture: Fixture): void {
     );
   }
   assert.equal(JSON.stringify(fixture.events).includes('private-default-key'), false);
+}
+
+function roleReply(
+  model: string,
+  message: Record<string, unknown>,
+  tools: boolean,
+  stream: boolean,
+): Response {
+  const usage = { prompt_tokens: 10, completion_tokens: 3, cost: 0.02 };
+  const returnedModel = model === 'router-worker' ? 'actual-router-worker' : model;
+  const finishReason = tools ? 'tool_calls' : 'stop';
+  if (stream) {
+    return fragmentedSse([
+      {
+        id: 'test-reply',
+        model: returnedModel,
+        choices: [{ delta: message, finish_reason: finishReason }],
+      },
+      { choices: [], usage },
+    ]);
+  }
+  return Response.json({
+    id: 'test-reply',
+    model: returnedModel,
+    choices: [{ index: 0, finish_reason: finishReason, message }],
+    usage,
+  });
+}
+
+function configureMixedAdapters(fixture: Fixture): void {
+  const { settings } = fixture.loaded;
+  settings.models!.session = {
+    ...settings.models!.session!,
+    dialect: 'openai',
+    reasoningStyle: 'openai',
+    outputTokenParameter: 'max_completion_tokens',
+  };
+  settings.models!.router = {
+    model: 'router-worker',
+    baseUrl: 'https://router.test/v1',
+    apiKeyVariable: null,
+    dialect: 'openrouter',
+    stream: true,
+  };
+  settings.subagents.agents.worker!.modelKey = 'default';
+  settings.subagents.agents.inherited!.modelKey = 'router';
 }

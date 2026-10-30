@@ -9,6 +9,8 @@
 
 import type { ResponseTiming } from './chatTypes.js';
 import { appendReasoningDetails } from './reasoningDetails.js';
+import { ModelProviderError } from './ModelProviderError.js';
+import { wireErrorSchema } from './openAiWireSchema.js';
 
 export interface StreamDelta {
   kind: 'reasoning' | 'answer';
@@ -86,42 +88,70 @@ export async function readCompletionStream(
     lastTokenMs: null,
     chunks: 0,
   };
+  for await (const line of sseLines(stream)) {
+    const chunk = parseDataLine(line);
+    if (chunk === 'done') {
+      break;
+    }
+    if (chunk !== null) {
+      timing.chunks += 1;
+      applyChunk(draft, chunk, mark(timing, startedAt), onDelta);
+    }
+  }
+  if (draft.finishReason === null) {
+    throw new ModelProviderError('Поток модели оборвался до finish_reason', null, null);
+  }
+  return { body: toCompletion(draft), timing };
+}
+
+// Декодер сохраняет байты незаконченного UTF-8 символа между сетевыми кусками.
+async function* sseLines(stream: ReadableStream<Uint8Array>): AsyncGenerator<string> {
   const decoder = new TextDecoder();
   let buffer = '';
   for await (const bytes of stream) {
     buffer += decoder.decode(bytes, { stream: true });
     const lines = buffer.split('\n');
     buffer = lines.pop() ?? '';
-    for (const line of lines) {
-      const chunk = parseDataLine(line);
-      if (chunk !== null) {
-        timing.chunks += 1;
-        applyChunk(draft, chunk, mark(timing, startedAt), onDelta);
-      }
-    }
+    yield* lines;
   }
-  const last = parseDataLine(buffer);
-  if (last !== null) {
-    timing.chunks += 1;
-    applyChunk(draft, last, mark(timing, startedAt), onDelta);
+  buffer += decoder.decode();
+  if (buffer !== '') {
+    yield buffer;
   }
-  return { body: toCompletion(draft), timing };
 }
 
-// Строка SSE `data: {...}`; комментарии, пустые строки и `[DONE]` пропускаем.
-function parseDataLine(line: string): Chunk | null {
+// Ошибка или повреждённый data-блок не должны превращать частичный ответ
+// в успешный: иначе трейс и Evals засчитают то, что провайдер не завершил.
+function parseDataLine(line: string): Chunk | 'done' | null {
   const trimmed = line.trim();
   if (!trimmed.startsWith('data:')) {
     return null;
   }
   const data = trimmed.slice('data:'.length).trim();
-  if (data === '' || data === '[DONE]') {
+  if (data === '[DONE]') {
+    return 'done';
+  }
+  if (data === '') {
     return null;
   }
+  const chunk = parseChunkJson(data);
+  if (chunk === null || typeof chunk !== 'object' || Array.isArray(chunk)) {
+    throw new ModelProviderError('Непонятный формат события в потоке модели', null, chunk);
+  }
+  if ('error' in chunk) {
+    const parsed = wireErrorSchema.safeParse(chunk);
+    const message = parsed.success ? parsed.data.error.message : 'неизвестная ошибка';
+    throw new ModelProviderError(`Ошибка в потоке модели: ${message}`, null, chunk);
+  }
+  return chunk;
+}
+
+function parseChunkJson(data: string): unknown {
   try {
-    return JSON.parse(data) as Chunk;
-  } catch {
-    return null;
+    return JSON.parse(data);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new ModelProviderError(`Повреждённый JSON в потоке модели: ${detail}`, null, data);
   }
 }
 

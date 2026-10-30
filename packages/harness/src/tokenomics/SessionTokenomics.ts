@@ -29,6 +29,11 @@ export class SessionTokenomics {
   private readonly toolCosts = new Map<string, ToolCostTotal>();
 
   handleEvent(event: HarnessEvent): void {
+    // При обрыве провайдер мог уже потратить токены, но не прислать usage.
+    // Сумма только успешных вызовов не является полной стоимостью сессии.
+    if (event.type === 'model_error') {
+      this.hasUnknownModelCost = true;
+    }
     if (event.type === 'model_response') {
       this.recordModelRequest(event.reply.usage, event.cost);
     }

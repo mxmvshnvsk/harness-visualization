@@ -16,9 +16,30 @@ const executeFile = promisify(execFile);
 const EVAL_CLI = fileURLToPath(new URL('../../../harness/dist/cli/mainEval.js', import.meta.url));
 const PROJECT_ROOT = fileURLToPath(new URL('../../../../', import.meta.url));
 
+const TEST_SET = {
+  name: 'Model selection',
+  description: 'Тестовый транспорт',
+  tasks: [
+    {
+      id: 'test',
+      question: 'question',
+      origin: 'test',
+      checks: [
+        { kind: 'answerIncludes', anyOf: ['done'] },
+        { kind: 'judge', rubric: 'ответь done' },
+      ],
+    },
+  ],
+};
+
 interface RecordedRequest {
   model: string;
   judge: boolean;
+  stream: boolean;
+  url: string;
+  reasoning?: { effort: string };
+  thinking?: { type: string };
+  maxCompletionTokens?: number;
 }
 
 it('CLI сравнивает две модели с одним судьёй и отдаёт метаданные через API', async (context) => {
@@ -104,6 +125,53 @@ it('несовместимая модель судьи отклоняется д
   assert.deepEqual(await readRequests(root), []);
 });
 
+it('Evals: разные диалекты, streaming, тарифы и кэш остаются раздельными', async (context) => {
+  const root = await createFixture(context);
+  await runEval(root, ['--models', 'alpha,beta', '--judge-model', 'default']);
+  const report = await readReport(root);
+  const requests = await readRequests(root);
+  const alpha = requests.find((request) => request.model === 'model-alpha')!;
+  const beta = requests.find((request) => request.model === 'model-beta')!;
+  assert.equal(alpha.stream, true);
+  assert.deepEqual(alpha.reasoning, { effort: 'high' });
+  assert.equal(alpha.thinking, undefined);
+  assert.equal(beta.stream, false);
+  assert.equal(beta.maxCompletionTokens, 8192);
+  assert.ok(
+    requests
+      .filter((request) => request.judge)
+      .every((request) => request.thinking?.type === 'disabled'),
+  );
+  assert.equal(report.results[0]?.costUsd, 0.004);
+  assert.equal(report.results[1]?.costUsd, null);
+  assert.ok(report.results.every((trial) => trial.cacheWarm));
+  assert.equal(report.judgeModel?.model, 'deepseek-flash');
+});
+
+for (const fault of ['http', 'stream'] as const) {
+  it(`Evals: ошибка ${fault} одного адаптера не засчитывается как успешная попытка`, async (context) => {
+    const root = await createFixture(context);
+    const environment =
+      fault === 'http'
+        ? { HARNESS_MOCK_FAIL_MODEL: 'model-beta' }
+        : { HARNESS_MOCK_STREAM_ERROR: 'true' };
+    await runEval(root, ['--models', 'alpha,beta', '--judge-model', 'default'], environment);
+    const report = await readReport(root);
+    const failedModel = fault === 'http' ? 'tool@beta' : 'tool@alpha';
+    const failed = report.results.find((trial) => trial.config === failedModel)!;
+    assert.equal(failed.failed, true);
+    assert.equal(failed.passed, false);
+    assert.equal(failed.modelRequests, 1);
+    assert.equal(failed.costUsd, null);
+    const healthy = report.results.find((trial) => trial.config !== failedModel)!;
+    assert.equal(healthy.failed, false);
+    assert.equal(healthy.passed, true);
+    const trace = await readFile(join(root, failed.tracePath), 'utf8');
+    assert.ok(trace.includes('model_error'));
+    assert.equal(trace.includes('model_response'), false);
+  });
+}
+
 async function createFixture(context: TestContext): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), 'harness-eval-models-'));
   context.after(() => rm(root, { recursive: true, force: true }));
@@ -119,13 +187,17 @@ async function createFixture(context: TestContext): Promise<string> {
       label: 'Alpha',
       baseUrl: 'https://alpha.test/v1',
       apiKeyVariable: null,
-      stream: false,
+      dialect: 'openrouter',
+      stream: true,
     },
     beta: {
       model: 'model-beta',
       label: 'Beta',
       baseUrl: 'https://beta.test/v1',
       apiKeyVariable: null,
+      dialect: 'openai',
+      reasoningStyle: 'openai',
+      outputTokenParameter: 'max_completion_tokens',
       stream: false,
     },
     limited: {
@@ -140,29 +212,19 @@ async function createFixture(context: TestContext): Promise<string> {
   await mkdir(join(root, settings.workspace.seedDirectory), { recursive: true });
   await mkdir(join(root, 'evals'));
   await writeFile(join(root, 'harness.config.json'), JSON.stringify(settings));
+  await writeFile(join(root, 'evals', 'test.json'), JSON.stringify(TEST_SET));
   await writeFile(
-    join(root, 'evals', 'test.json'),
-    JSON.stringify({
-      name: 'Model selection',
-      description: 'Тестовый транспорт',
-      tasks: [
-        {
-          id: 'test',
-          question: 'question',
-          origin: 'test',
-          checks: [
-            { kind: 'answerIncludes', anyOf: ['done'] },
-            { kind: 'judge', rubric: 'ответь done' },
-          ],
-        },
-      ],
-    }),
+    join(root, 'transport.mjs'),
+    await readFile(new URL('../../src/evals/modelEvalsTransport.mjs', import.meta.url), 'utf8'),
   );
-  await writeFile(join(root, 'transport.mjs'), TEST_TRANSPORT);
   return root;
 }
 
-async function runEval(root: string, argumentsList: string[]): Promise<void> {
+async function runEval(
+  root: string,
+  argumentsList: string[],
+  environment: NodeJS.ProcessEnv = {},
+): Promise<void> {
   await executeFile(
     process.execPath,
     [
@@ -177,7 +239,7 @@ async function runEval(root: string, argumentsList: string[]): Promise<void> {
       '1',
       ...argumentsList,
     ],
-    { cwd: root },
+    { cwd: root, env: { ...process.env, ...environment } },
   );
 }
 
@@ -215,20 +277,3 @@ async function readReportThroughApi(root: string): Promise<EvalsResponse> {
     await app.close();
   }
 }
-
-// Заглушка установлена до загрузки CLI: ни один запрос теста не выходит в сеть.
-const TEST_TRANSPORT = `
-import { appendFileSync } from 'node:fs';
-globalThis.fetch = async (input, init) => {
-  const body = JSON.parse(init.body);
-  const judge = body.messages[0].content.startsWith('Ты — судья');
-  appendFileSync('requests.jsonl', JSON.stringify({ model: body.model, judge }) + '\\n');
-  const content = judge ? JSON.stringify({ verdict: 'pass', explanation: 'done' }) : 'done';
-  const response = {
-    id: 'reply', model: 'actual-' + body.model,
-    choices: [{ index: 0, finish_reason: 'stop', message: { role: 'assistant', content } }],
-    usage: { prompt_tokens: 10, completion_tokens: 3 },
-  };
-  return new Response(JSON.stringify(response), { headers: { 'content-type': 'application/json' } });
-};
-`;
